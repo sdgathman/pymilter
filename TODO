@@ -1,12 +1,20 @@
+Web admin interface
+RHBL
+Check valid domains allowed by internal senders to detect PCs infected
+with spam trojans.
+Do CBV (callback verification) for mail with no published SPF record.
+message log for automated stats and blacklisting
+adapt init script to work on RH9
+Skip dspam when SPF pass?
+Report 551 with rcpt on SPF fail?
+check spam keywords with character classes, e.g.
+	{a}=[a@гд], {i}=[i1н], {e}=[eл], {o}=[o0ц]
+
 Implement RRS - a backdoor for non-SRS forwarders.  User lists non-SRS 
 forwarder accounts, and a util provides a special local alias for the
 user to give to the forwarder.  Alias only works for mail from that
 forwarder.  Milter gets forwarder domain from alias and uses it to
 SPF check forwarder.
-
-adapt init script to work on RH9
-Skip dspam when SPF pass?
-Report 551 with rcpt on SPF fail?
 
 Another special dspam user, 'honeypot', can be listed in innoculations.
 All email to those addresses is treated as known spam.

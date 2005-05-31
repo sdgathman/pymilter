@@ -1,6 +1,33 @@
 #!/usr/bin/env python
 # A simple milter.
 # $Log$
+# Revision 1.105  2004/04/20 15:16:00  stuart
+# Release 0.6.9
+#
+# Revision 1.104  2004/04/19 21:56:26  stuart
+# Support SPF best_guess and get_header
+#
+# Revision 1.103  2004/04/10 02:31:01  stuart
+# Fix timeout config
+#
+# Revision 1.102  2004/04/08 20:25:11  stuart
+# Make libmilter timeout a config option
+#
+# Revision 1.101  2004/04/08 19:18:16  stuart
+# Preserve case of local part in sender
+#
+# Revision 1.100  2004/04/08 18:41:15  stuart
+# Reject numeric hello names
+#
+# Revision 1.99  2004/04/06 19:46:39  stuart
+# Reject invalid SRS immediately for benefit of CallBack Verifiers.
+#
+# Revision 1.98  2004/04/06 15:28:20  stuart
+# Release 0.6.8-2
+#
+# Revision 1.97  2004/04/06 13:07:43  stuart
+# Pass original header name to check_header
+#
 # Revision 1.96  2004/04/06 03:27:03  stuart
 # bugs from Redhat 9 testing
 #
@@ -154,90 +181,6 @@
 # Revision 1.47  2003/08/26 05:01:38  stuart
 # Release 0.6.0
 #
-# Revision 1.46  2003/08/26 04:45:16  stuart
-# Modest dspam control
-#
-# Revision 1.43  2003/06/25 17:00:02  stuart
-# fix hostaddr test
-#
-# Revision 1.42  2003/06/25 16:45:59  stuart
-# Not using checking hostaddr properly
-#
-# Revision 1.41  2003/06/25 15:57:54  stuart
-# Ready for 5.5 release.
-#
-# Revision 1.40  2003/06/25 15:41:41  stuart
-# recognize internal connections.
-# Give legitimate users a clue about banned subject keywords.
-#
-# Revision 1.39  2002/12/14 00:36:59  stuart
-# Smart alias feature
-#
-# Revision 1.38  2002/11/14 17:52:53  stuart
-# Redirection feature for wiretap
-#
-# Revision 1.37  2002/11/07 23:52:09  stuart
-# config fixes
-#
-# Revision 1.36  2002/10/04 05:27:38  stuart
-# Add get_submsg to allow modifying rfc822 attachment.
-#
-# Revision 1.35  2002/10/03 01:31:18  stuart
-# Test encoded rfc822 attachment
-#
-# Revision 1.34  2002/10/03 00:55:42  stuart
-# Decode rfc822 attachments
-#
-# Revision 1.33  2002/10/02 18:49:02  stuart
-# Save and log messages which cause an exception while parsing attachments.
-#
-# Revision 1.32  2002/09/24 01:38:05  stuart
-# Doc updates.
-#
-# Revision 1.31  2002/09/13 22:14:06  stuart
-# Release 0.5.0 wrapup
-#
-# Revision 1.30  2002/09/13 20:22:37  stuart
-# Additional config items
-#
-# Revision 1.29  2002/08/20 04:40:46  stuart
-# Use config file
-#
-# Revision 1.28  2002/07/12 19:40:38  stuart
-# Update docs, minor bugs.
-#
-# Revision 1.27  2002/06/16 02:06:24  stuart
-# SPAM tweaks
-#
-# Revision 1.26  2002/06/07 22:07:30  stuart
-# Isolate local hacks to configuration data.
-#
-# Revision 1.25  2002/05/02 20:41:00  stuart
-# Top level virus needs top level header change.
-#
-# Revision 1.24  2002/05/02 20:31:43  stuart
-# Handle quoted-printable HTML attachments.
-# Remove entire attachment when HTML can't be parsed by sgmllib.
-#
-# Revision 1.23  2002/05/02 03:42:31  stuart
-# base64 no longer needed
-#
-# Revision 1.22  2002/05/02 03:12:39  stuart
-# Move check_html to mime module.
-#
-# Revision 1.21  2002/05/02 02:48:22  stuart
-# Remove scripts from HTML even with base64 encoding.
-#
-# Revision 1.20  2002/05/02 00:21:01  stuart
-# Test filtering HTML attachments.
-#
-# Revision 1.19  2002/05/01 22:12:41  stuart
-# Remove scripts from HTML attachments.
-#
-# Revision 1.18  2002/03/01 20:29:00  stuart
-# Ready for release.
-#
-
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001 Business Management Systems, Inc.
 # This code is under GPL.  See COPYING for details.
@@ -252,17 +195,22 @@ import Milter
 import tempfile
 import ConfigParser
 import time
+import re
+
 from fnmatch import fnmatchcase
 from email.Header import decode_header
 
 # Import pysrs if available
 try:
   import SRS
-  import re
   srsre = re.compile(r'^SRS[01][+-=]',re.IGNORECASE)
 except: SRS = None
+
+# Import spf if available
 try: import spf
 except: spf = None
+
+ip4re = re.compile(r'^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$')
 #import syslog
 #syslog.openlog('milter')
 
@@ -297,10 +245,12 @@ dspam_whitelist = {}
 dspam_screener = None
 dspam_internal = True	# True if internal mail should be dspammed
 dspam_reject = ()
-dspam_sizelimit = 80000
+dspam_sizelimit = 180000
 srs = None
 srs_reject_spoofed = False
 spf_reject_neutral = ()
+spf_best_guess = False
+timeout = 600
 
 class MilterConfigParser(ConfigParser.ConfigParser):
 
@@ -351,6 +301,7 @@ def read_config(list):
   cp = MilterConfigParser({
     'tempdir': "/var/log/milter/save",
     'socket': "/var/log/milter/pythonsock",
+    'timeout': '600',
     'scan_html': 'no',
     'scan_rfc822': 'yes',
     'block_chinese': 'no',
@@ -358,12 +309,14 @@ def read_config(list):
     'blind_wiretap': 'yes',
     'maxage': '8',
     'hashlength': '8',
-    'reject_spoofed': 'no'
+    'reject_spoofed': 'no',
+    'best_guess': 'no'
   })
   cp.read(list)
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, scan_rfc822, scan_html, block_chinese
+  global socketname, scan_rfc822, scan_html, block_chinese, timeout
   socketname = cp.get('milter','socket')
+  timeout = cp.getint('milter','timeout')
   scan_rfc822 = cp.getboolean('milter','scan_rfc822')
   scan_html = cp.getboolean('milter','scan_html')
   block_chinese = cp.getboolean('milter','block_chinese')
@@ -402,7 +355,7 @@ def read_config(list):
 
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global spf_reject_neutral,SRS
+  global spf_reject_neutral,spf_best_guess,SRS
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -416,6 +369,7 @@ def read_config(list):
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
+    spf_best_guess = cp.getboolean('spf','best_guess')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
@@ -526,6 +480,10 @@ class bmsMilter(Milter.Milter):
   def hello(self,hostname):
     self.hello_name = hostname
     self.log("hello from %s" % hostname)
+    if ip4re.match(hostname):
+      self.log("REJECT: numeric hello name:",hostname)
+      self.setreply('550','5.7.1','hello name cannot be numeric ip')
+      return Milter.REJECT
     if not self.internal_connection and hostname in hello_blacklist:
       self.log("REJECT: spam from self:",hostname)
       self.setreply('550','5.7.1','I hate talking to myself.')
@@ -579,73 +537,32 @@ class bmsMilter(Milter.Milter):
     return Milter.CONTINUE
 
   def check_spf(self):
-    user,host = spf.split_email(self.canon_from,self.hello_name)
-    self.sender = '@'.join((user,host))
-    res,code,txt = spf.check(self.connectip,self.canon_from,self.hello_name)
+    t = parse_addr(self.mailfrom)
+    if len(t) == 2: t[1] = t[1].lower()
+    q = spf.query(self.connectip,'@'.join(t),self.hello_name)
+    q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
+    res,code,txt = q.check()
+    receiver = self.receiver
+    if res == 'none' and spf_best_guess:
+      #self.log('SPF: no record published, guessing')
+      q.set_default_explanation('SPF guess: see http://spf.pobox.com/why.html')
+      # best_guess should not result in fail
+      res,code,txt = q.best_guess()
+      receiver += ': guessing'
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-      # improve default explanation, but don't wipe out text from SPF record
-      if txt == 'access denied':	
-        txt = 'SPF fail: see http://spf.pobox.com/why.html'
       self.setreply(str(code),'5.7.1',txt)
       return Milter.REJECT
-    if res == 'pass':
-#       Received-SPF: pass (mybox.example.org: domain of
-#                           myname@example.com designates 192.0.2.1 as
-#                           permitted sender);
-#                           receiver=mybox.example.org;
-#                           client_ip=192.0.2.1;
-#                           envelope-from=myname@example.com;
-      self.add_header('Received-SPF',"""pass (%(receiver)s: domain of
-      %(sender)s designates %(connectip)s as permitted sender);
-      receiver=%(receiver)s; client_ip=%(connectip)s;
-      envelope-from=%(canon_from)s;""" % self.__dict__)
-    elif res == 'none' or res == 'unknown' and txt == 'no SPF record':
-#       Received-SPF: none (mybox.example.org: myname@example.com does
-#                           not designated permitted sender hosts)
-      self.add_header('Received-SPF',"""none (%(receiver)s: %(sender)s does
-      	not designate permitted sender hosts)""" % self.__dict__)
-    elif res == 'softfail':
-#       Received-SPF: softfail (mybox.example.org: domain of transitioning
-#                              myname@example.com does not designate
-#                              192.0.2.1 as permitted sender)
-      self.add_header('Received-SPF',
-      	"""softfail (%(receiver)s: domain of transitioning
-	%(sender)s does not designate
-	%(connectip)s as permitted sender)""" % self.__dict__)
-    elif res == 'neutral':
-      if host in spf_reject_neutral:
-        self.log('REJECT: SPF neutral for',self.sender)
-	self.setreply('550','5.7.1',
-	  'mail from %s must pass SPF: http://spf.pobox.com/why.html' % host
-	)
-	return Milter.REJECT
-#       Received-SPF: neutral (mybox.example.org: 192.0.2.1 is neither
-#                             permitted nor denied by domain of
-#                             myname@example.com)
-      self.add_header('Received-SPF',
-      	"""neutral (%(receiver)s: %(connectip)s is neither
-	permitted nor denied by domain of %(sender)s)""" % self.__dict__)
-    elif res == 'unknown':
-#       Received-SPF: unknown -extension:foo (mybox.example.org: domain
-#                      of myname@example.com uses mechanism
-#			not recognized by this client)
-      self.spf_mech = txt
-      self.add_header('Received-SPF',
-      	"""unknown %(spf_mech)s (%(receiver)s: domain
-	of %(sender)s uses mechanism not recognized by this client)"""
-	% self.__dict__)
-    elif res == 'error':
-#   	Received-SPF: error (mybox.example.org: error in processing
-#                           during lookup of myname@example.com: DNS
-#                           timeout)
-      self.add_header('Received-SPF',
-      	"""error (%s: error in processing
-	during lookup of %s: %s)""" % (self.receiver,self.sender,txt))
+    if res == 'neutral' and q.o in spf_reject_neutral:
+      self.log('REJECT: SPF neutral for',q.s)
+      self.setreply('550','5.7.1',
+	'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o
+      )
+      return Milter.REJECT
+    if res == 'error':
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    else:
-      self.log('SPF: %s %i %s' % (res,code,txt))
+    self.add_header('Received-SPF',q.get_header(res,receiver))
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
@@ -671,7 +588,9 @@ class bmsMilter(Milter.Milter):
 	    self.log("srs rcpt:",newaddr)
 	  except:
 	    if srsre.match(oldaddr):
-	      self.log("srs spoofed:",oldaddr)
+	      self.log("REJECT: srs spoofed:",oldaddr)
+	      self.setreply('550','5.7.1','Invalid SRS signature')
+	      return Milter.REJECT
 	    self.data_allowed = not srs_reject_spoofed
       self.recipients.append('@'.join(t))
       user,domain = t
@@ -708,7 +627,8 @@ class bmsMilter(Milter.Milter):
     return Milter.CONTINUE
 
   # Heuristic checks for spam headers
-  def check_header(self,lname,val):
+  def check_header(self,name,val):
+    lname = name.lower()
     # val is decoded header value
     if lname == 'subject':
 
@@ -743,6 +663,7 @@ class bmsMilter(Milter.Milter):
       if not self.forward:
 	if lval.startswith("fwd:") or lval.startswith("[fw"):
 	  self.log('REJECT: %s: %s' % (name,val))
+	  self.setreply('550','5.7.1','I find unedited forwards annoying')
 	  return Milter.REJECT
 
     # check for invalid message id
@@ -777,7 +698,7 @@ class bmsMilter(Milter.Milter):
 	  self.log('REJECT: %s: %s' % (name,hval))
 	  self.setreply('550','5.7.1',"We don't understand chinese")
 	  return Milter.REJECT
-      rc = self.check_header(lname,val)
+      rc = self.check_header(name,val)
       if rc != Milter.CONTINUE: return rc
     # log selected headers
     if log_headers or lname in ('subject','x-mailer'):
@@ -1031,6 +952,7 @@ class bmsMilter(Milter.Milter):
       os.remove(self.tempname)	# remove in case session aborted
     if self.fp:
       self.fp.close()
+    sys.stdout.flush()
     return Milter.CONTINUE
 
   def abort(self):
@@ -1047,7 +969,7 @@ def main():
   Milter.set_flags(flags)
   print "bms milter startup"
   sys.stdout.flush()
-  Milter.runmilter("pythonfilter",socketname,600)
+  Milter.runmilter("pythonfilter",socketname,timeout)
   print "bms milter shutdown"
 
 if __name__ == "__main__":

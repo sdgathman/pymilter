@@ -1,10 +1,10 @@
 %define name milter
-%define version 0.6.8
+%define version 0.6.9
 %define release 1
 # Redhat 7.x and earlier (multiple ps lines per thread)
-#%define sysvinit rc7
+%define sysvinit milter.rc7
 # RH9, other systems (single ps line per process)
-%define sysvinit rc
+#define sysvinit milter.rc
 %ifos Linux
 %define python python2.3
 %else
@@ -16,7 +16,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
-#Patch: %{name}.patch
+#Patch: %{name}-%{version}.patch
 Copyright: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -81,7 +81,7 @@ exec >>milter.log 2>&1
 echo $! >/var/run/milter/milter.pid
 EOF
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
-cp milter.%{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
+cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/milter <<'EOF'
 /^python=/
 c
@@ -127,6 +127,18 @@ rm -rf $RPM_BUILD_ROOT
 %config /var/log/milter/milter.cfg
 
 %changelog
+* Fri Apr 09 2004 Stuart Gathman <stuart@bmsi.com> 0.6.9-1
+- Validate spf.py against test suite, and add Received-SPF support to spf.py
+- Support best_guess for SPF
+- Reject numeric hello names
+- Preserve case of local part in sender
+- Make libmilter timeout a config option
+- Fix setup.py to work with python < 2.2.3
+* Tue Apr 06 2004 Stuart Gathman <stuart@bmsi.com> 0.6.8-3
+- Reject invalid SRS immediately for benefit of callback verifiers
+- Fix include bug in spf.py
+* Tue Apr 06 2004 Stuart Gathman <stuart@bmsi.com> 0.6.8-2
+- Bug in check_header
 * Mon Apr 05 2004 Stuart Gathman <stuart@bmsi.com> 0.6.8-1
 - Don't report spoofed unless rcpt looks like SRS
 - Check for bounce with multiple rcpts

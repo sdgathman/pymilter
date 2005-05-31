@@ -1,5 +1,12 @@
 Here is a history of user visible changes to Python milter.
 
+0.6.9	Reject invalid SRS immediately for benefit of callback verifiers
+	Fix include bug in spf.py
+	Fix check_header bug
+	Fix setup.py to work with python < 2.2.3, thanks to Eric S. Johansson
+	Test driver for SPF test suite.  Fix bugs and add features to
+	pass most of test suite.
+	Use best_guess() and get_header() in bms.py for SPF support
 0.6.8	Defang message/rfc822 content_type with boundary 
 	Support SPF delegation
 	Reject neutral SPF result for selected domains
@@ -7,6 +14,7 @@ Here is a history of user visible changes to Python milter.
 	Don't report "spoofed" unless rcpt looks like SRS
 	Check for bounce with multiple rcpts
 	Make dspam see Received-SPF headers
+	Fix sysv init for Redhat 9 and other single ps line per process systems
 0.6.7	Fix failure to remove explicit unix socket thanks to Alexander again.
 	Support SRS forgery detection.
 	Detect thread resource starvation in Milter.py.

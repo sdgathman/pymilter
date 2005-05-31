@@ -1,10 +1,18 @@
 import os
+import sys
 from distutils.core import setup, Extension
 
 # FIXME: on some versions of sendmail, smutil is renamed to sm
 libs = ["milter", "smutil"]
 
-setup(name = "milter", version = "0.6.8",
+# patch distutils if it can't cope with the "classifiers" or
+# "download_url" keywords
+if sys.version < '2.2.3':
+  from distutils.dist import DistributionMetadata
+  DistributionMetadata.classifiers = None
+  DistributionMetadata.download_url = None
+
+setup(name = "milter", version = "0.6.9",
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to

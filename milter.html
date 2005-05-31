@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Apr 05, 2004</h4>
+Last updated Apr 21, 2004</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="#download">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a>
@@ -45,6 +45,13 @@ I recommend upgrading.
 I have selected the <a href="http://www.nuclearelephant.com/projects/dspam/">
 dspam bayes filter project</a> and <a href="dspam.html">
 packaged it for python</a>.
+Release 0.6.6 adds support for <a href="http://spf.pobox.com/">SPF</a>,
+a protocol to prevent forging of the envelope from address.  
+SPF support requires <a href="http://pydns.sourceforge.net/">pydns</a>.
+The included spf.py module is an updated version of the original 1.6
+version at <a href="http://www.wayforward.net/spf/">wayforward.net</a>.
+The updated version tracks the draft RFC and test suite.
+<p>
 Release 0.6.0 offers a simple application of dspam I call "header triage",
 which rejects messages with spammy headers.  Since sendmail has to
 read the entire message anyway once we start reading headers, it
@@ -140,14 +147,43 @@ wiretapping, and Win32 virus protection milter.
 
 <h3><a name=download>Downloading</a></h3>
 
-The latest stable release is <a href="#stable">0.6.6</a>. A stable
+The latest stable release is <a href="#stable">0.6.9</a>. A stable
 release is one which has been installed (and working correctly) on
 production systems long enough to convince me that it is stable.  As
 the package gains more features and complexity, stable will mean no
 bug reports from outside users either.
 <p>
-The latest version is 0.6.7.  See the <a href=NEWS>Change Log</a>.
-
+The latest version is 0.6.9-1.  See the <a href=NEWS>Change Log</a>.
+<p>
+<a name="stable"><b>Stable</b></a>
+<a href="http://bmsi.com/python/milter-0.6.9.tar.gz">
+milter-0.6.9.tar.gz</a> Add SPF test suite driver, and validate
+spf.py against test suite.  Add best_guess and get_header to spf.py.
+Libmilter timeout option in config.
+<br>
+<a href="http://bmsi.com/linux/rh72/milter-0.6.9-1.i386.rpm">
+milter-0.6.9-1.i386.rpm</a> Binary RPM for Redhat 7.x, now requires 
+	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
+	python2.3</a>.
+<br>
+<a href="http://bmsi.com/linux/rh9/milter-0.6.9-1.src.rpm">
+milter-0.6.9-1.src.rpm</a> Source RPM for Redhat 9,7.x.  
+<p>
+<a href="http://bmsi.com/python/milter-0.6.8.tar.gz">
+milter-0.6.8.tar.gz</a> Include Received-SPF headers in Dspam analysis.
+Fix sysv init for Redhat 9 and later.  Reject bounces with multiple
+recipients.
+<br>
+<a href="http://bmsi.com/python/milter-0.6.8.patch">milter-0.6.8.patch</a>
+Last minutes fixes from production testing.
+<p>
+<a href="http://bmsi.com/linux/rh72/milter-0.6.8-3.i386.rpm">
+milter-0.6.8-3.i386.rpm</a> Binary RPM for Redhat 7.x, now requires 
+	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
+	python2.3</a>. 
+<br>
+<a href="http://bmsi.com/linux/rh9/milter-0.6.8-3.src.rpm">
+milter-0.6.8-3.src.rpm</a> Source RPM for Redhat 9,7.x.  
 <p>
 <a href="http://bmsi.com/python/milter-0.6.7.tar.gz">
 milter-0.6.7.tar.gz</a> Explicit local socket bug,
@@ -169,7 +205,6 @@ Release 0.6.7-3 patches:
 <li> Reject neutral SPF result for selected domains
 </ul>
 <p>
-<a name="stable"><b>Stable</b></a>
 <a href="http://bmsi.com/python/milter-0.6.6.tar.gz">
 milter-0.6.6.tar.gz</a> Plug another memory leak, 
 <a href="http://spf.pobox.com/">SPF</a> support, hello blacklist.

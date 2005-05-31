@@ -40,7 +40,26 @@ For news, bugfixes, etc. visit the home page for this implementation at
 #                      ditch the annoying Python 2.4 FutureWarning
 #   18-dec-2003, v1.6, Failures on Intel hardware: endianness.  Use ! on
 #                      struct.pack(), struct.unpack().
+#
+# Development taken over by Stuart Gathman <stuart@bmsi.com> since
+# Terrence is not responding to email.
+#
 # $Log$
+# Revision 1.10  2004/04/19 22:12:11  stuart
+# Release 0.6.9
+#
+# Revision 1.9  2004/04/18 03:29:35  stuart
+# Pass most tests except -local and -rcpt-to
+#
+# Revision 1.8  2004/04/17 22:17:55  stuart
+# Header comment method.
+#
+# Revision 1.7  2004/04/17 18:22:48  stuart
+# Support default explanation.
+#
+# Revision 1.6  2004/04/06 20:18:02  stuart
+# Fix bug in include
+#
 # Revision 1.5  2004/04/05 22:29:46  stuart
 # SPF best_guess,
 #
@@ -99,12 +118,13 @@ JOINERS = {'l': '.', 's': '.'}
 RESULTS = {'+': 'pass', '-': 'fail', '?': 'neutral', '~': 'softfail',
            'pass': 'pass', 'fail': 'fail', 'unknown': 'unknown',
 	   'neutral': 'neutral', 'softfail': 'softfail',
-	   'none': 'none' }
+	   'none': 'none', 'deny': 'fail' }
 
 EXPLANATIONS = {'pass': 'sender SPF verified', 'fail': 'access denied',
-                'unknown': 'SPF unknown', 'softfail': 'domain in transition',
+                'unknown': 'SPF unknown',
+		'softfail': 'domain in transition',
 		'neutral': 'access neither permitted nor denied',
-		'none': 'no SPF records'
+		'none': ''
 		}
 
 # if set to a domain name, search _spf.domain namespace if no SPF record
@@ -123,7 +143,7 @@ except NameError:
 # standard default SPF record
 DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 
-def check(i, s, h,default=None):
+def check(i, s, h,local=None):
 	"""Test an incoming MAIL FROM:<s>, from a client with ip address i.
 	h is the HELO/EHLO domain name.
 
@@ -137,21 +157,7 @@ def check(i, s, h,default=None):
 	#>>> check(i='61.51.192.42', s='liukebing@bcc.com', h='bmsi.com')
 
 	"""
-	if i.startswith('127.'):
-		return ('pass', 250, 'local connections always pass')
-
-	try:
-		q = query(i=i, s=s, h=h)
-		spf = q.dns_spf(q.d)
-		if not spf and default:
-		  spf = default
-		return q.check(spf)
-	except DNS.DNSError:
-		return ('error', 450, 'SPF DNS Error')
-
-def best_guess(i, s, h,spf=DEFAULT_SPF):
-	q = query(i=i, s=s, h=h)
-	return q.check(spf)
+	return query(i=i, s=s, h=h,local=local).check()
 
 class query(object):
 	"""A query object keeps the relevant information about a single SPF
@@ -172,7 +178,7 @@ class query(object):
 
 	Also keeps cache: DNS cache.
 	"""
-	def __init__(self, i, s, h):
+	def __init__(self, i, s, h,local=None):
 		self.i, self.s, self.h = i, s, h
 		self.l, self.o = split_email(s, h)
 		self.t = str(int(time.time()))
@@ -180,6 +186,13 @@ class query(object):
 		self.d = self.o
 		self.p = None
 		self.cache = {}
+		self.exps = dict(EXPLANATIONS)
+		self.local = local	# local policy
+
+	def set_default_explanation(self,exp):
+		exps = self.exps
+		for i in 'softfail','fail','unknown':
+		  exps[i] = exp
 
 	def getp(self):
 		if not self.p:
@@ -190,17 +203,32 @@ class query(object):
 				self.p = self.i
 		return self.p
 
-	def check(self, spf):
+	def best_guess(self,spf=DEFAULT_SPF):
+		"""Return a best guess based on a default SPF record"""
+		return self.check(spf)
+
+	def check(self, spf=None):
 		"""
-		Returns (result, mta-status-code, explanation) where
-		result in ['fail', 'unknown', 'pass']
+	Returns (result, mta-status-code, explanation) where
+	result in ['fail', 'softfail', 'neutral' 'unknown', 'pass', 'error']
 		"""
-		return self.check1(spf, self.d, 0)
+		if self.i.startswith('127.'):
+			return ('pass', 250, 'local connections always pass')
+
+		try:
+			if not spf:
+			    spf = self.dns_spf(self.d)
+			if self.local and spf:
+			    spf += ' ' + self.local
+			return self.check1(spf, self.d, 0)
+		except DNS.DNSError:
+			return ('error', 450, 'SPF DNS Error')
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
 		#
-		if recursion > 10:
+		if recursion > 20:
+			self.prob =  'Mechanisms used too many DNS lookups'
 			return ('unknown', 250, 'SPF recursion limit exceeded')
 		try:
 			tmp, self.d = self.d, domain
@@ -216,20 +244,21 @@ class query(object):
 		"""
 
 		if not spf:
-			return ('none', 250, 'no SPF records')
+			return ('none', 250, EXPLANATIONS['none'])
 
 		# split string by whitespace, drop the 'v=spf1'
 		#
 		spf = spf.split()[1:]
 
 		# copy of explanations to be modified by exp=
-		exps = dict(EXPLANATIONS)
+		exps = self.exps
 		redirect = None
 
 		# no mechanisms at all cause unknown result, unless
 		# overridden with 'default=' modifier
 		#
 		default = 'neutral'
+		self.mech = []		# unknown mechanisms
 
 		# Look for modifiers
 		#
@@ -267,13 +296,22 @@ class query(object):
 				arg = self.expand(arg)
 
 			if m == 'include':
-				if arg != self.d:
-					tmp = self.check1(self.dns_spf(arg),
-					                  arg, recursion + 1)
-					if tmp[0] == 'pass':
-						break
-					if tmp[0] != 'fail':
-						return tmp
+			    if arg != self.d:
+				res,code,txt = self.check1(self.dns_spf(arg),
+						  arg, recursion + 1)
+				if res == 'pass':
+					break
+				if res in ('fail','neutral','softfail'):
+					continue
+				if res == 'none':
+				  	self.prob = \
+					  'Could not find a valid SPF record'
+				  	res = 'unknown'
+				return res,code,txt
+			    else:
+			    	self.prob = 'Required option is missing'
+				self.mech.append(mech)
+				return ('unknown', 250, 'missing SPF option')
 
 			elif m == 'all':
 				break
@@ -304,7 +342,9 @@ class query(object):
 			else:
 				# unknown mechanisms cause immediate unknown
 				# abort results
-				return ('unknown', 250, mech)
+				self.mech.append(mech)
+				self.prob = 'Unknown mechanism found'
+				return ('unknown',250,'unknown SPF mechanism')
 
 		else:
 			# no matches
@@ -321,7 +361,10 @@ class query(object):
 
 	def get_explanation(self, spec):
 		"""Expand an explanation."""
-		return self.expand(''.join(self.dns_txt(self.expand(spec))))
+		if spec:
+		  return self.expand(''.join(self.dns_txt(self.expand(spec))))
+		else:
+		  return 'explanation : Required option is missing'
 
 	def expand(self, str):
 		"""Do SPF RFC macro expansion.
@@ -433,7 +476,9 @@ class query(object):
 			return None
 
 	def dns_txt(self, domainname):
-		return [t for a in self.dns(domainname, 'TXT') for t in a]
+		if domainname:
+		  return [t for a in self.dns(domainname, 'TXT') for t in a]
+		return []
 
 	def dns_mx(self, domainname):
 		"""Get a list of IP addresses for all MX exchanges for a
@@ -489,6 +534,46 @@ class query(object):
 		if not result and cname:
 			result = self.dns(cname, qtype)
 		return result
+
+	def get_header(self,res,receiver):
+	  if res in ('pass','fail'):
+	    return '%s (%s: %s) client-ip=%s; envelope-from=%s; helo=%s;' % (
+	  	res,receiver,self.get_header_comment(res),self.i,
+	        self.l + '@' + self.o, self.h)
+	  if res == 'unknown':
+	    return '%s (%s: %s)' % (' '.join([res] + self.mech),
+	      receiver,self.get_header_comment(res))
+	  return '%s (%s: %s)' % (res,receiver,self.get_header_comment(res))
+
+	def get_header_comment(self,res):
+		"""Return comment for Received-SPF header.
+		"""
+		sender = self.o
+		if res == 'pass':
+		  if self.i.startswith('127.'):
+		    return "localhost is always allowed."
+		  else: return \
+		    "domain of %s designates %s as permitted sender" \
+			% (sender,self.i)
+		elif res == 'softfail': return \
+      "transitioning domain of %s does not designate %s as permitted sender" \
+			% (sender,self.i)
+		elif res == 'neutral': return \
+		    "%s is neither permitted nor denied by domain of %s" \
+		    	% (self.i,sender)
+		elif res == 'none': return \
+		    "%s is neither permitted nor denied by domain of %s" \
+		    	% (self.i,sender)
+		    #"%s does not designate permitted sender hosts" % sender
+		elif res == 'unknown': return \
+		    "error in processing during lookup of domain of %s: %s" \
+		    	% (sender, self.prob)
+		elif res == 'error': return \
+		    "error in processing during lookup of %s" % sender
+		elif res == 'fail': return \
+		    "domain of %s does not designate %s as permitted sender" \
+			% (sender,self.i)
+		raise ValueError("invalid SPF result for header comment: "+res)
 
 def split_email(s, h):
 	"""Given a sender email s and a HELO domain h, create a valid tuple
