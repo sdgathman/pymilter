@@ -401,6 +401,7 @@ class query(object):
 	Returns (result, mta-status-code, explanation) where
 	result in ['fail', 'softfail', 'neutral' 'unknown', 'pass', 'error']
 		"""
+		self.mech = []		# unknown mechanisms
 		if self.i.startswith('127.'):
 			return ('pass', 250, 'local connections always pass')
 
@@ -456,7 +457,6 @@ class query(object):
 		# overridden with 'default=' modifier
 		#
 		default = 'neutral'
-		self.mech = []		# unknown mechanisms
 
 		# Look for modifiers
 		#
