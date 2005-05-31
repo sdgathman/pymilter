@@ -5,7 +5,6 @@ Here is a history of user visible changes to Python milter.
 	Three strikes and yer out rule.
 	Block softfail by default when no PTR or HELO
 	Return unknown for null mechanism
-	Return unknown for invalid ip address in mechanism
 	Try best guess on HELO also
 	Expand setreply for common errors
 	make rhsbl.m4 hack available for sendmail.mc

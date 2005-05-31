@@ -126,7 +126,7 @@ class sampleMilter(Milter.Milter):
   def eom(self):
     if not self.fp: return Milter.ACCEPT
     self.fp.seek(0)
-    msg = mime.MimeMessage(self.fp)
+    msg = mime.message_from_file(self.fp)
     msg.headerchange = self._headerChange
     if not mime.defang(msg,self.tempname):
       os.remove(self.tempname)

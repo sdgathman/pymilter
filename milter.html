@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Nov 24, 2004</h4>
+Last updated Jan 05, 2005</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="#download">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -59,6 +59,25 @@ HELO, (and the SPF record was not guessed), unless the domain is listed in the
 recognized, and do not count as a valid PTR.  This does not prevent anyone
 from sending mail from a dynamic IP - they just need to configure a
 valid HELO name or publish an SPF record.
+<p>
+As SPF adoption continues to rise, forged spam is not getting through.  So
+spammers are publishing their SPF records as predicted.  The 0.7.2 RPM
+now provides the <code>rhsbl</code> sendmail hack so that spammer domains
+can be blacklisted.  With the RPM installed, add a line like the following
+to your <code>sendmail.mc</code>.
+<pre>
+HACK(rhsbl,`blackholes.example.com',"550 Rejected: " $&{RHS} " has been spamming our customers.")dnl
+</pre>
+<p>
+Of course, spammers are now starting to register
+throwaway domains.  The next thing we need is a custom DNS server,
+in Python, that
+can recognize patterns.  For instance, one spammer registers ded304.com,
+ded305.com, ded306.com, etc.  We also need the custom DNS server to
+let SPF classic clients check SES (which will be part of pysrs).  
+The <a href="http://twistedmatrix.com/products/twisted">Twisted Python</a>
+framework provides a custom DNS server - but I
+would like a smaller implementation for our use.
 <p>
 The RPM for release 0.7.0 moves the config file and socket locations to
 /etc/mail and /var/run/milter respectively.  We now parse Microsoft CID records
@@ -226,6 +245,19 @@ will have the Python modules.  The bms milter application will still be named
 <a href="http://bmsi.com/python/milter-0.7.2.tar.gz">
 milter-0.7.2.tar.gz</a> Three strikes and your out policy.  Some SPF fixes.
 Recognizes PTR records for dynamic IPs.
+<br>
+<a href="http://bmsi.com/linux/rh72/milter-0.7.2-2.i386.rpm">
+milter-0.7.2-2.i386.rpm</a> Binary RPM for Redhat 7.x, now requires 
+	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
+	python2.3</a>.
+<br>
+<a href="http://bmsi.com/linux/rh9/milter-0.7.2-2rh9.i386.rpm">
+milter-0.7.2-2rh9.i386.rpm</a> Binary RPM for Redhat 9, now requires 
+	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
+	python2.3</a>.
+<br>
+<a href="http://bmsi.com/linux/rh9/milter-0.7.2-2.src.rpm">
+milter-0.7.2-2.src.rpm</a> Source RPM for Redhat 9,7.x. 
 <p>
 <a href="http://bmsi.com/python/milter-0.7.1.tar.gz">
 milter-0.7.1.tar.gz</a> Support setmlreply, handle some more exceptions
@@ -241,7 +273,6 @@ milter-0.7.1-1.i386.rpm</a> Binary RPM for Redhat 7.x, now requires
 <a href="http://bmsi.com/linux/rh9/milter-0.7.1-1.src.rpm">
 milter-0.7.1-1.src.rpm</a> Source RPM for Redhat 9,7.x. 
 <p>
-<a name="stable"><b>Stable</b></a>
 <a href="http://bmsi.com/python/milter-0.7.0.tar.gz">
 milter-0.7.0.tar.gz</a> Move config file and default socket location.
 Parse M$ CID records.
@@ -535,7 +566,7 @@ The "defang" function of the sample milter was inspired by
 a Perl milter with flexible attachment processing options.  The latest
 version of MIMEDefang uses an apache style process pool to avoid reloading
 the Perl interpreter for each message.  This makes it fast enough for
-production and does not use Perl threading.
+production without using Perl threading.
 <p>
 <a href="http://sourceforge.net/projects/mailchecker">mailchecker</a> is
 a Python project to provide flexible attachment processing for mail.  I
@@ -609,18 +640,10 @@ me if you successfully install milter on a system not mentioned below.
 <td>0.5.4</td><tr>
 <td>RedHat 7.1</td><td>gcc-2.96</td><td>?</td><td>8.12.1</td>
 <td>0.3.5</td><tr>
-<td>RedHat 7.2</td><td>gcc-2.96</td><td>2.1.1</td><td>8.11.6</td>
-<td>0.4.1</td><tr>
-<td>RedHat 7.2</td><td>gcc-2.96</td><td>2.2.1</td><td>8.11.6</td>
-<td>0.4.5</td><tr>
-<td>RedHat 7.2</td><td>gcc-2.96</td><td>2.2.2</td><td>8.11.6</td>
-<td>0.5.5</td><tr>
-<td>RedHat 7.2</td><td>gcc-2.96</td><td>2.3.3</td><td>8.12.10</td>
-<td>0.6.6</td><tr>
 <td>RedHat 7.3</td><td>gcc-2.96</td><td>2.2.2</td><td>8.11.6</td>
 <td>0.5.5</td><tr>
-<td>RedHat 7.3</td><td>gcc-2.96</td><td>2.3.3</td><td>8.12.10</td>
-<td>0.6.6</td><tr>
+<td>RedHat 7.3</td><td>gcc-2.96</td><td>2.3.3</td><td>8.13.1</td>
+<td>0.7.2</td><tr>
 <td>RedHat 8.0</td><td>gcc-3.2</td><td>2.2.1</td><td>8.12.6</td>
 <td>0.5.2</td><tr>
 <td>Debian Linux</td><td>gcc-2.95.2</td><td>2.1.1</td><td>8.12.0</td>
@@ -633,14 +656,14 @@ me if you successfully install milter on a system not mentioned below.
 <td>0.3.4</td><tr>
 <td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.1.3</td><td>8.12.3</td>
 <td>0.4.2</td><tr>
-<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.2.2</td><td>8.12.6</td>
-<td>0.5.4</td><tr>
+<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.2.3</td><td>8.13.1</td>
+<td>0.7.1</td><tr>
 <td>Slackware 7.1</td><td>?</td><td>?</td><td>8.12.1</td>
 <td>0.3.8</td><tr>
 <td>Slackware 9.0</td><td>gcc-3.2.2</td><td>2.2.3</td><td>8.12.9</td>
 <td>0.5.4</td><tr>
-<td>OpenBSD</td><td>?</td><td>2.1.1</td><td>8.11.6</td>
-<td>0.3.9</td><tr>
+<td>OpenBSD</td><td>?</td><td>2.3.3?</td><td>8.13.1?</td>
+<td>0.7.2</td><tr>
 <td>SuSE 7.3</td><td>gcc-2.95.3</td><td>2.1.1</td><td>8.12.2</td>
 <td>0.3.9</td><tr>
 <td>FreeBSD</td><td>gcc-2.95.3</td><td>2.2.1</td><td>8.12.3</td>

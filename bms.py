@@ -1,6 +1,33 @@
 #!/usr/bin/env python
 # A simple milter.
 # $Log$
+# Revision 1.134  2005/05/25 15:36:43  stuart
+# Use dynip module.
+# Support smart aliasing of wiretap destination.
+# Always send DSN for SOFTFAIL.
+# Close forged bounce loophole when there are no headers.
+#
+# Revision 1.133  2005/03/16 21:58:04  stuart
+# Auto DSN feature.
+#
+# Revision 1.132  2005/02/12 02:11:10  stuart
+# Pass unit tests with python2.4.
+#
+# Revision 1.131  2005/02/11 18:34:13  stuart
+# Handle garbage after quote in boundary.
+#
+# Revision 1.130  2005/02/10 01:10:58  stuart
+# Fixed MimeMessage.ismodified()
+#
+# Revision 1.129  2005/02/10 00:56:48  stuart
+# Runs with python2.4.  Defang not working correctly - more work needed.
+#
+# Revision 1.128  2005/02/09 17:53:34  stuart
+# Optionally run dspam on internal mail.
+#
+# Revision 1.127  2004/12/03 14:26:21  stuart
+# Mark DYN PTR, REJECT softfail, log Received-SPF from trusted MTA.
+#
 # Revision 1.126  2004/11/24 14:39:38  stuart
 # Also accept softfail if valid PTR or HELO.
 #
@@ -151,102 +178,6 @@
 # Revision 1.79  2003/12/04 23:46:06  stuart
 # Release 0.6.4
 #
-# Revision 1.78  2003/12/04 23:20:24  stuart
-# Make headerChange handle deleting absent header
-#
-# Revision 1.77  2003/12/04 22:01:40  stuart
-# Limit size of messages which will be dspammed.  This works around a bug
-# in dspam-2.6.5.2 where it scans large binary attachments.  I've never
-# seen really big spam anyway.
-#
-# Revision 1.76  2003/12/04 21:44:33  stuart
-# Pass header changes from Dspam to sendmail
-#
-# Revision 1.75  2003/11/25 17:43:07  stuart
-# Update FAQ.
-#
-# Revision 1.74  2003/11/25 17:36:58  stuart
-# dspam_reject
-#
-# Revision 1.73  2003/11/24 15:46:00  stuart
-# Missing global for dspam_whitelist
-#
-# Revision 1.72  2003/11/22 02:52:07  stuart
-# Handle multiple x-dspam-recipients properly on false positive
-#
-# Revision 1.71  2003/11/22 02:49:57  stuart
-# dspam whitelist
-#
-# Revision 1.70  2003/11/09 03:53:34  stuart
-# Don't block delivery of defanged false positives.
-#
-# Revision 1.69  2003/11/08 22:47:04  stuart
-# Exempt entire domains with '@domain.com'
-#
-# Revision 1.68  2003/11/02 03:06:16  stuart
-# Adjust error codes again.
-#
-# Revision 1.67  2003/11/02 03:01:46  stuart
-# Adjust SMTP error codes after careful reading of standard.
-#
-# Revision 1.66  2003/11/02 01:56:43  stuart
-# Use busy SMTP code.
-#
-# Revision 1.65  2003/11/02 01:44:11  stuart
-# Suppress traceback for Dspam lock timeouts
-#
-# Revision 1.64  2003/10/28 01:00:19  stuart
-# Dspam internal mail for dspam users
-#
-# Revision 1.63  2003/10/25 02:10:34  stuart
-# Match hostname for internal connection test, even if no ipaddr.
-#
-# Revision 1.62  2003/10/24 04:34:52  stuart
-# Fix for not saving defang of false positive triggered rejecting it
-# as a virus from self.
-#
-# Revision 1.61  2003/10/22 22:03:14  stuart
-# Apply dspam_exempt to screening
-#
-# Revision 1.60  2003/10/22 21:58:42  stuart
-# Don't save false positives as defang file.
-#
-# Revision 1.59  2003/10/22 05:02:27  stuart
-# Add support for dspam screeners
-#
-# Revision 1.58  2003/10/16 22:19:24  stuart
-# Redirect Dspam logging to bms milter
-#
-# Revision 1.57  2003/10/10 00:15:04  stuart
-# DISCARD message if quarrantined for any recipient.
-#
-# Revision 1.56  2003/10/06 19:30:27  stuart
-# REJECT messages with boundard errors
-#
-# Revision 1.55  2003/10/03 18:20:31  stuart
-# Opt-out feature to exempt certain recipients from header filtering.
-#
-# Revision 1.54  2003/09/22 13:36:04  stuart
-# Release 0.6.1
-#
-# Revision 1.53  2003/09/06 07:08:36  stuart
-# dspam support improvements.
-#
-# Revision 1.51  2003/09/02 00:27:27  stuart
-# Should have full milter based dspam support working
-#
-# Revision 1.50  2003/08/26 06:08:17  stuart
-# Use new python boolean since we now require 2.2.2
-#
-# Revision 1.49  2003/08/26 05:45:51  stuart
-# Fix conditional import of dspam.  Update web page.
-#
-# Revision 1.48  2003/08/26 05:10:43  stuart
-# Readability tweaks
-#
-# Revision 1.47  2003/08/26 05:01:38  stuart
-# Release 0.6.0
-#
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001 Business Management Systems, Inc.
 # This code is under GPL.  See COPYING for details.
@@ -262,6 +193,8 @@ import tempfile
 import ConfigParser
 import time
 import re
+import Milter.dsn as dsn
+from Milter.dynip import is_dynip as dynip
 
 from fnmatch import fnmatchcase
 from email.Header import decode_header
@@ -320,6 +253,11 @@ spf_accept_softfail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 timeout = 600
+cbv_cache = {}
+try:
+  for rcpt in open('send_dsn.log'):
+    cbv_cache[rcpt.strip()] = None
+except IOError: pass
 
 class MilterConfigParser(ConfigParser.ConfigParser):
 
@@ -380,7 +318,8 @@ def read_config(list):
     'hashlength': '8',
     'reject_spoofed': 'no',
     'reject_noptr': 'no',
-    'best_guess': 'no'
+    'best_guess': 'no',
+    'dspam_internal': 'yes'
   })
   cp.read(list)
   tempfile.tempdir = cp.get('milter','tempdir')
@@ -423,7 +362,7 @@ def read_config(list):
     key = (sm[0],sm[1])
     smart_alias[key] = sm[2:]
 
-  global dspam_dict, dspam_users, dspam_userdir, dspam_exempt
+  global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
   global spf_accept_softfail
@@ -434,6 +373,7 @@ def read_config(list):
   dspam_userdir = cp.getdefault('dspam','dspam_userdir')
   dspam_screener = cp.getlist('dspam','dspam_screener')
   dspam_reject = cp.getlist('dspam','dspam_reject')
+  dspam_internal = cp.getboolean('dspam','dspam_internal')
   if cp.has_option('dspam','dspam_sizelimit'):
     dspam_sizelimit = cp.getint('dspam','dspam_sizelimit')
 
@@ -488,43 +428,6 @@ def parse_header(val):
   except LookupError: pass
   return val
 
-ip3 = re.compile('([0-9]{1,3})[.-]([0-9]{1,3})[.-]([0-9]{1,3})')
-rehmac = re.compile('h[0-9a-f]{12}[.]|pcp[0-9]{6,10}pcs[.]|no-reverse')
-
-def dynip(host,addr):
-  """Return True if hostname is for a dynamic ip.
-  Examples:
-
-  >>> is_dynip('post3.fabulousdealz.com','69.60.99.112')
-  False
-  >>> is_dynip('adsl-69-208-201-177.dsl.emhril.ameritech.net','69.208.201.177')
-  True
-  """
-  if host.startswith('[') and host.endswith(']'):
-    return True
-  if addr:
-    if host.find(addr) >= 0: return True
-    a = addr.split('.')
-    m = ip3.search(host)
-    if m:
-      g = list(m.groups())
-      if g == a[1:] or g == a[:3]: return True
-      g.reverse()
-      if g == a[1:] or g == a[:3]: return True
-    if rehmac.search(host): return True
-    if host.find("-%s." % '-'.join(a[2:])) >= 0: return True
-    if host.find("w%s." % '-'.join(a[:2])) >= 0: return True
-    if host.find(''.join(a[:3])) >= 0: return True
-    if host.find(''.join(a[1:])) >= 0: return True
-    x = "%02x%02x%02x%02x" % tuple(map(int,a))
-    if host.lower().find(x) >= 0: return True
-    z = [n.zfill(3) for n in a]
-    if host.find('-'.join(z)) >= 0: return True
-    if host.find("-%s." % '-'.join(z[2:])) >= 0: return True
-    if host.find("%s." % ''.join(z[2:])) >= 0: return True
-    if host.find(''.join(z)) >= 0: return True
-  return False
-
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
      check SPF, and other anti-forgery features, and implement wiretapping
@@ -577,9 +480,8 @@ class bmsMilter(Milter.Milter):
 	if fnmatchcase(ipaddr,pat):
 	  self.trusted_relay = True
 	  break
-      self.connectip = ipaddr
-    else:
-      self.connectip = None
+    else: ipaddr = ''
+    self.connectip = ipaddr
     self.missing_ptr = dynip(hostname,self.connectip)
     for pat in internal_connect:
       if fnmatchcase(hostname,pat):
@@ -591,9 +493,16 @@ class bmsMilter(Milter.Milter):
       connecttype = 'EXTERNAL'
     if self.trusted_relay:
       connecttype += ' TRUSTED'
+    if self.missing_ptr:
+      connecttype += ' DYN'
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
     self.hello_name = None
     self.connecthost = hostname
+    if hostname == 'localhost' and not ipaddr.startswith('127.') \
+    or hostname == '.':
+      self.log("REJECT: PTR is",hostname)
+      self.setreply('550','5.7.1', '"%s" is not a reasonable PTR name'%hostname)
+      return Milter.REJECT
     return Milter.CONTINUE
 
   def hello(self,hostname):
@@ -608,6 +517,25 @@ class bmsMilter(Milter.Milter):
       self.setreply('550','5.7.1','I hate talking to myself.')
       return Milter.REJECT
     return Milter.CONTINUE
+
+  def smart_alias(self,to):
+    if smart_alias:
+      t = parse_addr(to.lower())
+      if len(t) == 2:
+	ct = '@'.join(t)
+      else:
+	ct = t[0]
+      cf = self.canon_from
+      cf0 = cf.split('@',1)
+      if len(cf0) == 2:
+	cf0 = '@' + cf0[1]
+      else:
+	cf0 = cf
+      for key in ((cf,ct),(cf0,ct)):
+	if smart_alias.has_key(key):
+	  self.del_recipient(to)
+	  for t in smart_alias[key]:
+	    self.add_recipient('<%s>'%t)
 
   # multiple messages can be received on a single connection
   # envfrom (MAIL FROM in the SMTP protocol) seems to mark the start
@@ -625,10 +553,12 @@ class bmsMilter(Milter.Milter):
     self.reject_spam = True
     self.data_allowed = True
     self.trust_received = self.trusted_relay
+    self.trust_spf = self.trusted_relay
     self.redirect_list = []
     self.discard_list = []
     self.new_headers = []
     self.recipients = []
+    self.cbv_needed = None
     t = parse_addr(f.lower())
     self.canon_from = '@'.join(t)
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
@@ -643,6 +573,7 @@ class bmsMilter(Milter.Milter):
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
         self.add_recipient(wiretap_dest)
+	self.smart_alias(wiretap_dest)
       if user in discard_users.get(domain,()):
 	self.discard = True
       exempt_users = dspam_whitelist.get(domain,())
@@ -662,14 +593,14 @@ class bmsMilter(Milter.Milter):
   def check_spf(self):
     t = parse_addr(self.mailfrom)
     if len(t) == 2: t[1] = t[1].lower()
-    q = spf.query(self.connectip,'@'.join(t),self.hello_name)
+    receiver = self.receiver
+    q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver)
     q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
     res,code,txt = q.check()
-    receiver = self.receiver
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
 	# check hello name via spf
-	h = spf.query(self.connectip,'',self.hello_name)
+	h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
 	hres,hcode,htxt = h.check()
 	if hres in ('deny','fail','neutral','softfail'):
 	  self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
@@ -695,32 +626,39 @@ class bmsMilter(Milter.Milter):
 	else:
 	  res,code,txt = q.best_guess()
 	receiver += ': guessing'
-      if self.missing_ptr and res in ('neutral', 'none')	\
-      	and spf_reject_noptr and hres != 'pass':
-        self.log('REJECT: no PTR, HELO or SPF')
-	self.setreply('550','5.7.1',
-  'You must have a reverse lookup or publish SPF: http://spf.pobox.com',
-  'Contact your mail administrator IMMEDIATELY!  Your mail server is',
-  'severely misconfigured.  It has no PTR record (dynamic PTR records',
-  "that contain your IP don't count), an invalid HELO, and no SPF record."
-	)
-	return Milter.REJECT
+      if self.missing_ptr and res in ('neutral', 'none') and hres != 'pass':
+	if spf_reject_noptr:
+	  self.log('REJECT: no PTR, HELO or SPF')
+	  self.setreply('550','5.7.1',
+    'You must have a reverse lookup or publish SPF: http://spf.pobox.com',
+    'Contact your mail administrator IMMEDIATELY!  Your mail server is',
+    'severely misconfigured.  It has no PTR record (dynamic PTR records',
+    "that contain your IP don't count), an invalid HELO, and no SPF record."
+	  )
+	  return Milter.REJECT
+        if self.mailfrom != '<>':
+	  self.cbv_needed = q
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'5.7.1',txt)
+      # A proper SPF fail error message would read:
+      # forger.biz [1.2.3.4] is not allowed to send mail with the domain
+      # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
       return Milter.REJECT
     if res == 'softfail' and not q.o in spf_accept_softfail:
-      if self.missing_ptr and spf_reject_noptr and hres != 'pass':
-	self.log('TEMPFAIL: SPF %s 450 %s' % (res,txt))
-	self.setreply('450','4.3.0',
-	  'SPF softfail: will keep trying until your SPF record is fixed.',
-	  'If you get this Delivery Status Notice, your email was probably',
-	  'legitimate.  Your administrator has published SPF records in a',
-	  'testing mode.  The SPF record reported your email as a forgery,',
-	  'which is a mistake if you are reading this.  Please notify your',
-	  'administrator of the problem immediately.'
-	)
-	return Milter.TEMPFAIL
+      if self.missing_ptr and hres != 'pass':
+        if spf_reject_noptr or q.o in spf_reject_neutral:
+	  self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+	  self.setreply('550','5.7.1',
+	    'SPF softfail: If you get this Delivery Status Notice, your email',
+	    'was probably legitimate.  Your administrator has published SPF',
+	    'records in a testing mode.  The SPF record reported your email as',
+	    'a forgery, which is a mistake if you are reading this.  Please',
+	    'notify your administrator of the problem immediately.'
+	  )
+	  return Milter.REJECT
+      if self.mailfrom != '<>':
+	self.cbv_needed = q
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
       self.setreply('550','5.7.1',
@@ -789,19 +727,7 @@ class bmsMilter(Milter.Milter):
         self.hidepath = True
       if not domain in dspam_reject:
         self.reject_spam = False
-    if smart_alias:
-      cf = self.canon_from
-      cf0 = cf.split('@',1)
-      if len(cf0) == 2:
-	cf0 = '@' + cf0[1]
-      else:
-	cf0 = cf
-      ct = '@'.join(t)
-      for key in ((cf,ct),(cf0,ct)):
-	if smart_alias.has_key(key):
-	  self.del_recipient(to)
-	  for t in smart_alias[key]:
-	    self.add_recipient('<%s>'%t)
+    self.smart_alias(to)
     #rcpt = self.getsymval("{rcpt_addr}")
     #self.log("rcpt-addr",rcpt);
     return Milter.CONTINUE
@@ -811,7 +737,7 @@ class bmsMilter(Milter.Milter):
     lname = name.lower()
     # val is decoded header value
     if lname == 'subject':
-
+      
       # check for common spam keywords
       for wrd in spam_words:
         if val.find(wrd) >= 0:
@@ -861,17 +787,28 @@ class bmsMilter(Milter.Milter):
     elif self.trust_received and lname == 'received':
       self.trust_received = False
       self.log('%s: %s' % (name,val.splitlines()[0]))
+    elif self.trust_spf and lname == 'received-spf':
+      self.trust_spf = False
+      self.log('%s: %s' % (name,val.splitlines()[0]))
     return Milter.CONTINUE
 
+  def forged_bounce(self):
+    if len(self.recipients) > 1:
+      self.log('REJECT: Multiple bounce recipients')
+      self.setreply('550','5.7.1','Multiple bounce recipients')
+    else:
+      self.log('REJECT: bounce with no SRS encoding')
+      self.setreply('550','5.7.1',
+      "I did not send you that message. Please consider implementing SPF",
+      "(http://spf.pobox.com) to avoid bouncing mail to spoofed senders.",
+      "Thank you."
+      )
+    return Milter.REJECT
+    
   def header(self,name,hval):
     if not self.data_allowed:
-      if len(self.recipients) > 1:
-	self.log('REJECT: Multiple bounce recipients')
-	self.setreply('550','5.7.1','Multiple bounce recipients')
-      else:
-	self.log('REJECT: bounce with no SRS encoding')
-	self.setreply('550','5.7.1',"I did not send you that message.")
-      return Milter.REJECT
+      return self.forged_bounce()
+	  
     lname = name.lower()
     # decode near ascii text to unobfuscate
     val = parse_header(hval)
@@ -897,6 +834,8 @@ class bmsMilter(Milter.Milter):
 
   def eoh(self):
     if not self.fp: return Milter.TEMPFAIL	# not seen by envfrom
+    if not self.data_allowed:
+      return self.forged_bounce()
     for name,val in self.new_headers:
       self.fp.write("%s: %s\n" % (name,val))	# add new headers to buffer
     self.fp.write("\n")				# terminate headers
@@ -945,7 +884,8 @@ class bmsMilter(Milter.Milter):
     # don't let a tricky virus slip one past us
     if scan_rfc822:
       msg = msg.get_submsg()
-      if msg: return mime.check_attachments(msg,self._chk_attach)
+      if isinstance(msg,email.Message.Message):
+	return mime.check_attachments(msg,self._chk_attach)
     return Milter.CONTINUE
 
   def alter_recipients(self,discard_list,redirect_list):
@@ -1047,11 +987,12 @@ class bmsMilter(Milter.Milter):
 
       # analyze all mail for dangerous attachments and scripts
       self.fp.seek(0)
-      msg = mime.MimeMessage(self.fp)
+      msg = mime.message_from_file(self.fp)
       # pass header changes in top level message to sendmail
       msg.headerchange = self._headerChange
 
       # filter leaf attachments through _chk_attach
+      assert not msg.ismodified()
       rc = mime.check_attachments(msg,self._chk_attach)
     except:	# milter crashed trying to analyze mail
       exc_type,exc_value = sys.exc_info()[0:2]
@@ -1105,6 +1046,33 @@ class bmsMilter(Milter.Milter):
       self.alter_recipients(self.discard_list,self.redirect_list)
     for name,val in self.new_headers:
       self.addheader(name,val)
+
+    if self.cbv_needed:
+      sender = self.cbv_needed.s
+      cached = cbv_cache.has_key(sender)
+      if cached:
+	self.log('CBV:',sender,'(cached)')
+        res = cbv_cache[sender]
+      else:
+	self.log('CBV:',sender)
+	m = dsn.create_msg(self.cbv_needed,self.recipients,msg)
+        m = m.as_string()
+        print >>open('last_dsn','w'),m
+	res = dsn.send_dsn(sender,self.receiver,m)
+      if res:
+        desc = "CBV: %d %s" % res[:2]
+        if 400 <= res[0] < 500:
+	  self.log('TEMPFAIL:',desc)
+          self.setreply('450','4.2.0',*desc.splitlines())
+	  return Milter.TEMPFAIL
+	cbv_cache[sender] = res
+	self.log('REJECT:',desc)
+        self.setreply('550','5.7.1',*desc.splitlines())
+	return Milter.REJECT
+      cbv_cache[sender] = res
+      if not cached:
+	print >>open('send_dsn.log','a'),sender # log who we sent DSNs to
+      self.cbv_needed = None
 
     if not defanged and not spam_checked:
       os.remove(self.tempname)

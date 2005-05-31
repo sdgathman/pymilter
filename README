@@ -92,7 +92,6 @@ milter.  This milter's socket is a unix-domain socket in the filesystem.
 See libmilter/README for the definitive list of options.
 NB: The name is specified in two places: here, in sendmail's cf file, and
 in the milter itself.  Make sure the two match.
-NB: OpenBSD must use an inet socket.  See the web page for details.
 NB: The above lines can be added in your .mc file with this line:
 
 INPUT_MAIL_FILTER(`pythonfilter', `S=local:/home/username/pythonsock')
@@ -123,16 +122,6 @@ file with a sendmail-devel package that includes the needed static libraries
 and headers at
 
 http://www.bmsi.com/linux/sendmail-rh72.spec
-
-OpenBSD Notes
--------------
-
-Sendmail is broken on OpenBSD for unix domain sockets.  You must use an
-inet socket for milter.  The sendmail.cf 'X' config line would look like:
-
-Xpythonfilter,        S=inet:1234@localhost
-
-and the sample milter needs to be modified accordingly.
 
 IPv6 Notes
 ----------

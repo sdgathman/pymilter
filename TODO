@@ -1,3 +1,15 @@
+Defer TEMPERROR in SPF evaluation - give precedence to security
+(only defer for PASS mechanisms).
+
+Allow multiple recipients for MAIL FROM: <> by default.
+
+Option to add Received-SPF header, but never reject on SPF.
+
+Option to configure banned extension list for mime.py.  Default to empty.
+
+Create null config that does nothing - except maybe add Received-SPF
+headers.  Many admins would like to turn features on one at a time.
+
 Checking in mime.py;
 /bms/cvs/milter/mime.py,v  <--  mime.py
 new revision: 1.56; previous revision: 1.55

@@ -17,7 +17,7 @@ class TestMilter(sample.sampleMilter):
   def replacebody(self,chunk):
     if self._body:
       self._body.write(chunk)
-      self.bodyreplaced = 1
+      self.bodyreplaced = True
     else:
       raise IOError,"replacebody not called from eom()"
 
@@ -29,16 +29,16 @@ class TestMilter(sample.sampleMilter):
       del self._msg[field]
     else:
       self._msg[field] = value
-    self.headerschanged = 1
+    self.headerschanged = True
 
   def addheader(self,field,value):
     self.log('addheader: %s=%s' % (field,value))
     self._msg[field] = value
-    self.headerschanged = 1
+    self.headerschanged = True
 
   def feedMsg(self,fname):
     self._body = None
-    self.bodyreplaced = 0
+    self.bodyreplaced = False
     self.headerschanged = 0
     fp = open('test/'+fname,'r')
     msg = rfc822.Message(fp)
@@ -85,7 +85,7 @@ class TestMilter(sample.sampleMilter):
 
   def connect(self,host='localhost'):
     self._body = None
-    self.bodyreplaced = 0
+    self.bodyreplaced = False
     rc =  sample.sampleMilter.connect(self,host,1,0) 
     if rc != Milter.CONTINUE and rc != Milter.ACCEPT:
       self.close()
@@ -108,7 +108,7 @@ class BMSMilterTestCase(unittest.TestCase):
     open('test/'+fname+".tstout","w").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
-    msg = mime.MimeMessage(fp)
+    msg = mime.message_from_file(fp)
     s = msg.get_payload(1).get_payload()
     milter.log(s)
     milter.close()

@@ -1,4 +1,29 @@
 # $Log$
+# Revision 1.62  2005/02/14 22:31:17  stuart
+# _parseparam replacement not needed for python2.4
+#
+# Revision 1.61  2005/02/12 02:11:11  stuart
+# Pass unit tests with python2.4.
+#
+# Revision 1.60  2005/02/11 18:34:14  stuart
+# Handle garbage after quote in boundary.
+#
+# Revision 1.59  2005/02/10 01:10:59  stuart
+# Fixed MimeMessage.ismodified()
+#
+# Revision 1.58  2005/02/10 00:56:49  stuart
+# Runs with python2.4.  Defang not working correctly - more work needed.
+#
+# Revision 1.57  2004/11/20 16:37:52  stuart
+# fix regex for splitting header and body
+#
+# Revision 1.56  2004/11/09 20:33:51  stuart
+# Recognize more dynamic PTR variations.
+#
+# Revision 1.55  2004/10/06 21:39:20  stuart
+# Handle message attachments with boundary errors by not parsing them
+# until needed.
+#
 # Revision 1.54  2004/08/18 01:59:46  stuart
 # Handle mislabeled multipart messages
 #
@@ -43,23 +68,17 @@
 import StringIO
 import socket
 import Milter
+
 import email
 import email.Message
 from email.Message import Message
 from email.Generator import Generator
 from email.Utils import quote
 from email import Utils
+from email.Parser import Parser
+from email import Errors
 
 from types import ListType,StringType
-
-# Enhance email.Parser
-# - Fix _parsebody to decode message attachments before parsing
-
-from email.Parser import Parser
-try: from email.Parser import NLCRE
-except: from email.Parser import nlcre as NLCRE
-
-from email import Errors
 
 class MimeGenerator(Generator):
     def _dispatch(self, msg):
@@ -73,146 +92,6 @@ class MimeGenerator(Generator):
 	else:
 	  Generator._dispatch(self,msg)
 
-class MimeParser(Parser):
-
-    # This is a copy of _parsebody from email.Parser, with a fix
-    # for message attachments.  I couldn't find a smaller way to patch it
-    # in a subclass.
-
-    def _parsebody(self, container, fp, firstbodyline=None):
-        # Parse the body, but first split the payload on the content-type
-        # boundary if present.
-        boundary = container.get_boundary()
-        isdigest = (container.get_content_type() == 'multipart/digest')
-        # If there's a boundary, split the payload text into its constituent
-        # parts and parse each separately.  Otherwise, just parse the rest of
-        # the body as a single message.  Note: any exceptions raised in the
-        # recursive parse need to have their line numbers coerced.
-        if boundary:
-            preamble = epilogue = None
-            # Split into subparts.  The first boundary we're looking for won't
-            # always have a leading newline since we're at the start of the
-            # body text, and there's not always a preamble before the first
-            # boundary.
-            separator = '--' + boundary
-            payload = fp.read()
-            if firstbodyline is not None:
-                payload = firstbodyline + '\n' + payload
-            # We use an RE here because boundaries can have trailing
-            # whitespace.
-            mo = re.search(
-                r'(?P<sep>' + re.escape(separator) + r')(?P<ws>[ \t]*)',
-                payload)
-            if not mo:
-                if self._strict:
-                    raise Errors.BoundaryError(
-                        "Couldn't find starting boundary: %s" % boundary)
-                container.set_payload(payload)
-                return
-            start = mo.start()
-            if start > 0:
-                # there's some pre-MIME boundary preamble
-                preamble = payload[0:start]
-            # Find out what kind of line endings we're using
-            start += len(mo.group('sep')) + len(mo.group('ws'))
-            mo = NLCRE.search(payload, start)
-            if mo:
-                start += len(mo.group(0))
-            # We create a compiled regexp first because we need to be able to
-            # specify the start position, and the module function doesn't
-            # support this signature. :(
-            cre = re.compile('(?P<sep>\r\n|\r|\n)' +
-                             re.escape(separator) + '--')
-            mo = cre.search(payload, start)
-            if mo:
-                terminator = mo.start()
-                linesep = mo.group('sep')
-                if mo.end() < len(payload):
-                    # There's some post-MIME boundary epilogue
-                    epilogue = payload[mo.end():]
-            elif self._strict:
-                raise Errors.BoundaryError(
-                        "Couldn't find terminating boundary: %s" % boundary)
-            else:
-                # Handle the case of no trailing boundary.  Check that it ends
-                # in a blank line.  Some cases (spamspamspam) don't even have
-                # that!
-                mo = re.search('(?P<sep>\r\n|\r|\n){2}$', payload)
-                if not mo:
-                    mo = re.search('(?P<sep>\r\n|\r|\n)$', payload)
-                    if not mo:
-                        raise Errors.BoundaryError(
-                          'No terminating boundary and no trailing empty line')
-                linesep = mo.group('sep')
-                terminator = len(payload)
-            # We split the textual payload on the boundary separator, which
-            # includes the trailing newline. If the container is a
-            # multipart/digest then the subparts are by default message/rfc822
-            # instead of text/plain.  In that case, they'll have a optional
-            # block of MIME headers, then an empty line followed by the
-            # message headers.
-            parts = re.split(
-                linesep + re.escape(separator) + r'[ \t]*' + linesep,
-                payload[start:terminator])
-            for part in parts:
-                if isdigest:
-                    if part.startswith(linesep):
-                        # There's no header block so create an empty message
-                        # object as the container, and lop off the newline so
-                        # we can parse the sub-subobject
-                        msgobj = self._class()
-                        part = part[len(linesep):]
-                    else:
-                        parthdrs, part = part.split(linesep+linesep, 1)
-                        # msgobj in this case is the "message/rfc822" container
-                        msgobj = self.parsestr(parthdrs, headersonly=1)
-                    # while submsgobj is the message itself
-                    msgobj.set_default_type('message/rfc822')
-                    maintype = msgobj.get_content_maintype()
-                    if maintype in ('message', 'multipart'):
-                        submsgobj = self.parsestr(part)
-                        msgobj.attach(submsgobj)
-                    else:
-                        msgobj.set_payload(part)
-                else:
-                    msgobj = self.parsestr(part)
-                container.preamble = preamble
-                container.epilogue = epilogue
-                container.attach(msgobj)
-        elif container.get_main_type() == 'multipart':
-            # Very bad.  A message is a multipart with no boundary!
-            raise Errors.BoundaryError(
-                'multipart message with no defined boundary')
-        elif container.get_type() == 'message/delivery-status':
-            # This special kind of type contains blocks of headers separated
-            # by a blank line.  We'll represent each header block as a
-            # separate Message object
-            blocks = []
-            while True:
-                blockmsg = self._class()
-                self._parseheaders(blockmsg, fp)
-                if not len(blockmsg):
-                    # No more header blocks left
-                    break
-                blocks.append(blockmsg)
-            container.set_payload(blocks)
-        elif container.get_main_type() == 'message':
-            # Create a container for the payload, but watch out for there not
-            # being any headers left
-            container.set_payload(fp.read())
-	    fp = StringIO.StringIO(container.get_payload(decode=True))
-            try:
-                msg = self.parse(fp)
-            except Errors.HeaderParseError:
-                msg = self._class()
-                self._parsebody(msg, fp)
-            container.set_payload([msg])
-        else:
-            text = fp.read()
-            if firstbodyline is not None:
-                text = firstbodyline + '\n' + text
-            container.set_payload(text)
-
 def unquote(s):
     """Remove quotes from a string."""
     if len(s) > 1:
@@ -221,10 +100,11 @@ def unquote(s):
             s = s[1:-1]
 	  else: # remove garbage after trailing quote
 	    try: s = s[1:s[1:].index('"')+1]
-	    except: return s
+	    except:
+	      return s
 	  return s.replace('\\\\', '\\').replace('\\"', '"')
         if s.startswith('<') and s.endswith('>'):
-            return s[1:-1]
+	  return s[1:-1]
     return s
 
 from types import TupleType
@@ -235,27 +115,11 @@ def _unquotevalue(value):
   else:
       return unquote(value)
 
-email.Message._unquotevalue = _unquotevalue
+#email.Message._unquotevalue = _unquotevalue
 
-def _parseparam(s):
-    plist = []
-    while s[:1] == ';':
-	s = s[1:]
-	end = s.find(';')
-	while end > 0 and (s.count('"',0,end) & 1):
-	  end = s.find(';',end + 1)
-	if end < 0: end = len(s)
-	f = s[:end]
-	if '=' in f:
-	    i = f.index('=')
-	    f = f[:i].strip().lower() + \
-		    '=' + f[i+1:].strip()
-	plist.append(f.strip())
-	s = s[end:]
-    return plist
+from email.Message import _parseparam
 
 # Enhance email.Message 
-# - Fix getparam to parse attributes IE style
 # - Provide a headerchange event for integration with Milter
 #   Headerchange attribute can be assigned a function to be called when
 #   changing headers.  The signature is:
@@ -266,64 +130,19 @@ class MimeMessage(Message):
   """Version of email.Message.Message compatible with old mime module
   """
   def __init__(self,fp=None,seekable=1):
+    Message.__init__(self)
     self.headerchange = None
     self.submsg = None
-    Message.__init__(self)
-    self.fp = fp
-    if fp:
-      parser = MimeParser(MimeMessage)
-      self.startofheaders = fp.tell()
-      parser._parseheaders(self,fp)
-      self.startofbody = fp.tell()
-      parser._parsebody(self,fp)
-    for part in self.walk():
-      part.modified = False
+    self.modified = False
 
-  def rewindbody(self):
-    return self.fp.seek(self.startofbody)
+  def get_param(self, param, failobj=None, header='content-type', unquote=True):
+    val = Message.get_param(self,param,failobj,header,unquote)
+    if val != failobj and param == 'boundary' and unquote:
+      # unquote boundaries an extra time, test case testDefang5
+      return _unquotevalue(val)
+    return val
 
-  # override param parsing to handle quotes
-  def _get_params_preserve(self,failobj=None,header='content-type'):
-    "Return all parameter names and values. Use parser that handles quotes."
-    missing = []
-    value = self.get(header, missing)
-    if value is missing:
-	return failobj
-    params = []
-    for p in _parseparam(';' + value):
-	  try:
-	      name, val = p.split('=', 1)
-	      name = name.strip()
-	      val = val.strip()
-	  except ValueError:
-	      # Must have been a bare attribute
-	      name = p.strip()
-	      val = ''
-	  params.append((name, val))
-    params = Utils.decode_params(params)
-    return params
-
-  def get_filename(self, failobj=None):
-      """Return the filename associated with the payload if present.
-
-      The filename is extracted from the Content-Disposition header's
-      `filename' parameter, and it is unquoted.
-      """
-      missing = []
-      filename = self.get_param('filename', missing, 'content-disposition')
-      if filename is missing:
-	  return failobj
-      if isinstance(filename, TupleType):
-	  # It's an RFC 2231 encoded parameter
-	  newvalue = _unquotevalue(filename)
-	  if newvalue[0]:
-	    return unicode(newvalue[2], newvalue[0])
-	  return unicode(newvalue[2])
-      else:
-	  newvalue = _unquotevalue(filename.strip())
-	  return newvalue
-
-  getfilename = get_filename
+  getfilename = Message.get_filename
   ismultipart = Message.is_multipart
   getheaders = Message.get_all
   gettype = Message.get_content_type
@@ -338,7 +157,7 @@ class MimeMessage(Message):
     """Return a list of (attr,name) pairs of attributes that IE might
        interpret as a name - and hence decide to execute this message."""
     names = []
-    for attr,val in self.get_params([]):
+    for attr,val in self._get_params_preserve([],'content-type'):
       if isinstance(val, TupleType):
 	  # It's an RFC 2231 encoded parameter
 	  newvalue = _unquotevalue(val)
@@ -354,7 +173,7 @@ class MimeMessage(Message):
   def ismodified(self):
     "True if this message or a subpart has been modified."
     if not self.is_multipart():
-      if self.submsg:
+      if isinstance(self.submsg,Message):
         return self.submsg.ismodified()
       return self.modified
     if self.modified: return True
@@ -401,7 +220,7 @@ class MimeMessage(Message):
 
   def get_payload(self,i=None,decode=False):
     msg = self.submsg
-    if msg and msg.ismodified():
+    if isinstance(msg,Message) and msg.ismodified():
       self.set_payload([msg])
     return Message.get_payload(self,i,decode)
 
@@ -415,17 +234,26 @@ class MimeMessage(Message):
     self.submsg = None
 
   def get_submsg(self):
-    if self.get_content_type().lower() == 'message/rfc822':
+    t = self.get_content_type().lower()
+    if t == 'message/rfc822' or t.startswith('multipart/'):
       if not self.submsg:
         txt = self.get_payload()
 	if type(txt) == str:
 	  txt = self.get_payload(decode=True)
-	  parser = MimeParser(MimeMessage)
-	  self.submsg = parser.parsestr(txt)
+	  self.submsg = email.message_from_string(txt,MimeMessage)
+	  for part in self.submsg.walk():
+	    part.modified = False
 	else:
 	  self.submsg = txt[0]
       return self.submsg
     return None
+
+def message_from_file(fp):
+  msg = email.message_from_file(fp,MimeMessage)
+  for part in msg.walk():
+    part.modified = False
+  assert not msg.ismodified()
+  return msg
 
 extlist = ''.join("""
 ade,adp,asd,asx,asp,bas,bat,chm,cmd,com,cpl,crt,dll,exe,hlp,hta,inf,ins,isp,js,
@@ -471,7 +299,7 @@ msg	MimeMessage
 check	function(MimeMessage): int
 	Return CONTINUE, REJECT, ACCEPT
   """
-  if msg.ismultipart() and not msg.get_content_type() == 'message/rfc822':
+  if msg.is_multipart():
     for i in msg.get_payload():
       rc = check_attachments(i,check)
       if rc != Milter.CONTINUE: return rc
@@ -480,28 +308,33 @@ check	function(MimeMessage): int
 
 # save call context for Python without nested_scopes
 class _defang:
-  def __init__(self,savname,check):
-    self._savname = savname
-    self._check = check
-    self.scan_rfc822 = True
+
+  def __init__(self):
     self.scan_html = True
+
   def _chk_name(self,msg):
     rc = check_name(msg,self._savname,self._check)
     if self.scan_html:
       check_html(msg,self._savname)	# remove scripts from HTML
     if self.scan_rfc822:
       msg = msg.get_submsg()
-      if msg: return check_attachments(msg,self._chk_name)
+      if isinstance(msg,Message):
+        return check_attachments(msg,self._chk_name)
     return rc
 
+  def __call__(self,msg,savname=None,check=check_ext,scan_rfc822=True):
+    """Compatible entry point.
+    Replace all attachments with dangerous names."""
+    self._savname = savname
+    self._check = check
+    self.scan_rfc822 = scan_rfc822
+    check_attachments(msg,self._chk_name)
+    if msg.ismodified():
+      return True
+    return False
+
 # emulate old defang function
-def defang(msg,savname=None,check=check_ext):
-  """Compatible entry point.
-Replace all attachments with dangerous names."""
-  check_attachments(msg,_defang(savname,check)._chk_name)
-  if msg.ismodified():
-    return 1;
-  return 0
+defang = _defang()
 
 import sgmllib
 
@@ -631,3 +464,20 @@ def check_html(msg,savname=None):
       del msg["content-transfer-encoding"]
       email.Encoders.encode_quopri(msg)
   return Milter.CONTINUE
+
+if __name__ == '__main__':
+  import sys
+  def _list_attach(msg):
+    t = msg.get_content_type()
+    p = msg.get_payload(decode=True)
+    print msg.get_filename(),msg.get_content_type(),type(p)
+    msg = msg.get_submsg()
+    if isinstance(msg,Message):
+      return check_attachments(msg,_list_attach)
+    return Milter.CONTINUE
+
+  for fname in sys.argv[1:]:
+    fp = open(fname)
+    msg = message_from_file(fp)
+    email.Iterators._structure(msg)
+    check_attachments(msg,_list_attach)
