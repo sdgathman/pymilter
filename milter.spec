@@ -1,12 +1,12 @@
 %define name milter
-%define version 0.7.2
-%define release 2
+%define version 0.8.0
+%define release 2.EL3
 # Redhat 7.x and earlier (multiple ps lines per thread)
-%define sysvinit milter.rc7
+#define sysvinit milter.rc7
 # RH9, other systems (single ps line per process)
-#define sysvinit milter.rc
+%define sysvinit milter.rc
 %ifos Linux
-%define python python2.3
+%define python python2.4
 %else
 %define python python
 %endif
@@ -24,7 +24,7 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.2.2, sendmail >= 8.12.10
+Requires: %{python} >= 2.4, sendmail >= 8.12.10
 %ifnos aix4.1
 Requires: chkconfig
 %endif
@@ -149,6 +149,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Tue Feb 08 2005 Stuart Gathman <stuart@bmsi.com> 0.7.3-1.EL3
+- Compile for EL3 and Python4
 * Mon Aug 30 2004 Stuart Gathman <stuart@bmsi.com> 0.7.2-1
 - Fix various SPF bugs
 - Recognize dynamic PTR names, and don't count them as authentication.

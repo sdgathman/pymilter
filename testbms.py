@@ -4,6 +4,8 @@ import bms
 import mime
 import rfc822
 import StringIO
+import email
+import sys
 #import pdb
 
 class TestMilter(bms.bmsMilter):
@@ -25,7 +27,7 @@ class TestMilter(bms.bmsMilter):
   def replacebody(self,chunk):
     if self._body:
       self._body.write(chunk)
-      self.bodyreplaced = 1
+      self.bodyreplaced = True
     else:
       raise IOError,"replacebody not called from eom()"
 
@@ -39,14 +41,14 @@ class TestMilter(bms.bmsMilter):
       del self._msg[field]
     else:
       self._msg[field] = value
-    self.headerschanged = 1
+    self.headerschanged = True
 
   def addheader(self,field,value):
     if not self._body:
       raise IOError,"addheader not called from eom()"
     self.log('addheader: %s=%s' % (field,value))
     self._msg[field] = value
-    self.headerschanged = 1
+    self.headerschanged = True
 
   def delrcpt(self,rcpt):
     if not self._body:
@@ -63,8 +65,8 @@ class TestMilter(bms.bmsMilter):
 
   def feedFile(self,fp,sender="spam@adv.com",rcpt="victim@lamb.com"):
     self._body = None
-    self.bodyreplaced = 0
-    self.headerschanged = 0
+    self.bodyreplaced = False
+    self.headerschanged = False
     self.reply = None
     msg = rfc822.Message(fp)
     rc = self.envfrom('<%s>'%sender)
@@ -118,7 +120,7 @@ class TestMilter(bms.bmsMilter):
 
   def connect(self,host='localhost'):
     self._body = None
-    self.bodyreplaced = 0
+    self.bodyreplaced = False
     rc =  bms.bmsMilter.connect(self,host,1,('1.2.3.4',1234)) 
     if rc != Milter.CONTINUE and rc != Milter.ACCEPT:
       self.close()
@@ -141,7 +143,7 @@ class BMSMilterTestCase(unittest.TestCase):
     open('test/'+fname+".tstout","w").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
-    msg = mime.MimeMessage(fp)
+    msg = mime.message_from_file(fp)
     str = msg.get_payload(1).get_payload()
     milter.log(str)
     milter.close()
@@ -218,7 +220,9 @@ class BMSMilterTestCase(unittest.TestCase):
     #pdb.set_trace()
     rc = milter.feedMsg('test8')
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
+    # python2.4 doesn't scan encoded message attachments
+    if sys.hexversion < 0x02040000:
+      self.failUnless(milter.bodyreplaced,"Message body not replaced")
     #self.failIf(milter.bodyreplaced,"Message body replaced")
     fp = milter._body
     open("test/test8.tstout","w").write(fp.getvalue())
@@ -237,9 +241,12 @@ class BMSMilterTestCase(unittest.TestCase):
     bms.smart_alias[key] = ['ham@eggs.com']
     rc = milter.feedMsg('test8',key[0],key[1])
     self.assertEqual(rc,Milter.ACCEPT)
-    self.failUnless(milter.bodyreplaced,"Message body not replaced")
     self.failUnless(milter._delrcpt == ['<baz@bat.com>'])
     self.failUnless(milter._addrcpt == ['<ham@eggs.com>'])
+    # python2.4 email does not decode message attachments, so script
+    # is not replaced
+    if sys.hexversion < 0x02040000:
+      self.failUnless(milter.bodyreplaced,"Message body not replaced")
 
   def testBadBoundary(self):
     milter = TestMilter()
@@ -247,8 +254,11 @@ class BMSMilterTestCase(unittest.TestCase):
     # test rfc822 attachment with invalid boundaries
     #pdb.set_trace()
     rc = milter.feedMsg('bound')
-    self.assertEqual(rc,Milter.REJECT)
-    self.assertEqual(milter.reply[0],'554')
+    if sys.hexversion < 0x02040000:
+      # python2.4 adds invalid boundaries to decects list and makes
+      # payload a str
+      self.assertEqual(rc,Milter.REJECT)
+      self.assertEqual(milter.reply[0],'554')
     #self.failUnless(milter.bodyreplaced,"Message body not replaced")
     self.failIf(milter.bodyreplaced,"Message body replaced")
     fp = milter._body
@@ -277,7 +287,6 @@ class BMSMilterTestCase(unittest.TestCase):
 def suite(): return unittest.makeSuite(BMSMilterTestCase,'test')
 
 if __name__ == '__main__':
-  import sys
   if len(sys.argv) > 1:
     for fname in sys.argv[1:]:
       milter = TestMilter()
