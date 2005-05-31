@@ -15,6 +15,7 @@ include spfquery.py
 include test.py
 include sample.py
 include test/*
+include Milter/*.py
 include *.spec
 include start.sh
 include milter.rc
