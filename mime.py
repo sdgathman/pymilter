@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.54  2004/08/18 01:59:46  stuart
+# Handle mislabeled multipart messages
+#
 # Revision 1.53  2004/04/24 22:53:20  stuart
 # Rename some local variables to avoid shadowing builtins
 #
@@ -57,6 +60,18 @@ try: from email.Parser import NLCRE
 except: from email.Parser import nlcre as NLCRE
 
 from email import Errors
+
+class MimeGenerator(Generator):
+    def _dispatch(self, msg):
+        # Get the Content-Type: for the message, then try to dispatch to
+        # self._handle_<maintype>_<subtype>().  If there's no handler for the
+        # full MIME type, then dispatch to self._handle_<maintype>().  If
+        # that's missing too, then dispatch to self._writeBody().
+        main = msg.get_content_maintype()
+	if msg.is_multipart() and main.lower() != 'multipart':
+	  self._handle_multipart(msg)
+	else:
+	  Generator._dispatch(self,msg)
 
 class MimeParser(Parser):
 
@@ -349,8 +364,14 @@ class MimeMessage(Message):
 
   def dump(self,file,unixfrom=False):
     "Write this message (and all subparts) to a file"
-    g = Generator(file)
+    g = MimeGenerator(file)
     g.flatten(self,unixfrom=unixfrom)
+
+  def as_string(self, unixfrom=False):
+      "Return the entire formatted message as a string."
+      fp = StringIO.StringIO()
+      self.dump(fp,unixfrom=unixfrom)
+      return fp.getvalue()
 
   def getencoding(self):
     return self.get('content-transfer-encoding',None)
@@ -576,7 +597,6 @@ class HTMLScriptFilter(SGMLFilter):
     if not self.ignoring: SGMLFilter.handle_data(self,data)
   def handle_comment(self,comment):
     if not self.ignoring: SGMLFilter.handle_comment(self,comment)
-
 
 def check_html(msg,savname=None):
   "Remove scripts from HTML attachments."

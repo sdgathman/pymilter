@@ -8,15 +8,12 @@ import milter
 import thread
 
 from milter import ACCEPT,CONTINUE,REJECT,DISCARD,TEMPFAIL,	\
-  set_flags, setdbg, \
+  set_flags, setdbg, setbacklog, settimeout, \
   ADDHDRS, CHGBODY, ADDRCPT, DELRCPT, CHGHDRS,	\
   V1_ACTS, V2_ACTS, CURR_ACTS
 
-try:
-  from milter import QUARANTINE
-except:
-  #print 'No QUARANTINE support'
-  pass
+try: from milter import QUARANTINE
+except: pass
 
 _seq_lock = thread.allocate_lock()
 _seq = 0
@@ -100,8 +97,10 @@ class Milter:
   def getsymval(self,sym):
     return self.__ctx.getsymval(sym)
 
-  def setreply(self,rcode,xcode,msg):
-    return self.__ctx.setreply(rcode,xcode,msg)
+  # If sendmail does not support setmlreply, then only the
+  # first msg line is used.
+  def setreply(self,rcode,xcode=None,msg=None,*ml):
+    return self.__ctx.setreply(rcode,xcode,msg,*ml)
 
   # Milter methods which can only be called from eom callback.
   def addheader(self,field,value):
@@ -119,6 +118,8 @@ class Milter:
   def replacebody(self,body):
     return self.__ctx.replacebody(body)
 
+  # When quarantined, a message goes into the mailq as if to be delivered,
+  # but delivery is deferred until the message is unquarantined.
   def quarantine(self,reason):
     return self.__ctx.quarantine(reason)
 

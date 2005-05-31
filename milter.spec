@@ -1,5 +1,5 @@
 %define name milter
-%define version 0.7.0
+%define version 0.7.1
 %define release 1
 # Redhat 7.x and earlier (multiple ps lines per thread)
 %define sysvinit milter.rc7
@@ -24,8 +24,8 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.2.2, sendmail >= 8.12
-BuildRequires: %{python}-devel >= 2.2.2, sendmail-devel >= 8.12
+Requires: %{python} >= 2.2.2, sendmail >= 8.12.10
+BuildRequires: %{python}-devel >= 2.2.2, sendmail-devel >= 8.12.10
 
 %description
 This is a python extension module to enable python scripts to
@@ -132,6 +132,11 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /etc/mail/pymilter.cfg
 
 %changelog
+* Sun Aug 22 2004 Stuart Gathman <stuart@bmsi.com> 0.7.1-1
+- Handle modifying mislabeled multipart messages without an exception
+- Support setbacklog, setmlreply
+- allow multi-recipient CBV
+- return TEMPFAIL for SPF softfail
 * Fri Jul 23 2004 Stuart Gathman <stuart@bmsi.com> 0.7.0-1
 - SPF check hello name
 - Move pythonsock to /var/run/milter
