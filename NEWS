@@ -1,5 +1,11 @@
 Here is a history of user visible changes to Python milter.
 
+0.7.0	SPF check hello name
+	Move pythonsock to /var/run/milter
+	Move milter.cfg to /etc/mail/pymilter.cfg
+	Check M$ style XML CID records by converting to SPF
+	Recognize, but never match ip6 - until we properly support it.
+	Option to reject when no PTR and no SPF
 0.6.9	Reject invalid SRS immediately for benefit of callback verifiers
 	Fix include bug in spf.py
 	Fix check_header bug

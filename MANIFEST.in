@@ -8,6 +8,7 @@ include testsample.py
 include testmime.py
 include testbms.py
 include testdspam.py
+include rejects.py
 include bms.py
 include spf.py
 include spfquery.py

@@ -1,4 +1,10 @@
 # $Log$
+# Revision 1.53  2004/04/24 22:53:20  stuart
+# Rename some local variables to avoid shadowing builtins
+#
+# Revision 1.52  2004/04/24 22:47:13  stuart
+# Convert header values to str
+#
 # Revision 1.51  2004/03/25 03:19:10  stuart
 # Correctly defang rfc822 attachments when boundary specified with
 # content-type message/rfc822.
@@ -192,19 +198,19 @@ class MimeParser(Parser):
                 text = firstbodyline + '\n' + text
             container.set_payload(text)
 
-def unquote(str):
+def unquote(s):
     """Remove quotes from a string."""
-    if len(str) > 1:
-        if str.startswith('"'):
-	  if str.endswith('"'):
-            str = str[1:-1]
+    if len(s) > 1:
+        if s.startswith('"'):
+	  if s.endswith('"'):
+            s = s[1:-1]
 	  else: # remove garbage after trailing quote
-	    try: str = str[1:str[1:].index('"')+1]
-	    except: return str
-	  return str.replace('\\\\', '\\').replace('\\"', '"')
-        if str.startswith('<') and str.endswith('>'):
-            return str[1:-1]
-    return str
+	    try: s = s[1:s[1:].index('"')+1]
+	    except: return s
+	  return s.replace('\\\\', '\\').replace('\\"', '"')
+        if s.startswith('<') and s.endswith('>'):
+            return s[1:-1]
+    return s
 
 from types import TupleType
 
@@ -216,21 +222,21 @@ def _unquotevalue(value):
 
 email.Message._unquotevalue = _unquotevalue
 
-def _parseparam(str):
+def _parseparam(s):
     plist = []
-    while str[:1] == ';':
-	str = str[1:]
-	end = str.find(';')
-	while end > 0 and (str.count('"',0,end) & 1):
-	  end = str.find(';',end + 1)
-	if end < 0: end = len(str)
-	f = str[:end]
+    while s[:1] == ';':
+	s = s[1:]
+	end = s.find(';')
+	while end > 0 and (s.count('"',0,end) & 1):
+	  end = s.find(';',end + 1)
+	if end < 0: end = len(s)
+	f = s[:end]
 	if '=' in f:
 	    i = f.index('=')
 	    f = f[:i].strip().lower() + \
 		    '=' + f[i+1:].strip()
 	plist.append(f.strip())
-	str = str[end:]
+	s = s[end:]
     return plist
 
 # Enhance email.Message 
@@ -350,9 +356,9 @@ class MimeMessage(Message):
     return self.get('content-transfer-encoding',None)
 
   # Decode body to stream according to transfer encoding, return encoding name
-  def decode(self,filter):
+  def decode(self,filt):
     try:
-      filter.write(self.get_payload(decode=True))
+      filt.write(self.get_payload(decode=True))
     except:
       pass
     return self.getencoding()
@@ -363,7 +369,7 @@ class MimeMessage(Message):
   def __setitem__(self, name, value):
     rc = Message.__setitem__(self,name,value)
     self.modified = True
-    if self.headerchange: self.headerchange(self,name,value)
+    if self.headerchange: self.headerchange(self,name,str(value))
     return rc
 
   def __delitem__(self, name):
@@ -423,7 +429,7 @@ See your administrator.
 
 def check_name(msg,savname=None,ckname=check_ext):
   "Replace attachment with a warning if its name is suspicious."
-  for (key,name) in msg.getnames():
+  for key,name in msg.getnames():
     badname = ckname(name)
     if badname:
       hostname = socket.gethostname()
@@ -582,14 +588,14 @@ def check_html(msg,savname=None):
 	msgtype = 'text/html'
   if msgtype == 'text/html':
     out = StringIO.StringIO()
-    filter = HTMLScriptFilter(out)
+    htmlfilter = HTMLScriptFilter(out)
     try:
-      filter.write(msg.get_payload(decode=True))
-      filter.close()
+      htmlfilter.write(msg.get_payload(decode=True))
+      htmlfilter.close()
     #except sgmllib.SGMLParseError:
     except:
       #mimetools.copyliteral(msg.get_payload(),open('debug.out','w')
-      filter.close()
+      htmlfilter.close()
       hostname = socket.gethostname()
       msg.set_payload(
   "An HTML attachment could not be parsed.  The original is saved as '%s:%s'"
@@ -600,7 +606,7 @@ def check_html(msg,savname=None):
       name = "WARNING.TXT"
       msg["Content-Type"] = "text/plain; name="+name
       return Milter.CONTINUE
-    if filter.modified:
+    if htmlfilter.modified:
       msg.set_payload(out)	# remove embedded scripts
       del msg["content-transfer-encoding"]
       email.Encoders.encode_quopri(msg)

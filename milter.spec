@@ -1,5 +1,5 @@
 %define name milter
-%define version 0.6.9
+%define version 0.7.0
 %define release 1
 # Redhat 7.x and earlier (multiple ps lines per thread)
 %define sysvinit milter.rc7
@@ -43,8 +43,10 @@ env CFLAGS="$RPM_OPT_FLAGS" %{python} setup.py build
 rm -rf $RPM_BUILD_ROOT
 %{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
+mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
-cp bms.py milter.cfg $RPM_BUILD_ROOT/var/log/milter
+cp bms.py $RPM_BUILD_ROOT/var/log/milter
+cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 
 # logfile rotation
 mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
@@ -103,6 +105,9 @@ mkssys -s milter -p /var/log/milter/start.sh -u 25 -S -n 15 -f 9 -G mail || :
 if [ $1 = 0 ]; then
   rmssys -s milter || :
 fi
+%else
+%post
+echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
 %endif
 
 %clean
@@ -124,9 +129,16 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter/save
 %config /var/log/milter/start.sh
 %config /var/log/milter/bms.py
-%config /var/log/milter/milter.cfg
+%config(noreplace) /etc/mail/pymilter.cfg
 
 %changelog
+* Fri Jul 23 2004 Stuart Gathman <stuart@bmsi.com> 0.7.0-1
+- SPF check hello name
+- Move pythonsock to /var/run/milter
+- Move milter.cfg to /etc/mail/pymilter.cfg
+- Check M$ style XML CID records by converting to SPF
+- Recognize, but never match ip6 until we properly support it.
+- Option to reject when no PTR and no SPF
 * Fri Apr 09 2004 Stuart Gathman <stuart@bmsi.com> 0.6.9-1
 - Validate spf.py against test suite, and add Received-SPF support to spf.py
 - Support best_guess for SPF
