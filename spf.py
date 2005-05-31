@@ -45,6 +45,25 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.21  2004/11/20 16:37:03  stuart
+# Handle multi-segment TXT records.
+#
+# Revision 1.20  2004/11/19 06:10:30  stuart
+# Use PermError exception instead of reporting unknown.
+#
+# Revision 1.19  2004/11/09 23:00:18  stuart
+# Limit recursion and DNS lookups separately.
+#
+#
+# Revision 1.17  2004/09/10 18:08:26  stuart
+# Return unknown for null mechanism
+#
+# Revision 1.16  2004/09/04 23:27:06  stuart
+# More mechanism aliases.
+#
+# Revision 1.15  2004/08/30 21:19:05  stuart
+# Return unknown for invalid ip syntax in mechanism
+#
 # Revision 1.14  2004/08/23 02:28:24  stuart
 # Remove Perl usage message.
 #
@@ -120,7 +139,7 @@ import xml.sax
 # Date: 2004-02-25
 #
 # A complete reverse translation (SPF -> CID) might be impossible, since
-# there are no way to handle:
+# there are no ways to handle:
 # - PTR and EXISTS mechanism 
 # - MX mechanism with an different domain as argument
 # - macros
@@ -284,6 +303,16 @@ except NameError:
 # standard default SPF record
 DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 
+# maximum DNS lookups allowed
+MAX_LOOKUP = 50
+MAX_RECURSION = 20
+
+class TempError(Exception):
+	"Temporary SPF error"
+
+class PermError(Exception):
+	"Permanent SPF error"
+
 def check(i, s, h,local=None):
 	"""Test an incoming MAIL FROM:<s>, from a client with ip address i.
 	h is the HELO/EHLO domain name.
@@ -329,6 +358,7 @@ class query(object):
 		self.cache = {}
 		self.exps = dict(EXPLANATIONS)
 		self.local = local	# local policy
+    		self.lookups = 0
 
 	def set_default_explanation(self,exp):
 		exps = self.exps
@@ -357,27 +387,32 @@ class query(object):
 			return ('pass', 250, 'local connections always pass')
 
 		try:
+			self.lookups = 0
 			if not spf:
 			    spf = self.dns_spf(self.d)
 			if self.local and spf:
 			    spf += ' ' + self.local
 			return self.check1(spf, self.d, 0)
-		except DNS.DNSError:
-			return ('error', 450, 'SPF DNS Error')
+		except DNS.DNSError,x:
+			return ('error', 450, 'SPF DNS Error: ' + str(x))
+		except TempError,x:
+			return ('error', 450, 'SPF Temporary Error: ' + str(x))
+		except PermError,x:
+			return ('error', 550, 'SPF Permanent Error: ' + str(x))
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
 		#
-		if recursion > 20:
-			self.prob =  'Mechanisms used too many DNS lookups'
+		if recursion > MAX_RECURSION:
+			self.prob =  'Too many levels of recursion'
 			return ('unknown', 250, 'SPF recursion limit exceeded')
 		try:
 			tmp, self.d = self.d, domain
-			return self.check0(spf, recursion)
+			return self.check0(spf,recursion)
 		finally:
 			self.d = tmp
 
-	def check0(self, spf, recursion):
+	def check0(self, spf,recursion):
 		"""Test this query information against SPF text.
 
 		Returns (result, mta-status-code, explanation) where
@@ -425,35 +460,30 @@ class query(object):
 			m, arg, cidrlength = parse_mechanism(mech, self.d)
 
 			# map '?' '+' or '-' to 'unknown' 'pass' or 'fail'
-			result = RESULTS.get(m[0])
-			if result:
+			if m:
+			  result = RESULTS.get(m[0])
+			  if result:
 				# eat '?' '+' or '-'
 				m = m[1:]
-			else:
+			  else:
 				# default pass
 				result = 'pass'
 
-			if m in ['a', 'mx', 'ptr', 'exists', 'include']:
+			if m in ['a', 'mx', 'ptr', 'prt', 'exists', 'include']:
 				arg = self.expand(arg)
 
 			if m == 'include':
-			    if arg != self.d:
-				res,code,txt = self.check1(self.dns_spf(arg),
-						  arg, recursion + 1)
-				if res == 'pass':
-					break
-				if res in ('fail','neutral','softfail'):
-					continue
-				if res == 'none':
-				  	self.prob = \
-					  'Could not find a valid SPF record'
-				  	res = 'unknown'
-				return res,code,txt
-			    else:
-			    	self.prob = 'Required option is missing'
-				self.mech.append(mech)
-				return ('unknown', 250, 'missing SPF option')
-
+			  if arg != self.d:
+			    res,code,txt = self.check1(self.dns_spf(arg),
+					      arg, recursion + 1)
+			    if res == 'pass':
+			      break
+			    if res == 'none':
+			      raise PermError(
+			      	'No valid SPF record for included domain')
+			    continue
+			  else:
+			    raise PermError('include mechanism missing domain')
 			elif m == 'all':
 				break
 
@@ -472,9 +502,15 @@ class query(object):
 					break
 
 			elif m in ('ip4', 'ipv4', 'ip') and arg != self.d:
+			    try:
 				if cidrmatch(self.i, [arg], cidrlength):
-					break
-			elif m == 'ip6':
+				    break
+			    except socket.error:
+				self.mech.append(mech)
+				self.prob = 'Bad mechanism syntax found'
+				return ('unknown',250,'SPF mechanism syntax error')
+			        
+			elif m in ('ip6', 'ipv6'):
 			# Until we support IPV6, we should never
 			# get an IPv6 connection.  So this mech
 			# will never match.
@@ -486,17 +522,14 @@ class query(object):
 					break
 
 			else:
-				# unknown mechanisms cause immediate unknown
-				# abort results
-				self.mech.append(mech)
-				self.prob = 'Unknown mechanism found'
-				return ('unknown',250,'unknown SPF mechanism')
-
+			  # unknown mechanisms cause immediate unknown
+			  # abort results
+			  raise PermError('Unknown mechanism found: ' + mech)
 		else:
 			# no matches
 			if redirect:
 				return self.check1(self.dns_spf(redirect),
-				                   redirect, recursion+1)
+				                   redirect, recursion + 1)
 			else:
 				result = default
 
@@ -630,7 +663,7 @@ class query(object):
 	def dns_txt(self, domainname):
 		"Get a list of TXT records for a domain name."
 		if domainname:
-		  return [t for a in self.dns(domainname, 'TXT') for t in a]
+		  return [''.join(a) for a in self.dns(domainname, 'TXT')]
 		return []
 
 	def dns_mx(self, domainname):
@@ -672,6 +705,9 @@ class query(object):
 		pre: qtype in ['A', 'AAAA', 'MX', 'PTR', 'TXT', 'SPF']
 		post: isinstance(__return__, types.ListType)
 		"""
+		self.lookups += 1
+		if self.lookups > MAX_LOOKUP:
+			raise PermError('Too many DNS lookups')
 		result = self.cache.get( (name, qtype) )
 		cname = None
 		if not result:

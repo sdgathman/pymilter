@@ -1,6 +1,30 @@
 #!/usr/bin/env python
 # A simple milter.
 # $Log$
+# Revision 1.126  2004/11/24 14:39:38  stuart
+# Also accept softfail if valid PTR or HELO.
+#
+# Revision 1.125  2004/11/19 16:40:14  stuart
+# Block softfail except for listed domains.
+#
+# Revision 1.124  2004/11/19 06:18:04  stuart
+# block softfail for configured domains only
+#
+# Revision 1.123  2004/11/18 20:36:49  stuart
+# Recognize more dynamic hosts.  Ignore dynamic PTR for best_guess.
+#
+# Revision 1.122  2004/11/18 17:16:10  stuart
+# Recognize more dynamic ips.
+#
+# Revision 1.121  2004/11/09 22:37:48  stuart
+# Don't accept helo names which are dynamic IP addresses.
+#
+# Revision 1.120  2004/11/09 20:33:50  stuart
+# Recognize more dynamic PTR variations.
+#
+# Revision 1.118  2004/08/30 21:19:50  stuart
+# Try best guess for HELO, expand setreply for common errors
+#
 # Revision 1.117  2004/08/23 02:27:53  stuart
 # Allow multi rcpt CBV.  Add some multiline replies.
 #
@@ -292,6 +316,7 @@ srs = None
 srs_reject_spoofed = False
 srs_fwdomain = None
 spf_reject_neutral = ()
+spf_accept_softfail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 timeout = 600
@@ -401,6 +426,7 @@ def read_config(list):
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
+  global spf_accept_softfail
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -414,6 +440,7 @@ def read_config(list):
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
+    spf_accept_softfail = cp.getlist('spf','accept_softfail')
     spf_best_guess = cp.getboolean('spf','best_guess')
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
   srs_config = cp.getdefault('srs','config')
@@ -461,6 +488,43 @@ def parse_header(val):
   except LookupError: pass
   return val
 
+ip3 = re.compile('([0-9]{1,3})[.-]([0-9]{1,3})[.-]([0-9]{1,3})')
+rehmac = re.compile('h[0-9a-f]{12}[.]|pcp[0-9]{6,10}pcs[.]|no-reverse')
+
+def dynip(host,addr):
+  """Return True if hostname is for a dynamic ip.
+  Examples:
+
+  >>> is_dynip('post3.fabulousdealz.com','69.60.99.112')
+  False
+  >>> is_dynip('adsl-69-208-201-177.dsl.emhril.ameritech.net','69.208.201.177')
+  True
+  """
+  if host.startswith('[') and host.endswith(']'):
+    return True
+  if addr:
+    if host.find(addr) >= 0: return True
+    a = addr.split('.')
+    m = ip3.search(host)
+    if m:
+      g = list(m.groups())
+      if g == a[1:] or g == a[:3]: return True
+      g.reverse()
+      if g == a[1:] or g == a[:3]: return True
+    if rehmac.search(host): return True
+    if host.find("-%s." % '-'.join(a[2:])) >= 0: return True
+    if host.find("w%s." % '-'.join(a[:2])) >= 0: return True
+    if host.find(''.join(a[:3])) >= 0: return True
+    if host.find(''.join(a[1:])) >= 0: return True
+    x = "%02x%02x%02x%02x" % tuple(map(int,a))
+    if host.lower().find(x) >= 0: return True
+    z = [n.zfill(3) for n in a]
+    if host.find('-'.join(z)) >= 0: return True
+    if host.find("-%s." % '-'.join(z[2:])) >= 0: return True
+    if host.find("%s." % ''.join(z[2:])) >= 0: return True
+    if host.find(''.join(z)) >= 0: return True
+  return False
+
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
      check SPF, and other anti-forgery features, and implement wiretapping
@@ -500,7 +564,6 @@ class bmsMilter(Milter.Milter):
     self.log('%s: %s' % (name,val))
 
   def connect(self,hostname,unused,hostaddr):
-    self.missing_ptr = hostname.startswith('[') and hostname.endswith(']')
     self.internal_connection = False
     self.trusted_relay = False
     self.receiver = self.getsymval('j')
@@ -517,6 +580,7 @@ class bmsMilter(Milter.Milter):
       self.connectip = ipaddr
     else:
       self.connectip = None
+    self.missing_ptr = dynip(hostname,self.connectip)
     for pat in internal_connect:
       if fnmatchcase(hostname,pat):
 	self.internal_connection = True
@@ -602,47 +666,61 @@ class bmsMilter(Milter.Milter):
     q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
     res,code,txt = q.check()
     receiver = self.receiver
-    if res == 'none':
+    if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
 	# check hello name via spf
-	hres,hcode,htxt = spf.check(self.connectip,'',self.hello_name)
+	h = spf.query(self.connectip,'',self.hello_name)
+	hres,hcode,htxt = h.check()
 	if hres in ('deny','fail','neutral','softfail'):
 	  self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
 	  self.setreply('550','5.7.1',htxt,
 	    "The hostname given in your MTA's HELO response is not listed",
-	    "as a legitimate MTA in the SPF records for your domain.",
-	    "If you get this bounce, the message was not in fact a forgery,",
-	    "and you should notify your email administrator of the problem."
+	    "as a legitimate MTA in the SPF records for your domain.  If you",
+	    "get this bounce, the message was not in fact a forgery, and you",
+	    "should IMMEDIATELY notify your email administrator of the problem."
 	  )
 	  return Milter.REJECT
-      if spf_best_guess:
+	if hres == 'none' and spf_best_guess \
+	  and not dynip(self.hello_name,self.connectip):
+	  hres,hcode,htxt = h.best_guess()
+      else: hres = res
+      if spf_best_guess and res == 'none':
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
 		'SPF guess: see http://spf.pobox.com/why.html')
 	# best_guess should not result in fail
-	res,code,txt = q.best_guess()
+	if self.missing_ptr:
+	  # ignore dynamic PTR for best guess
+	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
+	else:
+	  res,code,txt = q.best_guess()
 	receiver += ': guessing'
-      if self.missing_ptr and res in ('neutral', 'none') and spf_reject_noptr:
-        self.log('REJECT: no PTR or SPF')
+      if self.missing_ptr and res in ('neutral', 'none')	\
+      	and spf_reject_noptr and hres != 'pass':
+        self.log('REJECT: no PTR, HELO or SPF')
 	self.setreply('550','5.7.1',
-  'You must have a reverse lookup or publish SPF: http://spf.pobox.com'
+  'You must have a reverse lookup or publish SPF: http://spf.pobox.com',
+  'Contact your mail administrator IMMEDIATELY!  Your mail server is',
+  'severely misconfigured.  It has no PTR record (dynamic PTR records',
+  "that contain your IP don't count), an invalid HELO, and no SPF record."
 	)
 	return Milter.REJECT
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'5.7.1',txt)
       return Milter.REJECT
-    if res == 'softfail':
-      self.log('TEMPFAIL: SPF %s 450 %s' % (res,txt))
-      self.setreply('450','4.3.0',
-	'SPF softfail: will keep trying until your SPF record is fixed.',
-	'If you get this Delivery Status Notice, your email was probably',
-	'legitimate.  Your administrator has published SPF records in a',
-	'testing mode.  The SPF record reported your email as a forgery,',
-	'which is a mistake if you are reading this.  Please notify your',
-	'administrator of the problem.'
-      )
-      return Milter.TEMPFAIL
+    if res == 'softfail' and not q.o in spf_accept_softfail:
+      if self.missing_ptr and spf_reject_noptr and hres != 'pass':
+	self.log('TEMPFAIL: SPF %s 450 %s' % (res,txt))
+	self.setreply('450','4.3.0',
+	  'SPF softfail: will keep trying until your SPF record is fixed.',
+	  'If you get this Delivery Status Notice, your email was probably',
+	  'legitimate.  Your administrator has published SPF records in a',
+	  'testing mode.  The SPF record reported your email as a forgery,',
+	  'which is a mistake if you are reading this.  Please notify your',
+	  'administrator of the problem immediately.'
+	)
+	return Milter.TEMPFAIL
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
       self.setreply('550','5.7.1',
@@ -655,6 +733,11 @@ class bmsMilter(Milter.Milter):
       )
       return Milter.REJECT
     if res == 'error':
+      if code >= 500:
+        self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+	self.setreply(str(code),'5.7.1',txt)
+	return Milter.REJECT
+      self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(res,receiver))
@@ -985,6 +1068,9 @@ class bmsMilter(Milter.Milter):
       self.tempname = None
       if exc_type == email.Errors.BoundaryError:
 	self.log("MALFORMED: %s" % fname)	# log filename
+        if self.internal_connection:
+	  # accept anyway for now
+	  return Milter.ACCEPT
 	self.setreply('554','5.7.7',
 		'Boundary error in your message, are you a spammer?')
         return Milter.REJECT

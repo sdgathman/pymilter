@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Aug 06, 2004</h4>
+Last updated Nov 24, 2004</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="#download">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -43,14 +43,52 @@ separation features to enhance security.
 I recommend upgrading.
 
 <h2> Recent Changes </h2>
+
+Release 0.7.2 tightens the authentication screws with a "3 strikes and
+your out" policy.  A sender must have a valid PTR, HELO, or SPF record
+to send email.  Specific senders can be whitelisted using the
+"delegate" option in the spf configuration section by adding a
+default SPF record for them.  The PTR and HELO are required
+by RFC anyway, so this is not an unreasonable requirement.
+There is now a coherent policy for an SPF softfail result.  A softfail
+is accepted if there is a valid PTR or HELO, or if the domain
+is listed in the "accept_softfail" option of the spf configuration section.
+A neutral result is accepted by default if there is a valid PTR or
+HELO, (and the SPF record was not guessed), unless the domain is listed in the
+"reject_neutral" option.  Common forms of PTR records for dynamic IPs are
+recognized, and do not count as a valid PTR.  This does not prevent anyone
+from sending mail from a dynamic IP - they just need to configure a
+valid HELO name or publish an SPF record.
+<p>
 The RPM for release 0.7.0 moves the config file and socket locations to
 /etc/mail and /var/run/milter respectively.  We now parse Microsoft CID records
-- but only hotmail.com uses them.  They seem to have a patent on the brilliant
-idea of examining the mail headers to see who the message is from.
-We aren't doing that here, so not to worry - but I am not a lawyer, so if you
-are worried, change spf.py around line 626 to return None instead of
+- but only hotmail.com uses them.  They seem to have applied for a patent on
+the brilliant idea of examining the mail headers to see who the message is
+from.  We aren't doing that here, so not to worry - but I am not a lawyer, so
+if you are worried, change spf.py around line 626 to return None instead of
 calling CIDParser().  There is a new option to reject mail with no PTR
 and no SPF.
+<p>
+Microsoft is pushing an anti-opensource license for their pending patent
+along with their sender-ID proposal before the IETF.
+It is royalty free - but requires anyone distributing a binary they've
+compiled from source to sign a license agreement.  The Apache Software
+Foundation <a
+href="http://www.apache.org/foundation/docs/sender-id-position.html"> explains
+the problem with sender-ID</a>, and Debian <a
+href="http://www.debian.org/News/2004/20040904">concurs</a>.  Since 
+the <a href="http://download.microsoft.com/download/4/3/9/439b024b-09fd-44ee-8ff0-10e834004c36/senderid_FAQ.PDF">Microsoft license</a> is
+<a href="http://www.circleid.com/article/732_0_1_0_C/">incompatible with free
+software in general</a> and the <a
+href="http://www.imc.org/ietf-mxcomp/mail-archive/msg03678.html">GPL in
+particular</a>, Python milter will not be able to implement sender-ID in its
+current form.  This was, no doubt, Microsoft's intent all along.
+<p>
+Sender-ID attempts to do for RFC2822 headers what SPF does for RFC2821 headers.
+Unlike SPF, it has never been tried, and is encumbered by a stupid patent.  I
+recommend ignoring it and continuing to implement and improve SPF until a
+working and unencumbered proposal for RFC2822 headers surfaces.
+
 <p>
 <a href="http://spf.pobox.com">
 <img src="SPF.gif" align=left alt="SPF logo"></a>
@@ -168,13 +206,40 @@ in the <a href="milter.cfg">sample config file</a> for the bms.py milter.
 
 <h3><a name=download>Downloading</a></h3>
 
-The latest stable release is <a href="#stable">0.7.0</a>. A stable
+The latest stable release is <a href="#stable">0.7.2</a>. A stable
 release is one which has been installed (and working correctly) on
 production systems long enough to convince me that it is stable.  As
 the package gains more features and complexity, stable will mean no
 bug reports from outside users either.
 <p>
-The latest version is 0.7.0-1.  See the <a href=NEWS>Change Log</a>.
+The latest version is 0.7.2-2.  See the <a href=NEWS>Change Log</a>.
+PLEASE NOTE - if you are using the modules, but not the bms milter application,
+then ignore the RPMs and milter.spec.  Use 'python setup.py bdist_rpm' to 
+build source and binary rpms that do not include the milter application.
+<p>
+I want to split the bms milter application to a new project once I figure
+out the renaming.  The current plan is to rename 'milter' to 'pymilter', which
+will have the Python modules.  The bms milter application will still be named
+'milter' and depend on pymilter (so that my installs won't notice anything).
+<p>
+<a name="stable"><b>Stable</b></a>
+<a href="http://bmsi.com/python/milter-0.7.2.tar.gz">
+milter-0.7.2.tar.gz</a> Three strikes and your out policy.  Some SPF fixes.
+Recognizes PTR records for dynamic IPs.
+<p>
+<a href="http://bmsi.com/python/milter-0.7.1.tar.gz">
+milter-0.7.1.tar.gz</a> Support setmlreply, handle some more exceptions
+for malformed spam.  Compiling pymilter with sendmail-8.12.10, requires
+sendmail-devel with _FFR_MULTILINE set.  The binary will work with older
+sendmails.  The _FFR_MULTILINE option only affects libmilter.a.
+<br>
+<a href="http://bmsi.com/linux/rh72/milter-0.7.1-1.i386.rpm">
+milter-0.7.1-1.i386.rpm</a> Binary RPM for Redhat 7.x, now requires 
+	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
+	python2.3</a>.
+<br>
+<a href="http://bmsi.com/linux/rh9/milter-0.7.1-1.src.rpm">
+milter-0.7.1-1.src.rpm</a> Source RPM for Redhat 9,7.x. 
 <p>
 <a name="stable"><b>Stable</b></a>
 <a href="http://bmsi.com/python/milter-0.7.0.tar.gz">
@@ -190,6 +255,9 @@ milter-0.7.0-1.i386.rpm</a> Binary RPM for Redhat 7.x, now requires
 milter-0.7.0-1rh9.i386.rpm</a> Binary RPM for Redhat 9, requires 
 	sendmail-8.12 and <a href="http://www.python.org/2.3.3/rpms.html">
 	python2.3</a>.
+<br>
+<a href="http://bmsi.com/aix/milter-0.7.0-1.ppc.rpm">
+milter-0.7.0-1.ppc.rpm</a> Binary RPM for AIX, requires sendmail-8.13.1.
 <br>
 <a href="http://bmsi.com/linux/rh9/milter-0.7.0-1.src.rpm">
 milter-0.7.0-1.src.rpm</a> Source RPM for Redhat 9,7.x.  

@@ -1,5 +1,14 @@
 Here is a history of user visible changes to Python milter.
 
+0.7.2	Return unknown for invalid ip address in mechanism
+	Recognize dynamic PTR names, and don't count them as authentication.
+	Three strikes and yer out rule.
+	Block softfail by default when no PTR or HELO
+	Return unknown for null mechanism
+	Return unknown for invalid ip address in mechanism
+	Try best guess on HELO also
+	Expand setreply for common errors
+	make rhsbl.m4 hack available for sendmail.mc
 0.7.1	Handle modifying mislabeled multipart messages without an exception
 	Support setbacklog, setmlreply
 	Allow multi-recipient CBV
