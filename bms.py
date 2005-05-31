@@ -1,6 +1,37 @@
 #!/usr/bin/env python
 # A simple milter.
 # $Log$
+# Revision 1.114  2004/07/27 00:40:12  stuart
+# Make reject on no PTR optional.
+#
+# Revision 1.113  2004/07/23 23:11:14  stuart
+# Log known malformed messages differently than general processing exceptions.
+#
+# Revision 1.112  2004/07/21 19:18:33  stuart
+# Punt on UnicodeDecodeError when decoding headers.
+# Accept a pass with default SPF for missing reverse IP.
+#
+# Revision 1.111  2004/07/18 13:13:31  stuart
+# Reject invalid SRS only for SRS domain (which is the only one we
+# know the key for).
+# Reject senders that have neither reverse IP nor SPF.
+#
+# Revision 1.110  2004/06/12 03:13:18  stuart
+# Block bounces only for SRS domain.  Also treat mail from
+# postmaster or mailer-daemon as DSN for SRS/SES checking purposes.
+#
+# Revision 1.109  2004/05/01 02:56:55  stuart
+# Let multiple screeners share work.
+#
+# Revision 1.108  2004/04/29 20:36:23  stuart
+# Require HELO name
+#
+# Revision 1.107  2004/04/24 22:55:29  stuart
+# Move some files to make the RPM more standard.
+#
+# Revision 1.106  2004/04/21 18:29:08  stuart
+# Validate hello name with SPF.
+#
 # Revision 1.105  2004/04/20 15:16:00  stuart
 # Release 0.6.9
 #
@@ -242,14 +273,16 @@ dspam_users = {}
 dspam_userdir = None
 dspam_exempt = {}
 dspam_whitelist = {}
-dspam_screener = None
+dspam_screener = ()
 dspam_internal = True	# True if internal mail should be dspammed
 dspam_reject = ()
 dspam_sizelimit = 180000
 srs = None
 srs_reject_spoofed = False
+srs_fwdomain = None
 spf_reject_neutral = ()
 spf_best_guess = False
+spf_reject_noptr = False
 timeout = 600
 
 class MilterConfigParser(ConfigParser.ConfigParser):
@@ -300,7 +333,7 @@ class MilterConfigParser(ConfigParser.ConfigParser):
 def read_config(list):
   cp = MilterConfigParser({
     'tempdir': "/var/log/milter/save",
-    'socket': "/var/log/milter/pythonsock",
+    'socket': "/var/run/milter/pythonsock",
     'timeout': '600',
     'scan_html': 'no',
     'scan_rfc822': 'yes',
@@ -310,6 +343,7 @@ def read_config(list):
     'maxage': '8',
     'hashlength': '8',
     'reject_spoofed': 'no',
+    'reject_noptr': 'no',
     'best_guess': 'no'
   })
   cp.read(list)
@@ -355,13 +389,13 @@ def read_config(list):
 
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global spf_reject_neutral,spf_best_guess,SRS
+  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
   dspam_users = cp.getaddrdict('dspam','dspam_users')
   dspam_userdir = cp.getdefault('dspam','dspam_userdir')
-  dspam_screener = cp.getdefault('dspam','dspam_screener')
+  dspam_screener = cp.getlist('dspam','dspam_screener')
   dspam_reject = cp.getlist('dspam','dspam_reject')
   if cp.has_option('dspam','dspam_sizelimit'):
     dspam_sizelimit = cp.getint('dspam','dspam_sizelimit')
@@ -370,11 +404,12 @@ def read_config(list):
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
     spf_best_guess = cp.getboolean('spf','best_guess')
+    spf_reject_noptr = cp.getboolean('spf','reject_noptr')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
   if SRS and srs_secret:
-    global srs,srs_reject_spoofed
+    global srs,srs_reject_spoofed,srs_fwdomain
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
     maxage = cp.getint('srs','maxage')
@@ -387,7 +422,7 @@ def read_config(list):
     else:
       srs = SRS.Guarded.Guarded(secret=srs_secret,
         maxage=maxage,hashlength=hashlength,separator=separator)
-
+    srs_fwdomain = cp.getdefault('srs','fwdomain')
 
 def parse_addr(t):
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
@@ -408,6 +443,8 @@ def parse_header(val):
       try:
 	return u.encode(enc)
       except UnicodeError: continue
+  except UnicodeDecodeError:
+    return val
   except LookupError:
     return val
 
@@ -448,6 +485,7 @@ class bmsMilter(Milter.Milter):
     self.log('%s: %s' % (name,val))
 
   def connect(self,hostname,unused,hostaddr):
+    self.missing_ptr = hostname.startswith('[') and hostname.endswith(']')
     self.internal_connection = False
     self.trusted_relay = False
     self.receiver = self.getsymval('j')
@@ -475,6 +513,8 @@ class bmsMilter(Milter.Milter):
     if self.trusted_relay:
       connecttype += ' TRUSTED'
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
+    self.hello_name = None
+    self.connecthost = hostname
     return Milter.CONTINUE
 
   def hello(self,hostname):
@@ -531,6 +571,10 @@ class bmsMilter(Milter.Milter):
 	self.dspam = False
     else:
       self.rejectvirus = False
+    if not self.hello_name:
+      self.log("REJECT: missing HELO")
+      self.setreply('550','5.7.1',"It's polite to say HELO first.")
+      return Milter.REJECT
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       return self.check_spf()
@@ -543,12 +587,27 @@ class bmsMilter(Milter.Milter):
     q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
     res,code,txt = q.check()
     receiver = self.receiver
-    if res == 'none' and spf_best_guess:
-      #self.log('SPF: no record published, guessing')
-      q.set_default_explanation('SPF guess: see http://spf.pobox.com/why.html')
-      # best_guess should not result in fail
-      res,code,txt = q.best_guess()
-      receiver += ': guessing'
+    if res == 'none':
+      if self.mailfrom != '<>':
+	# check hello name via spf
+	hres,hcode,htxt = spf.check(self.connectip,'',self.hello_name)
+	if hres in ('deny','fail','neutral','softfail'):
+	  self.log('REJECT: hello SPF: %s %i %s' % (hres,hcode,htxt))
+	  self.setreply('550','5.7.1',htxt)
+	  return Milter.REJECT
+      if spf_best_guess:
+	#self.log('SPF: no record published, guessing')
+	q.set_default_explanation(
+		'SPF guess: see http://spf.pobox.com/why.html')
+	# best_guess should not result in fail
+	res,code,txt = q.best_guess()
+	receiver += ': guessing'
+      if self.missing_ptr and res in ('neutral', 'none') and spf_reject_noptr:
+        self.log('REJECT: no PTR or SPF')
+	self.setreply('550','5.7.1',
+  'You must have a reverse lookup or publish SPF: http://spf.pobox.com'
+	)
+	return Milter.REJECT
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'5.7.1',txt)
@@ -576,15 +635,19 @@ class bmsMilter(Milter.Milter):
     self.log("rcpt to",to,str)
     t = parse_addr(to.lower())
     if len(t) == 2:
-      if self.mailfrom == '<>':
+      user,domain = t
+      if self.mailfrom == '<>' or self.canon_from.startswith('postmaster@') \
+      	or self.canon_from.startswith('mailer-daemon@'):
         if self.recipients:
 	  self.log('REJECT: Multiple bounce recipients')
 	  self.setreply('550','5.7.1','Multiple bounce recipients')
 	  return Milter.REJECT
-        if srs and not (self.internal_connection or self.trusted_relay):
+        if srs and not (self.internal_connection or self.trusted_relay) \
+		and domain == srs_fwdomain:
 	  oldaddr = '@'.join(parse_addr(to))
 	  try:
 	    newaddr = srs.reverse(oldaddr)
+	    # Currently, a sendmail map reverses SRS.  We just log it here.
 	    self.log("srs rcpt:",newaddr)
 	  except:
 	    if srsre.match(oldaddr):
@@ -592,13 +655,13 @@ class bmsMilter(Milter.Milter):
 	      self.setreply('550','5.7.1','Invalid SRS signature')
 	      return Milter.REJECT
 	    self.data_allowed = not srs_reject_spoofed
+      # non DSN mail to SRS address will bounce due to invalid local part
       self.recipients.append('@'.join(t))
-      user,domain = t
       users = check_user.get(domain)
       if self.discard:
         self.del_recipient(to)
       if users and not user in users:
-        self.log('REJECT: RCPT TO:',to,str)
+        self.log('REJECT: RCPT TO:',to)
 	return Milter.REJECT
       if user in block_forward.get(domain,()):
         self.forward = False
@@ -686,7 +749,7 @@ class bmsMilter(Milter.Milter):
   def header(self,name,hval):
     if not self.data_allowed:
       self.log('REJECT: bounce with no SRS encoding')
-      self.setreply('550','5.7.1',"spoofed reply address")
+      self.setreply('550','5.7.1',"I did not send you this message.")
       return Milter.REJECT
     lname = name.lower()
     # decode near ascii text to unobfuscate
@@ -832,21 +895,22 @@ class bmsMilter(Milter.Milter):
 	    print x
     # screen if no recipients are dspam_users
     if not modified and dspam_screener and not self.internal_connection \
-    	and (self.dspam or self.reject_spam):
+    	and self.dspam:
       self.fp.seek(0)
       txt = self.fp.read()
       if len(txt) > dspam_sizelimit:
 	self.log("Large message:",len(txt))
 	return False
-      if not ds.check_spam(dspam_screener,txt,self.recipients,
+      screener = dspam_screener[self.id % len(dspam_screener)]
+      if not ds.check_spam(screener,txt,self.recipients,
       	classify=True,quarantine=not self.reject_spam):
 	self.fp = None
 	if self.reject_spam:
-	  self.log("DSPAM:",dspam_screener,
+	  self.log("DSPAM:",screener,
 	  	'REJECT: X-DSpam-Score: %f' % ds.probability)
 	  self.setreply('550','5.7.1','Your Message looks spammy')
 	  return True
-	self.log("DSPAM:",dspam_screener,"SCREENED")
+	self.log("DSPAM:",screener,"SCREENED")
     return modified
 
   def eom(self):
@@ -881,16 +945,18 @@ class bmsMilter(Milter.Milter):
       fname = tempfile.mktemp(".fail")	# save message that caused crash
       os.rename(self.tempname,fname)
       self.tempname = None
-      self.log("FAIL: %s" % fname)	# log filename
       if exc_type == email.Errors.BoundaryError:
+	self.log("MALFORMED: %s" % fname)	# log filename
 	self.setreply('554','5.7.7',
 		'Boundary error in your message, are you a spammer?')
         return Milter.REJECT
       if exc_type == email.Errors.HeaderParseError:
+	self.log("MALFORMED: %s" % fname)	# log filename
 	self.setreply('554','5.7.7',
 		'Header parse error in your message, are you a spammer?')
         return Milter.REJECT
       # let default exception handler print traceback and return 451 code
+      self.log("FAIL: %s" % fname)	# log filename
       raise
     if rc == Milter.REJECT: return rc;
     if rc == Milter.DISCARD: return rc;
@@ -967,13 +1033,13 @@ def main():
   if srs or len(discard_users) > 0 or smart_alias or dspam_userdir:
     flags = flags + Milter.DELRCPT
   Milter.set_flags(flags)
-  print "bms milter startup"
+  print "%s bms milter startup" % time.strftime('%Y%b%d %H:%M:%S')
   sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,timeout)
-  print "bms milter shutdown"
+  print "%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
 
 if __name__ == "__main__":
-  read_config(["milter.cfg"])
+  read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
   if dspam_dict:
     import dspam	# low level spam check
   if dspam_userdir:

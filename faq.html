@@ -134,5 +134,26 @@ is a milter declaration for sendmail.cf with all timeouts specified:
 Xpythonfilter, S=local:/var/log/milter/pythonsock, F=T, T=C:5m;S:20s;R:60s;E:5m
 </pre>
 
+<a name="spf">
+<li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
+        to use it.
+<p>  A. The bms.py milter supports spf.  The RedHat RPMs will set almost
+everything up for you.  For other systems:
+<ol type=i>
+<li> Arrange to run bms.py in the background (as a service perhaps) and
+     redirect output and errors to a logfile.  For instance, on AIX you'll want
+     to use SRC (System Resource Controller).  
+<li> Copy milter.cfg to the directory you run bms.py in, and edit it.  The
+     comments should explain the options. 
+<li> Start bms.py in the background as arranged.
+<li> Add Xpythonfilter to sendmail.cf or add an INPUT_MAIL_FILTER to
+     sendmail.mc.  Regen sendmail.cf if you use sendmail.mc and restart 
+     sendmail.
+<li> Arrange to rotate log files and remove old defang files in 
+     <code>tempdir</code>.  The RedHat RPM uses <code>logrotate</code> for
+     logfiles and a simple cron script using <code>find</code> to clean
+     <code>tempdir</code>.
+</ol>
+
 </ol>
 </html>

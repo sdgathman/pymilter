@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Apr 21, 2004</h4>
+Last updated Jun 08, 2004</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="#download">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a>
@@ -40,11 +40,8 @@ Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.
 I recommend upgrading.
 
-<h2> <a name=dspam>Bayesian Filtering</a> </h2>
+<h2> Recent Changes </h2>
 
-I have selected the <a href="http://www.nuclearelephant.com/projects/dspam/">
-dspam bayes filter project</a> and <a href="dspam.html">
-packaged it for python</a>.
 Release 0.6.6 adds support for <a href="http://spf.pobox.com/">SPF</a>,
 a protocol to prevent forging of the envelope from address.  
 SPF support requires <a href="http://pydns.sourceforge.net/">pydns</a>.
@@ -52,15 +49,15 @@ The included spf.py module is an updated version of the original 1.6
 version at <a href="http://www.wayforward.net/spf/">wayforward.net</a>.
 The updated version tracks the draft RFC and test suite.
 <p>
-Release 0.6.0 offers a simple application of dspam I call "header triage",
-which rejects messages with spammy headers.  Since sendmail has to
-read the entire message anyway once we start reading headers, it
-would probably be better to scan the whole message - except that 
-we replace dangerous attachments elsewhere in the milter  - which screws up the
-body statistics for messages with dangerous attachments.
+The FAQ addresses <a href="faq.html#spf">how to get started with SPF</a>.
 <p>
 Release 0.6.1 adds a full milter based dspam application.
 <p>
+I have selected the <a href="http://www.nuclearelephant.com/projects/dspam/">
+dspam bayes filter project</a> and <a href="dspam.html">
+packaged it for python</a>.
+Release 0.6.0 offers a simple application of dspam I call "header triage",
+which rejects messages with spammy headers.  
 To use header triage, you must have <a href="dspam.html">DSPAM</a> installed,
 and select a dictionary that is well moderated by someone who gets
 lots of spam.  That dictionary can be used to block spam that is 

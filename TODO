@@ -1,10 +1,25 @@
+Message not saved for following traceback:
+Traceback (most recent call last):
+  File "/usr/lib/python2.3/site-packages/Milter.py", line 188, in <lambda>
+    milter.set_eom_callback(lambda ctx: ctx.getpriv().eom())
+  File "bms.py", line 935, in eom
+    msg.dump(out)
+  File "/usr/lib/python2.3/site-packages/mime.py", line 347, in dump
+    g.flatten(self,unixfrom=unixfrom)
+  File "/var/tmp/python2.3-2.3.3-root/usr/lib/python2.3/email/Generator.py", line 102, in flatten
+  File "/var/tmp/python2.3-2.3.3-root/usr/lib/python2.3/email/Generator.py", line 130, in _write
+  File "/var/tmp/python2.3-2.3.3-root/usr/lib/python2.3/email/Generator.py", line 156, in _dispatch
+  File "/var/tmp/python2.3-2.3.3-root/usr/lib/python2.3/email/Generator.py", line 199, in _handle_text
+TypeError: string payload expected: <type 'list'>
+------------
+spf.py has no recursion bound on CNAME lookup
+Support SMTP AUTH and disable SPF checks when connection is authorized.
 Web admin interface
-RHBL
+RHSBL
 Check valid domains allowed by internal senders to detect PCs infected
 with spam trojans.
 Do CBV (callback verification) for mail with no published SPF record.
 message log for automated stats and blacklisting
-adapt init script to work on RH9
 Skip dspam when SPF pass?
 Report 551 with rcpt on SPF fail?
 check spam keywords with character classes, e.g.
