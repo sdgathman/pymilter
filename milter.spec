@@ -1,6 +1,6 @@
 %define name milter
-%define version 0.7.1
-%define release 1
+%define version 0.7.2
+%define release 2
 # Redhat 7.x and earlier (multiple ps lines per thread)
 %define sysvinit milter.rc7
 # RH9, other systems (single ps line per process)
@@ -25,6 +25,9 @@ Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{python} >= 2.2.2, sendmail >= 8.12.10
+%ifnos aix4.1
+Requires: chkconfig
+%endif
 BuildRequires: %{python}-devel >= 2.2.2, sendmail-devel >= 8.12.10
 
 %description
@@ -59,10 +62,15 @@ EOF
 
 # purge saved defanged message copies
 mkdir -p $RPM_BUILD_ROOT/etc/cron.daily
+%ifos aix4.1
+R=
+%else
+R='-r'
+%endif
 cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 #!/bin/sh
 
-find /var/log/milter/save -mtime +7 | xargs -r rm
+find /var/log/milter/save -mtime +7 | xargs $R rm
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
@@ -96,6 +104,8 @@ EOF
 chmod a+x $RPM_BUILD_ROOT/var/log/milter/start.sh
 
 mkdir -p $RPM_BUILD_ROOT/var/run/milter
+mkdir -p $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
+cp -p rhsbl.m4 $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 
 %ifos aix4.1
 %post
@@ -107,7 +117,13 @@ if [ $1 = 0 ]; then
 fi
 %else
 %post
-echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
+#echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
+/sbin/chkconfig --add milter
+
+%preun
+if [ $1 = 0 ]; then
+  /sbin/chkconfig --del milter
+fi
 %endif
 
 %clean
@@ -130,8 +146,19 @@ rm -rf $RPM_BUILD_ROOT
 %config /var/log/milter/start.sh
 %config /var/log/milter/bms.py
 %config(noreplace) /etc/mail/pymilter.cfg
+/usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Mon Aug 30 2004 Stuart Gathman <stuart@bmsi.com> 0.7.2-1
+- Fix various SPF bugs
+- Recognize dynamic PTR names, and don't count them as authentication.
+- Three strikes and yer out rule.
+- Block softfail by default unless valid PTR or HELO
+- Return unknown for null mechanism
+- Return unknown for invalid ip address in mechanism
+- Try best guess on HELO also
+- Expand setreply for common errors
+- make rhsbl.m4 hack available for sendmail.mc
 * Sun Aug 22 2004 Stuart Gathman <stuart@bmsi.com> 0.7.1-1
 - Handle modifying mislabeled multipart messages without an exception
 - Support setbacklog, setmlreply
