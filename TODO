@@ -1,0 +1,42 @@
+Implement RRS - a backdoor for non-SRS forwarders.  User lists non-SRS 
+forwarder accounts, and a util provides a special local alias for the
+user to give to the forwarder.  Alias only works for mail from that
+forwarder.  Milter gets forwarder domain from alias and uses it to
+SPF check forwarder.
+
+adapt init script to work on RH9
+Skip dspam when SPF pass?
+Report 551 with rcpt on SPF fail?
+
+Another special dspam user, 'honeypot', can be listed in innoculations.
+All email to those addresses is treated as known spam.
+
+Framework for modular Python milter components within a single VM.
+Python milters can be already be composed through sendmail by running each in
+a separate process.  However, a significant amount of memory is wasted
+for each additional Python VM, and communication between milters
+is cumbersome (e.g., adding mail headers, writing external files).
+
+Backup copies for outgoing/incoming mail.
+
+Allow multiple wiretap groups, each with its own destination.  Perhaps 
+also copy incoming wiretap mail, even though sendmail alias works perfectly
+for the purpose, to avoid having to change two configs for a wiretap.
+
+Provide a way to reload milter.cfg without stopping/restarting milter.
+
+Allow selected Windows extensions for specific domains via milter.cfg
+
+Fix setup.py so that _FFR_QUARANTINE is automatically defined when
+available in libmilter.
+
+Keep separate ismodified flag for headers and body.  This is important
+when rejecting outgoing mail with viruses removed (so as not to
+embarrass yourself), and also removing Received headers with hidepath.
+
+Wrap smfi_setbacklog(int) - but it is only available in sendmail >= 8.12.3,
+  so how can we detect whether to wrap it?
+
+Need a test module to feed sample messages to a milter though a live 
+sendmail and SMTP.  The mockup currently used is probably not very accurate,
+and doesn't test the threading code.

@@ -1,0 +1,86 @@
+Received: from localhost (localhost)
+	by bmsaix.bmsi.com (8.12.9/8.12.6) id h62JqW5p030912;
+	Wed, 2 Jul 2003 15:52:32 -0400
+Date: Wed, 2 Jul 2003 15:52:32 -0400
+From: Mail Delivery Subsystem <MAILER-DAEMON@bmsaix.bmsi.com>
+Message-Id: <200307021952.h62JqW5p030912@bmsaix.bmsi.com>
+To: <annagh000@bellsouth.net>
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="h62JqW5p030912.1057175552/bmsaix.bmsi.com"
+Subject: Returned mail: see transcript for details
+Auto-Submitted: auto-generated (failure)
+
+This is a MIME-encapsulated message
+
+--h62JqW5p030912.1057175552/bmsaix.bmsi.com
+
+The original message was received at Fri, 27 Jun 2003 15:28:03 -0400
+from IDENT:ndcHoBWTR9Bf/rEFYJRejRoPTaRDgSCl@bmsweb.bmsi.com [192.168.9.81]
+
+   ----- The following addresses had permanent fatal errors -----
+makurat@erols.com
+    (reason: 452 4.3.0 Filter failure)
+    (expanded from: <makurat@bmsi.com>)
+
+   ----- Transcript of session follows -----
+... while talking to [192.168.9.81]:
+>>> DATA
+<<< 452 4.3.0 Filter failure
+makurat@erols.com... Deferred: 452 4.3.0 Filter failure
+Message could not be delivered for 5 days
+Message will be deleted from queue
+
+--h62JqW5p030912.1057175552/bmsaix.bmsi.com
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; bmsaix.bmsi.com
+Arrival-Date: Fri, 27 Jun 2003 15:28:03 -0400
+
+Final-Recipient: RFC822; makurat@bmsi.com
+X-Actual-Recipient: RFC822; makurat@erols.com
+Action: failed
+Status: 4.4.7
+Remote-MTA: DNS; [192.168.9.81]
+Diagnostic-Code: SMTP; 452 4.3.0 Filter failure
+Last-Attempt-Date: Wed, 2 Jul 2003 15:52:32 -0400
+
+--h62JqW5p030912.1057175552/bmsaix.bmsi.com
+Content-Type: message/rfc822
+
+Return-Path: <annagh000@bellsouth.net>
+Received: from spidey.bmsi.com (IDENT:ndcHoBWTR9Bf/rEFYJRejRoPTaRDgSCl@bmsweb.bmsi.com [192.168.9.81])
+	by bmsaix.bmsi.com (8.12.9/8.12.6) with ESMTP id h5RJS3Vi042394
+	for <makurat@bmsi.com>; Fri, 27 Jun 2003 15:28:03 -0400
+Received: from sunlong.com ([202.105.130.54])
+	by spidey.bmsi.com (8.11.6/8.11.6) with SMTP id h5RJS2o03547
+	for <makurat@bmsi.com>; Fri, 27 Jun 2003 15:28:02 -0400
+Message-Id: <200306271928.h5RJS2o03547@spidey.bmsi.com>
+Received: from mx06.mail.bellsouth.net([218.104.6.10]) by sunlong.com(JetMail 2.5.3.0)
+	with SMTP id jma73efca64b; Fri, 27 Jun 2003 19:23:44 -0000
+To: <Undisclosed.Recipients@spidey.bmsi.com>
+From: "Stacy McClain" <annagh000@bellsouth.net>
+Subject: Defy Gravity in 15 minutes
+Date: Sat, 28 Jun 2003 03:34:15 -1600
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+	boundary="----=_NextPart_000_646C_00001D33.00000BE1"
+Reply-To: annagh000@bellsouth.net
+X-AntiAbuse: : This header was added to track abuse, please include it with any abuse report
+X-AntiAbuse: Primary Hostname -	210.222.2.13
+X-Originating-Host: : 210.188.201.159
+
+------=_NextPart_000_646C_00001D33.00000BE1
+Content-Type: text/html;
+	charset="iso-8859-1"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+DQoNCjxoZWFkPg0KPHRpdGxlPjwvdGl0bGU+DQo8L2hlYWQ+DQoNCjxib2R5Pg0KDQo8cD4NCjxhIGhyZWY9Imh0dHA6Ly9zcmQueWFob28uY29tL2Ryc3QvNzQxMjQzMjM1LypodHRwOi93d3cuZnJ5YmVlLmNvbS8iPg0KPGltZyBzcmM9Imh0dHA6Ly8yMTAuMTUuNTEuOTUvcGljX3dlbGwvZ3YyLmdpZiIgYm9yZGVyPSIwIiB3aWR0aD0iNDA1IiBoZWlnaHQ9IjI3MCI+PC9hPjwvcD4NCg0KPHA+DQo8YSBocmVmPSJodHRwOi8vc3JkLnlhaG9vLmNvbS9kcnN0Lzc0MTQxNjg4Mjc3NzcvKmh0dHA6L3d3dy5mcnliZWUuY29tL3BhZ2UvYS5odG1sIj4NCjxpbWcgc3JjPSJodHRwOi8vY2xpY2suanVzdGZvcnlvdS1tYWlsLmNvbS9pbWFnZXMvRjEuZ2lmIiB3aWR0aD0iNDEwIiBoZWlnaHQ9IjE0IiBib3JkZXI9IjAiPjwvYT48L3A+DQoNCjxwIGFsaWduPSJsZWZ0Ij4NCiZuYnNwOzwvcD4NCg0KPHAgc3R5bGU9Im1hcmdpbi10b3A6IDA7IG1hcmdpbi1ib3R0b206IDAiPg0KJm5ic3A7PC9wPg0KDQo8cCBzdHlsZT0ibWFyZ2luLXRvcDogMDsgbWFyZ2luLWJvdHRvbTogMCI+DQombmJzcDs8L3A+DQoNCjxwIHN0eWxlPSJtYXJnaW4tdG9wOiAwOyBtYXJnaW4tYm90dG9tOiAwIj4NCiZuYnNwOzwvcD4NCg0KPHAgc3R5bGU9Im1hcmdpbi10b3A6IDA7IG1hcmdpbi1ib3R0b206IDAiPjxmb250IHNpemU9IjEiPnFhd3NteXp0ciBxYXdzYW9lZHRhZ2ZwdiANCnFhd3N5ZmRhb3FqIHFhd3NjaSBxYXdzY!
+212Z3ZrIHFhd3NvaW55d3pkbyBxYXdzbXVxYXdza29jIA0KcWF3c2hobmVkZCBxYXdzZWllbiBxYXdzemlnZ3hucGN2cyBxYXdzd3lkZSBxYXdzeWFwIHFhd3NxamVkeWhxYXdzZmt1bSANCnFhd3NmbSBxYXdzdW11Ym1mYmR3IHFhd3Nkc29ka2xvIHFhd3Nhc2VtayBxYXdzZXdzIHFhd3NxdWRneGVvcWF3c3J6IA0KcWF3c290dSBxYXdzcHplbnJoZW1xYSBxYXdzdXplcmpqcWZxIHFhd3NydWFucyBxYXdzbnBjcGFoZ2pwIHFhd3NxYXdoZHJxYXdzYmFscXNxaiANCnFhd3N5bmggcWF3c2VrIHFhd3N0YmNndGd0IHFhd3N0ZnhzeHd4ICBxYXdzandlcHFhd3NsYmN6ZWRuIHFhd3NzcW1nb3YgDQpxYXdzZ3phdiBxYXdzZ2N2aCBxYXdzd21sYWt1bW5sbiBxYXdzZHpqcW9yeCBxYXdzdGhvbHRmaWxmeHFhd3NpcGJneSANCnFhd3NpbHp5Znd2dnMgIHFhd3NpdmJwdmNiIHFhd3NrZXRpYmtocGRhIHFhd3N6ZmJqYm1yayBxYXdzbWZvZ29ucWF3c2FvIA0KcWF3c21vcXggcWF3c3FkeWVuaCBxYXdzYnMgcWF3c2l5aXBkYWx4IHFhd3N6aXlpbyBxYXdzaWZ6dXFyamltcSANCnFhd3NuayBxYXdza3dhciBxYXdzanNleHNmc2IgcWF3c3RxaWlhY2cgcWF3c2p0YnFobnFlIHFhd3Niam1pcGpxYXdzaHl4anNwbXhuIA0KIHFhd3NqcmJlbnIgcWF3c3p6b3p0ZndydyBxYXdzZ25uaHdjIHFhd3NrdXkgcWF3c3ZwcWF3c25qbmd5eHl1eCBxYXdzd3lvc2EgDQpxYXdzb2lnIHFhd3Nub25rcm5pbWcgcWF3c2NtcGdxemtwcm!
+U8L2ZvbnQ+PC9wPg0KDQo8L2JvZHk+DQoNCjwvaHRtbD48L3RpdGxlPg0K
+
+------=_NextPart_000_646C_00001D33.00000BE1--
+
+
+--h62JqW5p030912.1057175552/bmsaix.bmsi.com--
+

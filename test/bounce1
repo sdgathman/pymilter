@@ -1,0 +1,85 @@
+Received: from zuul.kastle.com (root@localhost)
+	by zuul.kastle.com with ESMTP id h7JGdwn27534
+	for <amy@koger.bmsi.com>; Tue, 19 Aug 2003 12:39:58 -0400 (EDT)
+Received: from kastle.com (netgate.kastle.com [172.17.2.8])
+	by zuul.kastle.com with ESMTP id h7JGdwV27530
+	for <amy@koger.bmsi.com>; Tue, 19 Aug 2003 12:39:58 -0400 (EDT)
+Received: by kastle.com
+	with XWall v3.27 ;
+	Tue, 19 Aug 2003 12:45:41 -0400
+From: System Administrator <postmaster@kastle.com>
+To: "amy@koger.bmsi.com" <amy@koger.bmsi.com>
+Subject: Non delivery report: 5.9.5 (Blocked attachment)
+Date: Tue, 19 Aug 2003 12:45:41 -0400
+X-Mailer: XWall v3.27
+Mime-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="_NextPart_1_qmZrHLajoetbkwlTZTViemHPfyb"
+
+This is a multi part message in MIME format.
+
+--_NextPart_1_qmZrHLajoetbkwlTZTViemHPfyb
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+
+Your message
+
+ From:	amy@koger.bmsi.com
+
+ To:	lwilliams@kastle.com
+
+ Subj:	Thank you!
+ Sent:	2003-08-19 08:51
+
+has encountered a delivery problem.
+
+
+Reason: Blocked attachment
+One of the attachment(s) in the message is blocked.
+For security reasons the message was not or not completely delivered to
+the recipient.
+
+Additional info:
+The blocked attachment is: thank_you.pif
+
+--_NextPart_1_qmZrHLajoetbkwlTZTViemHPfyb
+Content-Type: message/xdelivery-status ; name="delivery-status.txt"
+
+Reporting-MTA: dns; kastle.com
+Received-From-MTA: dns; zuul.kastle.com
+Arrival-Date: Tue, 19 Aug 2003 12:45:41 -0400
+
+Final-Recipient: rfc822; lwilliams@kastle.com
+Action: failed
+Status: 5.9.5
+
+--_NextPart_1_qmZrHLajoetbkwlTZTViemHPfyb
+Content-Type: message/rfc822
+
+Received: from zuul.kastle.com [172.17.2.100]
+	by kastle.com
+	with XWall v3.27 ;
+	Tue, 19 Aug 2003 12:45:41 -0400
+Received: from zuul.kastle.com (root@localhost)
+	by zuul.kastle.com with ESMTP id h7JGduo27526
+	for <lwilliams@kastle.com>; Tue, 19 Aug 2003 12:39:56 -0400 (EDT)
+Received: from 1333AVE2 (wan-vc8f35e.norva3.biz.mindspring.com [216.135.140.174])
+	by zuul.kastle.com with ESMTP id h7JGdqS27522
+	for <lwilliams@kastle.com>; Tue, 19 Aug 2003 12:39:53 -0400 (EDT)
+Message-Id: <200308191639.h7JGdqS27522@zuul.kastle.com>
+From: <amy@koger.bmsi.com>
+To: <lwilliams@kastle.com>
+Subject: Thank you!
+Date: Tue, 19 Aug 2003 12:51:38 --0400
+X-MailScanner: Found to be clean
+Importance: Normal
+X-Mailer: Microsoft Outlook Express 6.00.2600.0000
+X-MSMail-Priority: Normal
+X-Priority: 3 (Normal)
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+	boundary="_NextPart_000_062C48F7"
+
+--_NextPart_1_qmZrHLajoetbkwlTZTViemHPfyb--
+
+

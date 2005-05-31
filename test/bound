@@ -1,0 +1,84 @@
+From dspam Mon Sep 29 16:36:23 2003
+Received: from orcon.net.nz (port-219-88-129-82.orcon.net.nz [219.88.129.82])
+	by spidey.planet.com (8.11.6/8.11.6) with SMTP id h8Q85c414321
+	for <postmaster@bugle.com>; Fri, 26 Sep 2003 04:05:39 -0400
+Date: Fri, 26 Sep 2003 20:05:56 +1200
+From: Mail Delivery Subsystem <MAILER-DAEMON@orcon.net.nz>
+Message-Id: <200309262005.IEI23104@mx1.orcon.net.nz>
+To: <postmaster@bugle.com>
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+ boundary="IEI23104.1064534400/mx1.orcon.net.nz"
+Subject: Returned mail: User unknown
+Auto-Submitted: auto-generated (failure)
+X-DSpam-HeaderScore: 0.007433
+
+This is a MIME-encapsulated message
+
+--IEI23104.1064534400/mx1.orcon.net.nz
+
+The original message was received at Fri, 26 Sep 2003 20:05:56 +1200
+from 
+
+   ----- The following addresses had permanent fatal errors -----
+<mike-liz@orcon.net.nz>
+    (expanded from: <mike-liz@orcon.net.nz>)
+
+   ----- Transcript of session follows -----
+mail.local: unknown name: mike-liz
+550 <mike-liz@orcon.net.nz>... User unknown
+
+--IEI23104.1064534400/mx1.orcon.net.nz
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; mx1.orcon.net.nz
+Received-From-MTA: DNS; 
+Arrival-Date: Fri, 26 Sep 2003 20:05:56 +1200
+
+Final-Recipient: RFC822; <mike-liz@orcon.net.nz>
+X-Actual-Recipient: RFC822; mike-liz@orcon.net.nz
+Action: failed
+Status: 5.1.1
+Last-Attempt-Date: Fri, 26 Sep 2003 20:05:56 +1200
+
+--IEI23104.1064534400/mx1.orcon.net.nz
+Content-Type: message/rfc822
+
+Return-Path: <MAILER-DAEMON>
+Received: from global_1.bugle.com ([12.4.120.82])
+	by dbmail-mx3.orcon.co.nz (8.12.6/8.12.6/Debian-7) with ESMTP id h8O6CRJ8015038
+	for <mike-liz@orcon.net.nz>; Wed, 24 Sep 2003 18:12:28 +1200
+From: postmaster@bugle.com
+To: mike-liz@orcon.net.nz
+Date: Wed, 24 Sep 2003 02:13:53 -0400
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status;
+	boundary="9B095B5ADSN=_01C3664F7D2C23400000BC00global_1.bugle."
+X-DSNContext: 335a7efd - 4457 - 00000001 - 80040546
+Message-ID: <YkMSnhRpy00001453@global_1.bugle.com>
+Subject: Delivery Status Notification (Failure)
+X-Spam-Score: 3.5 (***) BANG_MONEY,CASHCASHCASH,EXCUSE_10,EXCUSE_14,MAILTO_TO_SPAM_ADDR,NO_REAL_NAME,SENT_IN_COMPLIANCE
+X-Scanned-By: MIMEDefang 2.32 (www . roaringpenguin . com / mimedefang)
+This is a MIME-formatted message.  
+Portions of this message may be unreadable without a MIME-capable mail program.
+
+--9B095B5ADSN=_01C3664F7D2C23400000BC00global_1.bugle.
+Content-Type: text/plain; charset=unicode-1-1-utf-7
+
+This is an automatically generated Delivery Status Notification.
+
+Delivery to the following recipients failed.
+
+       jholt@bugle.com
+
+
+
+
+--9B095B5ADSN=_01C3664F7D2C23400000BC00global_1.bugle.
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns;global_1.bugle.com
+Received-From-MTA: dns;gts.bugle.com
+--IEI23104.1064534400/mx1.orcon.net.nz--
+
+
