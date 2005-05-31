@@ -33,6 +33,18 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 2.31  2004/08/23 02:24:36  stuart
+ * Support setbacklog
+ *
+ * Revision 2.30  2004/08/21 20:29:53  stuart
+ * Support option of 11 lines max for mlreply.
+ *
+ * Revision 2.29  2004/08/21 04:14:29  stuart
+ * mlreply support
+ *
+ * Revision 2.28  2004/08/21 02:45:21  stuart
+ * Don't leak int constants if module unloaded.
+ *
  * Revision 2.27  2004/04/06 03:19:59  stuart
  * Release 0.6.8
  *
@@ -127,10 +139,19 @@ $ python setup.py help
  *
  */
 
+#ifndef MAX_ML_REPLY
+#define MAX_ML_REPLY 32
+#endif
+#if MAX_ML_REPLY != 1 && MAX_ML_REPLY != 32 && MAX_ML_REPLY != 11
+#error MAX_ML_REPLY must be 1 or 11 or 32
+#endif
+#define _FFR_MULTILINE (MAX_ML_REPLY > 1)
+
 #include <pthread.h>
 #include <netinet/in.h>
 #include <Python.h>
 #include <libmilter/mfapi.h>
+
 
 /* See if we have IPv4 and/or IPv6 support in this OS and in
  * libmilter.  We need to make several macro tests because some OS's
@@ -746,6 +767,18 @@ milter_setdbg(PyObject *self, PyObject *args) {
   return _generic_return(smfi_setdbg(val), "cannot set debug value");
 }
 
+static char milter_setbacklog__doc__[] =
+"setbacklog(int) -> None\n\
+Set the TCP connection queue size for the milter socket.";
+
+static PyObject *
+milter_setbacklog(PyObject *self, PyObject *args) {
+   int val;
+
+   if (!PyArg_ParseTuple(args, "i:setbacklog", &val)) return NULL;
+   return _generic_return(smfi_setbacklog(val), "cannot set backlog");
+}
+
 static char milter_settimeout__doc__[] =
 "settimeout(int) -> None\n\
 Set the time (in seconds) that sendmail will wait before\n\
@@ -820,13 +853,54 @@ static PyObject *
 milter_setreply(PyObject *self, PyObject *args) {
   char *rcode;
   char *xcode;
-  char *message;
+  char *message[MAX_ML_REPLY];
+  char fmt[MAX_ML_REPLY + 16];
   SMFICTX *ctx;
-  if (!PyArg_ParseTuple(args, "szz:setreply", &rcode, &xcode, &message))
+  int i;
+  strcpy(fmt,"sz|");
+  for (i = 0; i < MAX_ML_REPLY; ++i) {
+    message[i] = 0;
+    fmt[i+3] = 's';
+  }
+  strcpy(fmt+i+3,":setreply");
+  if (!PyArg_ParseTuple(args, fmt,
+	&rcode, &xcode, message
+#if MAX_ML_REPLY > 1
+	,message+1,message+2,message+3,message+4,message+5,message+6,
+	message+7,message+8,message+9,message+10
+#if MAX_ML_REPLY > 11
+	,message+11,message+12,message+13,message+14,message+15,
+	message+16,message+17,message+18,message+19,message+20,
+	message+21,message+22,message+23,message+24,message+25,
+	message+26,message+27,message+28,message+29,message+30,
+	message+31
+#endif
+#endif
+  ))
     return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
-  return _generic_return(smfi_setreply(ctx, rcode, xcode, message),
+#if MAX_ML_REPLY > 1
+  /*
+   * C varargs might be convenient for some things, but they sure are a pain
+   * when the number of args is not known at compile time.
+   */
+  if (message[0] && message[1])
+    return _generic_return(smfi_setmlreply(ctx, rcode, xcode,
+	  message[0],
+	  message[1],message[2],message[3],message[4],message[5],
+	  message[6],message[7],message[8],message[9],message[10],
+#if MAX_ML_REPLY > 11
+	  message[11],message[12],message[13],message[14],message[15],
+	  message[16],message[17],message[18],message[19],message[20],
+	  message[21],message[22],message[23],message[24],message[25],
+	  message[26],message[27],message[28],message[29],message[30],
+	  message[31],
+#endif
+	  (char *)0
+    ), "cannot set reply");
+#endif
+  return _generic_return(smfi_setreply(ctx, rcode, xcode, message[0]),
 			 "cannot set reply");
 }
 
@@ -986,7 +1060,7 @@ milter_getpriv(PyObject *self, PyObject *args) {
   return o;
 }
 
-#if _FFR_QUARANTINE
+#ifdef SMFIF_QUARANTINE
 static char milter_quarantine__doc__[] =
 "quarantine(string) -> None\n\
 Place the message in quarantine.  A string with a description of the reason\n\
@@ -1035,7 +1109,7 @@ static PyMethodDef context_methods[] = {
   { "replacebody", milter_replacebody, METH_VARARGS, milter_replacebody__doc__},
   { "setpriv",     milter_setpriv,     METH_VARARGS, milter_setpriv__doc__},
   { "getpriv",     milter_getpriv,     METH_VARARGS, milter_getpriv__doc__},
-#if _FFR_QUARANTINE
+#ifdef SMFIF_QUARANTINE
   { "quarantine",  milter_quarantine,  METH_VARARGS, milter_quarantine__doc__},
 #endif
 #if _FFR_SMFI_PROGRESS
@@ -1081,6 +1155,7 @@ static PyMethodDef milter_methods[] = {
    { "main",                 milter_main,                 METH_VARARGS, milter_main__doc__},
    { "setdbg",               milter_setdbg,               METH_VARARGS, milter_setdbg__doc__},
    { "settimeout",           milter_settimeout,           METH_VARARGS, milter_settimeout__doc__},
+   { "setbacklog",           milter_setbacklog,           METH_VARARGS, milter_setbacklog__doc__},
    { "setconn",              milter_setconn,              METH_VARARGS, milter_setconn__doc__},
    { "stop",                 milter_stop,                 METH_VARARGS, milter_stop__doc__},
    { NULL, NULL }
@@ -1116,6 +1191,12 @@ allowing one to write email filters directly in Python.\n\
 Libmilter is currently marked FFR, and needs to be explicitly installed.\n\
 See <sendmailsource>/libmilter/README for details on setting it up.\n";
 
+static void setitem(PyObject *d,const char *name,long val) {
+  PyObject *v = PyInt_FromLong(val);
+  PyDict_SetItemString(d,name,v);
+  Py_DECREF(v);
+}
+
 void
 initmilter(void) {
    PyObject *m, *d;
@@ -1125,24 +1206,24 @@ initmilter(void) {
    d = PyModule_GetDict(m);
    MilterError = PyErr_NewException("milter.error", NULL, NULL);
    PyDict_SetItemString(d,"error", MilterError);
-   PyDict_SetItemString(d,"SUCCESS", PyInt_FromLong((long) MI_SUCCESS));
-   PyDict_SetItemString(d,"FAILURE", PyInt_FromLong((long) MI_FAILURE));
-   PyDict_SetItemString(d,"VERSION", PyInt_FromLong((long) SMFI_VERSION));
-   PyDict_SetItemString(d,"ADDHDRS", PyInt_FromLong((long) SMFIF_ADDHDRS));
-   PyDict_SetItemString(d,"CHGBODY", PyInt_FromLong((long) SMFIF_CHGBODY));
-   PyDict_SetItemString(d,"MODBODY", PyInt_FromLong((long) SMFIF_MODBODY));
-   PyDict_SetItemString(d,"ADDRCPT", PyInt_FromLong((long) SMFIF_ADDRCPT));
-   PyDict_SetItemString(d,"DELRCPT", PyInt_FromLong((long) SMFIF_DELRCPT));
-   PyDict_SetItemString(d,"CHGHDRS", PyInt_FromLong((long) SMFIF_CHGHDRS));
-   PyDict_SetItemString(d,"V1_ACTS", PyInt_FromLong((long) SMFI_V1_ACTS));
-   PyDict_SetItemString(d,"V2_ACTS", PyInt_FromLong((long) SMFI_V2_ACTS));
-   PyDict_SetItemString(d,"CURR_ACTS", PyInt_FromLong((long) SMFI_CURR_ACTS));
+   setitem(d,"SUCCESS",  MI_SUCCESS);
+   setitem(d,"FAILURE",  MI_FAILURE);
+   setitem(d,"VERSION",  SMFI_VERSION);
+   setitem(d,"ADDHDRS",  SMFIF_ADDHDRS);
+   setitem(d,"CHGBODY",  SMFIF_CHGBODY);
+   setitem(d,"MODBODY",  SMFIF_MODBODY);
+   setitem(d,"ADDRCPT",  SMFIF_ADDRCPT);
+   setitem(d,"DELRCPT",  SMFIF_DELRCPT);
+   setitem(d,"CHGHDRS",  SMFIF_CHGHDRS);
+   setitem(d,"V1_ACTS",  SMFI_V1_ACTS);
+   setitem(d,"V2_ACTS",  SMFI_V2_ACTS);
+   setitem(d,"CURR_ACTS",  SMFI_CURR_ACTS);
 #ifdef SMFIF_QUARANTINE
-   PyDict_SetItemString(d,"QUARANTINE",PyInt_FromLong((long)SMFIF_QUARANTINE));
+   setitem(d,"QUARANTINE",SMFIF_QUARANTINE);
 #endif
-   PyDict_SetItemString(d,"CONTINUE", PyInt_FromLong((long) SMFIS_CONTINUE));
-   PyDict_SetItemString(d,"REJECT", PyInt_FromLong((long) SMFIS_REJECT));
-   PyDict_SetItemString(d,"DISCARD", PyInt_FromLong((long) SMFIS_DISCARD));
-   PyDict_SetItemString(d,"ACCEPT", PyInt_FromLong((long) SMFIS_ACCEPT));
-   PyDict_SetItemString(d,"TEMPFAIL", PyInt_FromLong((long) SMFIS_TEMPFAIL));
+   setitem(d,"CONTINUE",  SMFIS_CONTINUE);
+   setitem(d,"REJECT",  SMFIS_REJECT);
+   setitem(d,"DISCARD",  SMFIS_DISCARD);
+   setitem(d,"ACCEPT",  SMFIS_ACCEPT);
+   setitem(d,"TEMPFAIL",  SMFIS_TEMPFAIL);
 }

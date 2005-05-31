@@ -1,5 +1,9 @@
 Here is a history of user visible changes to Python milter.
 
+0.7.1	Handle modifying mislabeled multipart messages without an exception
+	Support setbacklog, setmlreply
+	Allow multi-recipient CBV
+	Return TEMPFAIL for SPF softfail
 0.7.0	SPF check hello name
 	Move pythonsock to /var/run/milter
 	Move milter.cfg to /etc/mail/pymilter.cfg

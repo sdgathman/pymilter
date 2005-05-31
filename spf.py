@@ -45,6 +45,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.14  2004/08/23 02:28:24  stuart
+# Remove Perl usage message.
+#
 # Revision 1.13  2004/07/23 19:23:12  stuart
 # Always fail to match on ip6, until we support it properly.
 #
@@ -115,15 +118,6 @@ import xml.sax
 # (c) 2004 Python version by Stuart Gathman
 #
 # Date: 2004-02-25
-# Version: 1.0
-#
-# Usage:
-#  ./cid2spf.pl "<ep xmlns='http://ms.net/1'>...</ep>"
-#
-# Note that the 'include' directives will also have to be checked and
-# "translated". Future versions of this script might be able to get a
-# domain name as an argument and "crawl" the DNS for the necessary
-# information.
 #
 # A complete reverse translation (SPF -> CID) might be impossible, since
 # there are no way to handle:

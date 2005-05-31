@@ -1,6 +1,17 @@
 #!/usr/bin/env python
 # A simple milter.
 # $Log$
+# Revision 1.117  2004/08/23 02:27:53  stuart
+# Allow multi rcpt CBV.  Add some multiline replies.
+#
+# Revision 1.116  2004/08/20 22:27:52  stuart
+# Generate TEMPFAIL for SPF softfail.
+#
+# Revision 1.115  2004/08/19 20:55:49  stuart
+# Always show reversed SRS path.
+# Check if encodings are an ASCII superset.  Some messages were encoded as
+# BIG5 and getting rejected even though chars were all in ascii subset.
+#
 # Revision 1.114  2004/07/27 00:40:12  stuart
 # Make reject on no PTR optional.
 #
@@ -435,7 +446,10 @@ def parse_header(val):
     u = []
     for s,enc in h:
       if enc:
-	u.append(unicode(s,enc))
+        try:
+	  u.append(unicode(s,enc))
+	except LookupError:
+	  u.append(unicode(s))
       else:
 	u.append(unicode(s))
     u = ''.join(u)
@@ -443,13 +457,14 @@ def parse_header(val):
       try:
 	return u.encode(enc)
       except UnicodeError: continue
-  except UnicodeDecodeError:
-    return val
-  except LookupError:
-    return val
+  except UnicodeDecodeError: pass
+  except LookupError: pass
+  return val
 
 class bmsMilter(Milter.Milter):
-  "Milter to replace attachments poisonous to Windows with a WARNING message."
+  """Milter to replace attachments poisonous to Windows with a WARNING message,
+     check SPF, and other anti-forgery features, and implement wiretapping
+     and smart alias redirection."""
 
   def log(self,*msg):
     print "%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S'),self.id),
@@ -592,8 +607,13 @@ class bmsMilter(Milter.Milter):
 	# check hello name via spf
 	hres,hcode,htxt = spf.check(self.connectip,'',self.hello_name)
 	if hres in ('deny','fail','neutral','softfail'):
-	  self.log('REJECT: hello SPF: %s %i %s' % (hres,hcode,htxt))
-	  self.setreply('550','5.7.1',htxt)
+	  self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
+	  self.setreply('550','5.7.1',htxt,
+	    "The hostname given in your MTA's HELO response is not listed",
+	    "as a legitimate MTA in the SPF records for your domain.",
+	    "If you get this bounce, the message was not in fact a forgery,",
+	    "and you should notify your email administrator of the problem."
+	  )
 	  return Milter.REJECT
       if spf_best_guess:
 	#self.log('SPF: no record published, guessing')
@@ -612,10 +632,26 @@ class bmsMilter(Milter.Milter):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'5.7.1',txt)
       return Milter.REJECT
+    if res == 'softfail':
+      self.log('TEMPFAIL: SPF %s 450 %s' % (res,txt))
+      self.setreply('450','4.3.0',
+	'SPF softfail: will keep trying until your SPF record is fixed.',
+	'If you get this Delivery Status Notice, your email was probably',
+	'legitimate.  Your administrator has published SPF records in a',
+	'testing mode.  The SPF record reported your email as a forgery,',
+	'which is a mistake if you are reading this.  Please notify your',
+	'administrator of the problem.'
+      )
+      return Milter.TEMPFAIL
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
       self.setreply('550','5.7.1',
-	'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o
+	'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o,
+	'The %s domain is one that spammers love to forge.  Due to' % q.o,
+	'the volume of forged mail, we can only accept mail that',
+	'the SPF record for %s explicitly designates as legitimate.' % q.o,
+	'Sending your email through the recommended outgoing SMTP',
+	'servers for %s should accomplish this.' % q.o
       )
       return Milter.REJECT
     if res == 'error':
@@ -639,22 +675,20 @@ class bmsMilter(Milter.Milter):
       if self.mailfrom == '<>' or self.canon_from.startswith('postmaster@') \
       	or self.canon_from.startswith('mailer-daemon@'):
         if self.recipients:
-	  self.log('REJECT: Multiple bounce recipients')
-	  self.setreply('550','5.7.1','Multiple bounce recipients')
-	  return Milter.REJECT
-        if srs and not (self.internal_connection or self.trusted_relay) \
-		and domain == srs_fwdomain:
+	  self.data_allowed = False
+        if srs and domain == srs_fwdomain:
 	  oldaddr = '@'.join(parse_addr(to))
 	  try:
 	    newaddr = srs.reverse(oldaddr)
 	    # Currently, a sendmail map reverses SRS.  We just log it here.
 	    self.log("srs rcpt:",newaddr)
 	  except:
-	    if srsre.match(oldaddr):
-	      self.log("REJECT: srs spoofed:",oldaddr)
-	      self.setreply('550','5.7.1','Invalid SRS signature')
-	      return Milter.REJECT
-	    self.data_allowed = not srs_reject_spoofed
+            if not (self.internal_connection or self.trusted_relay):
+	      if srsre.match(oldaddr):
+		self.log("REJECT: srs spoofed:",oldaddr)
+		self.setreply('550','5.7.1','Invalid SRS signature')
+		return Milter.REJECT
+	      self.data_allowed = not srs_reject_spoofed
       # non DSN mail to SRS address will bounce due to invalid local part
       self.recipients.append('@'.join(t))
       users = check_user.get(domain)
@@ -748,8 +782,12 @@ class bmsMilter(Milter.Milter):
 
   def header(self,name,hval):
     if not self.data_allowed:
-      self.log('REJECT: bounce with no SRS encoding')
-      self.setreply('550','5.7.1',"I did not send you this message.")
+      if len(self.recipients) > 1:
+	self.log('REJECT: Multiple bounce recipients')
+	self.setreply('550','5.7.1','Multiple bounce recipients')
+      else:
+	self.log('REJECT: bounce with no SRS encoding')
+	self.setreply('550','5.7.1',"I did not send you that message.")
       return Milter.REJECT
     lname = name.lower()
     # decode near ascii text to unobfuscate
@@ -757,8 +795,8 @@ class bmsMilter(Milter.Milter):
     if not self.internal_connection:
       # even if we wanted the Taiwanese spam, we can't read Chinese
       if block_chinese and lname == 'subject':
-	if hval.startswith('=?big5') or hval.startswith('=?ISO-2022-JP'):
-	  self.log('REJECT: %s: %s' % (name,hval))
+	if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
+	  self.log('REJECT: %s: %s' % (name,val))
 	  self.setreply('550','5.7.1',"We don't understand chinese")
 	  return Milter.REJECT
       rc = self.check_header(name,val)
@@ -770,7 +808,7 @@ class bmsMilter(Milter.Milter):
       try:
         val = val.encode('us-ascii')
       except:
-        val = hval
+	val = hval
       self.fp.write("%s: %s\n" % (name,val))	# add header to buffer
     return Milter.CONTINUE
 
