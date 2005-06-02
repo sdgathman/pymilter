@@ -1,8 +1,6 @@
 Defer TEMPERROR in SPF evaluation - give precedence to security
 (only defer for PASS mechanisms).
 
-Allow multiple recipients for MAIL FROM: <> by default.
-
 Option to add Received-SPF header, but never reject on SPF.
 
 Option to configure banned extension list for mime.py.  Default to empty.

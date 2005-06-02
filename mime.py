@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.1.1.4  2005/05/31 18:23:49  customdesigned
+# Development changes since 0.7.2
+#
 # Revision 1.62  2005/02/14 22:31:17  stuart
 # _parseparam replacement not needed for python2.4
 #
@@ -62,8 +65,8 @@
 # with a warning message.
 
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001 Business Management Systems, Inc.
-# This code is under GPL.  See COPYING for details.
+# Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
 
 import StringIO
 import socket

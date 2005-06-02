@@ -2,6 +2,7 @@
 """SPF (Sender-Permitted From) implementation.
 
 Copyright (c) 2003, Terence Way
+Portions Copyright (c) 2004,2005 Stuart Gathman <stuart@bmsi.com>
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -45,6 +46,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.3  2005/06/02 02:08:12  customdesigned
+# Reject on PermErr
+#
 # Revision 1.2  2005/05/31 18:57:59  customdesigned
 # Clear unknown mechanism list at proper time.
 #

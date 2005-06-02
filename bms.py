@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.3  2005/06/02 02:09:00  customdesigned
+# Record timestamp in send_dsn.log
+#
 # Revision 1.2  2005/06/02 01:00:36  customdesigned
 # Support configurable templates for DSNs.
 #
@@ -183,8 +186,8 @@
 # Release 0.6.4
 #
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001 Business Management Systems, Inc.
-# This code is under GPL.  See COPYING for details.
+# Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
 
 import sys
 import os

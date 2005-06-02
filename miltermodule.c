@@ -1,4 +1,5 @@
 /* Copyright (C) 2001  James Niemira (niemira@colltech.com, urmane@urmane.org)
+ * Portions Copyright (C) 2001,2002,2003,2004  Stuart Gathman (stuart@bmsi.com)
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.1.1.2  2005/05/31 18:09:06  customdesigned
+ * Release 0.7.1
+ *
  * Revision 2.31  2004/08/23 02:24:36  stuart
  * Support setbacklog
  *

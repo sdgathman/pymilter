@@ -1,3 +1,10 @@
+# Author: Stuart D. Gathman <stuart@bmsi.com>
+# Copyright 2005 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
+
+# Send DSNs, do call back verification,
+# and generate DSN messages from a template
+
 import smtplib
 import spf
 import socket
