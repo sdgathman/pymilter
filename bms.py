@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.2  2005/06/02 01:00:36  customdesigned
+# Support configurable templates for DSNs.
+#
 #
 # Revision 1.134  2005/05/25 15:36:43  stuart
 # Use dynip module.
@@ -254,11 +257,20 @@ spf_accept_softfail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 multiple_bounce_recipients = True
+time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
 try:
-  for rcpt in open('send_dsn.log'):
-    cbv_cache[rcpt.strip()] = None
+  too_old = time.time() - 30*24*60*60	# 30 days
+  for ln in open('send_dsn.log'):
+    try:
+      rcpt,ts = ln.strip().split(None,1)
+      l = time.strptime(ts,time_format)
+      t = time.mktime(l)
+      if t > too_old:
+	cbv_cache[rcpt] = None
+    except:
+      cbv_cache[ln.strip()] = None
 except IOError: pass
 
 class MilterConfigParser(ConfigParser.ConfigParser):
@@ -677,7 +689,8 @@ class bmsMilter(Milter.Milter):
     if res == 'error':
       if code >= 500:
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	self.setreply(str(code),'5.7.1',txt)
+	# latest SPF draft recommends 5.5.2 instead of 5.7.1
+	self.setreply(str(code),'5.5.2',txt)
 	return Milter.REJECT
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
@@ -1077,13 +1090,15 @@ class bmsMilter(Milter.Milter):
 	  self.log('TEMPFAIL:',desc)
           self.setreply('450','4.2.0',*desc.splitlines())
 	  return Milter.TEMPFAIL
+	if len(res) < 3: res += time.time(),
 	cbv_cache[sender] = res
 	self.log('REJECT:',desc)
         self.setreply('550','5.7.1',*desc.splitlines())
 	return Milter.REJECT
       cbv_cache[sender] = res
       if not cached:
-	print >>open('send_dsn.log','a'),sender # log who we sent DSNs to
+        s = time.strftime(time_format,time.localtime())
+	print >>open('send_dsn.log','a'),sender,s # log who we sent DSNs to
       self.cbv_needed = None
 
     if not defanged and not spam_checked:
