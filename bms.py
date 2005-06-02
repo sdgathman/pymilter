@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.4  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
 # Revision 1.3  2005/06/02 02:09:00  customdesigned
 # Record timestamp in send_dsn.log
 #
@@ -236,6 +239,8 @@ log_headers = False
 block_chinese = False
 spam_words = ()
 porn_words = ()
+banned_exts = mime.extlist.split(',')
+scan_zip = False
 scan_html = True
 scan_rfc822 = True
 internal_connect = ()
@@ -340,10 +345,11 @@ def read_config(list):
   })
   cp.read(list)
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, scan_rfc822, scan_html, block_chinese, timeout
+  global socketname, scan_rfc822, scan_html, block_chinese, timeout, scan_zip
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
   scan_rfc822 = cp.getboolean('milter','scan_rfc822')
+  scan_zip = cp.getboolean('milter','scan_zip')
   scan_html = cp.getboolean('milter','scan_html')
   block_chinese = cp.getboolean('milter','block_chinese')
 
@@ -366,9 +372,11 @@ def read_config(list):
   internal_domains = cp.getlist('milter','internal_domains')
 
   global porn_words, spam_words, smart_alias, trusted_relay, hello_blacklist
+  global banned_exts
   trusted_relay = cp.getlist('milter','trusted_relay')
   porn_words = cp.getlist('milter','porn_words')
   spam_words = cp.getlist('milter','spam_words')
+  banned_exts = cp.getlist('milter','banned_exts')
   hello_blacklist = cp.getlist('milter','hello_blacklist')
   for sa in cp.getlist('wiretap','smart_alias'):
     sm = cp.getlist('wiretap',sa)
@@ -897,11 +905,22 @@ class bmsMilter(Milter.Milter):
 	for i in range(len(h),0,-1):
 	  self.chgheader(name,i-1,'')
 
+  def _chk_ext(self,name):
+    "Check a name for dangerous Winblows extensions."
+    if not name: return name
+    lname = name.lower()
+    for ext in self.bad_extensions:
+      if lname.endswith(ext): return name
+    return None
+
+    
   def _chk_attach(self,msg):
     "Filter attachments by content."
-    mime.check_name(msg,self.tempname)	# check for bad extensions
+    # check for bad extensions
+    mime.check_name(msg,self.tempname,ckname=self._chk_ext,scan_zip=scan_zip)
+    # remove scripts from HTML
     if scan_html:
-      mime.check_html(msg,self.tempname)	# remove scripts from HTML
+      mime.check_html(msg,self.tempname)	
     # don't let a tricky virus slip one past us
     if scan_rfc822:
       msg = msg.get_submsg()
@@ -1014,6 +1033,7 @@ class bmsMilter(Milter.Milter):
 
       # filter leaf attachments through _chk_attach
       assert not msg.ismodified()
+      self.bad_extensions = ['.' + x for x in banned_exts]
       rc = mime.check_attachments(msg,self._chk_attach)
     except:	# milter crashed trying to analyze mail
       exc_type,exc_value = sys.exc_info()[0:2]

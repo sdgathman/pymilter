@@ -169,6 +169,8 @@ rm -rf $RPM_BUILD_ROOT
 - DSN support for Three strikes rule and SPF SOFTFAIL
 - Move /*mime*/ and dynip to Milter subpackage
 - Fix SPF unknown mechanism list not cleared
+- Make banned extensions configurable.
+- Option to scan zipfiles for bad extensions.
 * Tue Feb 08 2005 Stuart Gathman <stuart@bmsi.com> 0.7.3-1.EL3
 - Support EL3 and Python2.4 (some scanning/defang support broken)
 * Mon Aug 30 2004 Stuart Gathman <stuart@bmsi.com> 0.7.2-1

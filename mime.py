@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.2  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
 # Revision 1.1.1.4  2005/05/31 18:23:49  customdesigned
 # Development changes since 0.7.2
 #
@@ -71,6 +74,7 @@
 import StringIO
 import socket
 import Milter
+import zipfile
 
 import email
 import email.Message
@@ -156,7 +160,7 @@ class MimeMessage(Message):
   def getname(self):
     return self.get_param('name')
 
-  def getnames(self):
+  def getnames(self,scan_zip=False):
     """Return a list of (attr,name) pairs of attributes that IE might
        interpret as a name - and hence decide to execute this message."""
     names = []
@@ -171,7 +175,16 @@ class MimeMessage(Message):
       else:
 	  val = _unquotevalue(val.strip())
       names.append((attr,val))
-    return names + [("filename",self.get_filename())]
+    names += [("filename",self.get_filename())]
+    if scan_zip:
+      for key,name in names:
+	if name and name.lower().endswith('.zip'):
+	  txt = self.get_payload(decode=True)
+	  fp =  StringIO.StringIO(txt)
+	  zipf = zipfile.ZipFile(fp,'r')
+	  for nm in zipf.namelist():
+	    names.append(('zipname',nm))
+    return names
 
   def ismodified(self):
     "True if this message or a subpart has been modified."
@@ -279,12 +292,14 @@ A copy of your original message was saved as '%s:%s'.
 See your administrator.
 """
 
-def check_name(msg,savname=None,ckname=check_ext):
+def check_name(msg,savname=None,ckname=check_ext,scan_zip=False):
   "Replace attachment with a warning if its name is suspicious."
-  for key,name in msg.getnames():
+  for key,name in msg.getnames(scan_zip):
     badname = ckname(name)
     if badname:
       hostname = socket.gethostname()
+      if key == 'zipname':
+        badname = msg.get_filename()
       msg.set_payload(virus_msg % (badname,hostname,savname))
       del msg["content-type"]
       del msg["content-disposition"]
@@ -312,11 +327,11 @@ check	function(MimeMessage): int
 # save call context for Python without nested_scopes
 class _defang:
 
-  def __init__(self):
-    self.scan_html = True
+  def __init__(self,scan_html=True):
+    self.scan_html = scan_html
 
   def _chk_name(self,msg):
-    rc = check_name(msg,self._savname,self._check)
+    rc = check_name(msg,self._savname,self._check,self.scan_zip)
     if self.scan_html:
       check_html(msg,self._savname)	# remove scripts from HTML
     if self.scan_rfc822:
@@ -325,12 +340,14 @@ class _defang:
         return check_attachments(msg,self._chk_name)
     return rc
 
-  def __call__(self,msg,savname=None,check=check_ext,scan_rfc822=True):
+  def __call__(self,msg,savname=None,check=check_ext,scan_rfc822=True,
+  		scan_zip=False):
     """Compatible entry point.
     Replace all attachments with dangerous names."""
     self._savname = savname
     self._check = check
     self.scan_rfc822 = scan_rfc822
+    self.scan_zip = scan_zip
     check_attachments(msg,self._chk_name)
     if msg.ismodified():
       return True
