@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-# A simple milter.
+# A simple milter that has grown quite a bit.
 # $Log$
+#
 # Revision 1.134  2005/05/25 15:36:43  stuart
 # Use dynip module.
 # Support smart aliasing of wiretap destination.
@@ -252,6 +253,7 @@ spf_reject_neutral = ()
 spf_accept_softfail = ()
 spf_best_guess = False
 spf_reject_noptr = False
+multiple_bounce_recipients = True
 timeout = 600
 cbv_cache = {}
 try:
@@ -264,7 +266,7 @@ class MilterConfigParser(ConfigParser.ConfigParser):
   def getlist(self,sect,opt):
     if self.has_option(sect,opt):
       return [q.strip() for q in self.get(sect,opt).split(',')]
-    return ()
+    return []
 
   def getaddrset(self,sect,opt):
     if not self.has_option(sect,opt):
@@ -637,6 +639,7 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
         if self.mailfrom != '<>':
+	  q.result = res
 	  self.cbv_needed = q
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
@@ -658,6 +661,7 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
       if self.mailfrom != '<>':
+        q.result = res
 	self.cbv_needed = q
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
@@ -695,7 +699,7 @@ class bmsMilter(Milter.Milter):
       user,domain = t
       if self.mailfrom == '<>' or self.canon_from.startswith('postmaster@') \
       	or self.canon_from.startswith('mailer-daemon@'):
-        if self.recipients:
+        if self.recipients and not multiple_bounce_recipients:
 	  self.data_allowed = False
         if srs and domain == srs_fwdomain:
 	  oldaddr = '@'.join(parse_addr(to))
@@ -843,8 +847,9 @@ class bmsMilter(Milter.Milter):
     # copy headers to a temp file for scanning the body
     headers = self.fp.getvalue()
     self.fp.close()
-    self.tempname = fname = tempfile.mktemp(".defang")
-    self.fp = open(fname,"w+b")
+    fd,fname = tempfile.mkstemp(".defang")
+    self.tempname = fname
+    self.fp = os.fdopen(fd,"w+b")
     self.fp.write(headers)	# IOError (e.g. disk full) causes TEMPFAIL
     # check if headers are really spammy
     if dspam_dict and not self.internal_connection:
@@ -1048,14 +1053,21 @@ class bmsMilter(Milter.Milter):
       self.addheader(name,val)
 
     if self.cbv_needed:
-      sender = self.cbv_needed.s
+      q = self.cbv_needed
+      sender = q.s
       cached = cbv_cache.has_key(sender)
       if cached:
 	self.log('CBV:',sender,'(cached)')
         res = cbv_cache[sender]
       else:
 	self.log('CBV:',sender)
-	m = dsn.create_msg(self.cbv_needed,self.recipients,msg)
+	try:
+	  if q.result == 'softfail':
+	    template = file('softfail.txt').read()
+	  else:
+	    template = file('strike3.txt').read()
+	except IOError: template = None
+	m = dsn.create_msg(q,self.recipients,msg,template)
         m = m.as_string()
         print >>open('last_dsn','w'),m
 	res = dsn.send_dsn(sender,self.receiver,m)

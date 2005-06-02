@@ -3,7 +3,9 @@ import spf
 import socket
 from email.Message import Message
 
-nospf_msg = """This is an automatically generated Delivery Status Notification.
+nospf_msg = """Subject: Critical mail server configuration error
+
+This is an automatically generated Delivery Status Notification.
 
 THIS IS A WARNING MESSAGE ONLY.
 
@@ -65,11 +67,12 @@ If you need further assistance, please do not hesitate to
 contact me again.
 
 Kind regards,
-Stuart D. Gathman
+
 postmaster@%(receiver)s
 """
 
-softfail_msg = """
+softfail_msg = """Subject: SPF softfail (POSSIBLE FORGERY)
+
 This is an automatically generated Delivery Status Notification.
 
 THIS IS A WARNING MESSAGE ONLY.
@@ -131,7 +134,8 @@ def send_dsn(mailfrom,receiver,msg=None):
     smtp.close()
   return (450,'No MX servers available')	# temp error
 
-def create_msg(q,rcptlist,origmsg):
+def create_msg(q,rcptlist,origmsg=None,template=None):
+  "Create a DSN message from a template.  Template must be '\n' separated."
   heloname = q.h
   sender = q.s
   connectip = q.i
@@ -145,24 +149,30 @@ def create_msg(q,rcptlist,origmsg):
     if not spf_result.startswith('softfail'):
       spf_result = None
   except: spf_result = None
+
   msg = Message()
+
   msg.add_header('To',sender)
   msg.add_header('From','postmaster@%s'%receiver)
   msg.add_header('Auto-Submitted','auto-generated (configuration error)')
   msg.set_type('text/plain')
-  if spf_result:
-    msg.add_header('Subject','SPF softfail (POSSIBLE FORGERY)')
-    msg.set_payload(softfail_msg % locals())
-  else:
-    msg.add_header('Subject','Critical mail server configuration error')
-    msg.set_payload(nospf_msg % locals())
+
+  if not template:
+    if spf_result: template = softfail_msg
+    else: template = nospf_msg
+  hdrs,body = template.split('\n',1)
+  for ln in hdrs.splitlines():
+    name,val = ln.split(':',1)
+    msg.add_header(name,(val % locals()).strip())
+  msg.set_payload(body % locals())
+
   return msg
 
 if __name__ == '__main__':
   q = spf.query('192.168.9.50',
   'SRS0=pmeHL=RH=bmsi.com=stuart@bmsi.com',
   'bmsred.bmsi.com',receiver='mail.bmsi.com')
-  msg = create_msg(q,'charlie@jsconnor.com')
-  #print msg.as_string()
+  msg = create_msg(q,['charlie@jsconnor.com'],None,None)
+  print msg.as_string()
   # print send_dsn(f,msg.as_string())
   print send_dsn(q.s,'mail.bmsi.com',msg.as_string())
