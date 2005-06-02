@@ -45,6 +45,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.2  2005/05/31 18:57:59  customdesigned
+# Clear unknown mechanism list at proper time.
+#
 # Revision 1.24  2005/03/16 21:58:39  stuart
 # Change Milter module to package.
 #
@@ -417,11 +420,12 @@ class query(object):
 		except TempError,x:
 			return ('error', 450, 'SPF Temporary Error: ' + str(x))
 		except PermError,x:
-			# Pre-Lentczner draft treats this as an unknown result
-			# and equivalent to no SPF record.
-			self.prob = x.msg
-			self.mech.append(x.mech)
-			return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
+		    self.prob = x.msg
+		    self.mech.append(x.mech)
+		    # Pre-Lentczner draft treats this as an unknown result
+		    # and equivalent to no SPF record.
+		    # return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
+		    return ('error', 550, 'SPF Permanent Error: ' + str(x))
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
