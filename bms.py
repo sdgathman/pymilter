@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.5  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
 # Revision 1.4  2005/06/02 04:18:55  customdesigned
 # Update copyright notices after reading article on /.
 #
@@ -333,6 +336,7 @@ def read_config(list):
     'timeout': '600',
     'scan_html': 'no',
     'scan_rfc822': 'yes',
+    'scan_zip': 'no',
     'block_chinese': 'no',
     'log_headers': 'no',
     'blind_wiretap': 'yes',
@@ -344,20 +348,42 @@ def read_config(list):
     'dspam_internal': 'yes'
   })
   cp.read(list)
+
+  # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, scan_rfc822, scan_html, block_chinese, timeout, scan_zip
+  global socketname, timeout, check_user, log_headers
+  global internal_connect, internal_domains, trusted_relay, hello_blacklist
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
-  scan_rfc822 = cp.getboolean('milter','scan_rfc822')
-  scan_zip = cp.getboolean('milter','scan_zip')
-  scan_html = cp.getboolean('milter','scan_html')
-  block_chinese = cp.getboolean('milter','block_chinese')
-
-  global hide_path, block_forward, log_headers
-  hide_path = cp.getlist('scrub','hide_path')
-  block_forward = cp.getaddrset('milter','block_forward')
+  check_user = cp.getaddrset(section,'check_user')
   log_headers = cp.getboolean('milter','log_headers')
+  internal_connect = cp.getlist('milter','internal_connect')
+  internal_domains = cp.getlist('milter','internal_domains')
+  trusted_relay = cp.getlist('milter','trusted_relay')
+  hello_blacklist = cp.getlist('milter','hello_blacklist')
 
+  # defang section
+  global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
+  global banned_exts, porn_words, spam_words
+  if cp.has_section('defang'):
+    section = 'defang'
+  else:	# use milter section if no defang section for compatibility
+    section = 'milter'
+  scan_rfc822 = cp.getboolean(section,'scan_rfc822')
+  scan_zip = cp.getboolean(section,'scan_zip')
+  scan_html = cp.getboolean(section,'scan_html')
+  block_chinese = cp.getboolean(section,'block_chinese')
+  block_forward = cp.getaddrset(section,'block_forward')
+  banned_exts = cp.getlist(section,'banned_exts')
+  porn_words = cp.getlist(section,'porn_words')
+  spam_words = cp.getlist(section,'spam_words')
+
+  # scrub section
+  global hide_path, reject_virus_from
+  hide_path = cp.getlist('scrub','hide_path')
+  reject_virus_from = cp.getlist('scrub','reject_virus_from')
+
+  # wiretap section
   global blind_wiretap, wiretap_users, wiretap_dest, discard_users
   blind_wiretap = cp.getboolean('wiretap','blind')
   wiretap_users = cp.getaddrset('wiretap','users')
@@ -365,19 +391,7 @@ def read_config(list):
   wiretap_dest = cp.getdefault('wiretap','dest')
   if wiretap_dest: wiretap_dest = '<%s>' % wiretap_dest
 
-  global check_user, reject_virus_from, internal_connect, internal_domains
-  check_user = cp.getaddrset('milter','check_user')
-  reject_virus_from = cp.getlist('scrub','reject_virus_from')
-  internal_connect = cp.getlist('milter','internal_connect')
-  internal_domains = cp.getlist('milter','internal_domains')
-
-  global porn_words, spam_words, smart_alias, trusted_relay, hello_blacklist
-  global banned_exts
-  trusted_relay = cp.getlist('milter','trusted_relay')
-  porn_words = cp.getlist('milter','porn_words')
-  spam_words = cp.getlist('milter','spam_words')
-  banned_exts = cp.getlist('milter','banned_exts')
-  hello_blacklist = cp.getlist('milter','hello_blacklist')
+  global smart_alias
   for sa in cp.getlist('wiretap','smart_alias'):
     sm = cp.getlist('wiretap',sa)
     if len(sm) < 2:
@@ -387,10 +401,9 @@ def read_config(list):
     key = (sm[0],sm[1])
     smart_alias[key] = sm[2:]
 
+  # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
-  global spf_accept_softfail
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -402,6 +415,9 @@ def read_config(list):
   if cp.has_option('dspam','dspam_sizelimit'):
     dspam_sizelimit = cp.getint('dspam','dspam_sizelimit')
 
+  # spf section
+  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
+  global spf_accept_softfail
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')

@@ -3,8 +3,6 @@ Defer TEMPERROR in SPF evaluation - give precedence to security
 
 Option to add Received-SPF header, but never reject on SPF.
 
-Option to configure banned extension list for mime.py.  Default to empty.
-
 Create null config that does nothing - except maybe add Received-SPF
 headers.  Many admins would like to turn features on one at a time.
 
@@ -24,8 +22,6 @@ Auto whitelist based on outgoing email - perhaps with magic subject
 or recipient prefix.
 
 Can't output messages with malformed rfc822 attachments.
-
-Use python exceptions in SPF to cleanly handle unknown and error results.
 
 Example malformed SPF:
 onvunvuvvx.usafisnews.org text "v=spf1 mx ptr ip4:207.44.199.970 -all"
