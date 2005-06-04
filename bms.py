@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.6  2005/06/03 04:57:05  customdesigned
+# Organize config reader by section.  Create defang section.
+#
 # Revision 1.5  2005/06/02 15:00:17  customdesigned
 # Configure banned extensions.  Scan zipfile option with test case.
 #
@@ -355,7 +358,7 @@ def read_config(list):
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
-  check_user = cp.getaddrset(section,'check_user')
+  check_user = cp.getaddrset('milter','check_user')
   log_headers = cp.getboolean('milter','log_headers')
   internal_connect = cp.getlist('milter','internal_connect')
   internal_domains = cp.getlist('milter','internal_domains')
@@ -367,6 +370,9 @@ def read_config(list):
   global banned_exts, porn_words, spam_words
   if cp.has_section('defang'):
     section = 'defang'
+    # for backward compatibility,
+    # banned extensions defaults to empty only when defang section exists
+    banned_exts = cp.getlist(section,'banned_exts')
   else:	# use milter section if no defang section for compatibility
     section = 'milter'
   scan_rfc822 = cp.getboolean(section,'scan_rfc822')
@@ -374,7 +380,6 @@ def read_config(list):
   scan_html = cp.getboolean(section,'scan_html')
   block_chinese = cp.getboolean(section,'block_chinese')
   block_forward = cp.getaddrset(section,'block_forward')
-  banned_exts = cp.getlist(section,'banned_exts')
   porn_words = cp.getlist(section,'porn_words')
   spam_words = cp.getlist(section,'spam_words')
 

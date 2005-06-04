@@ -2,7 +2,7 @@
 %define version 0.8.0
 %define release 3.RH7
 # what version of RH are we building for?
-%define redhat9 0	# and Enterprise Linux
+%define redhat9 0
 %define redhat7 1
 %define redhat6 0
 
@@ -43,7 +43,7 @@ Requires: %{python} >= 2.4, sendmail >= 8.12.10
 %ifos Linux
 Requires: chkconfig
 %endif
-BuildRequires: %{python}-devel >= 2.2.2, sendmail-devel >= 8.12.10
+BuildRequires: %{python}-devel , sendmail-devel >= 8.12.10
 
 %description
 This is a python extension module to enable python scripts to
@@ -63,7 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
-cp bms.py $RPM_BUILD_ROOT/var/log/milter
+cp bms.py strike3.txt softfail.txt $RPM_BUILD_ROOT/var/log/milter
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 
 # logfile rotation
@@ -160,10 +160,14 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter/save
 %config /var/log/milter/start.sh
 %config /var/log/milter/bms.py
+%config /var/log/milter/strike3.txt
+%config /var/log/milter/softfail.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Sat Jun 04 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-2
+- Include default softfail, strike3 templates
 * Wed May 25 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-1
 - Move Milter module to subpackage.
 - DSN support for Three strikes rule and SPF SOFTFAIL
