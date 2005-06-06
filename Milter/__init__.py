@@ -1,7 +1,8 @@
-
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001 Business Management Systems, Inc.
-# This code is under GPL.  See COPYING for details.
+# This code is under the GNU General Public License.  See COPYING for details.
+
+# A thin OO wrapper for the milter module
 
 import os
 import milter

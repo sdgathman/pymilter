@@ -1,5 +1,13 @@
 #!/usr/bin/python2.3
+
+# Author: Stuart D. Gathman <stuart@bmsi.com>
+# Copyright 2004 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
+
 # $Log$
+# Revision 1.1.1.1  2005/05/31 18:07:19  customdesigned
+# Release 0.6.9
+#
 # Revision 2.3  2004/04/19 22:12:11  stuart
 # Release 0.6.9
 #
