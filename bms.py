@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.7  2005/06/04 19:41:16  customdesigned
+# Fix bugs from testing RPM
+#
 # Revision 1.6  2005/06/03 04:57:05  customdesigned
 # Organize config reader by section.  Create defang section.
 #
@@ -206,6 +209,7 @@ import mime
 import email.Errors
 import Milter
 import tempfile
+import traceback
 import ConfigParser
 import time
 import re
@@ -1014,7 +1018,8 @@ class bmsMilter(Milter.Milter):
 	      self.fp = StringIO.StringIO(txt)
 	      modified = True
 	  except Exception,x:
-	    print x
+	    self.log("check_spam:",x)
+	    traceback.print_exc()
     # screen if no recipients are dspam_users
     if not modified and dspam_screener and not self.internal_connection \
     	and self.dspam:
