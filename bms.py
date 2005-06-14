@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.8  2005/06/06 18:24:59  customdesigned
+# Properly log exceptions from pydspam
+#
 # Revision 1.7  2005/06/04 19:41:16  customdesigned
 # Fix bugs from testing RPM
 #
@@ -620,6 +623,17 @@ class bmsMilter(Milter.Milter):
 	    self.log("REJECT: spam from self",pat)
 	    self.setreply('550','5.7.1','I hate talking to myself.')
 	    return Milter.REJECT
+      elif internal_domains:
+	for pat in internal_domains:
+	  if fnmatchcase(domain,pat): break
+	else:
+	  self.log("REJECT: zombie PC at ",self.connectip," sending MAIL FROM ",
+	  	self.canon_from)
+	  self.setreply('550','5.7.1','Get rid of your virus!',
+	  'Your PC is using an unauthorized MAIL FROM.',
+	  'It is either badly misconfigured or controlled by organized crime.'
+	  )
+	  return Milter.REJECT
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
         self.add_recipient(wiretap_dest)
@@ -638,6 +652,8 @@ class bmsMilter(Milter.Milter):
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       return self.check_spf()
+    if self.internal_connection:
+      pass
     return Milter.CONTINUE
 
   def check_spf(self):
