@@ -6,6 +6,7 @@ Here is a history of user visible changes to Python milter.
 	Fix SPF unknown mechanism list not cleared
 	Make banned extensions configurable.
 	Option to scan zipfiles for bad extensions.
+	Properly log pydspam exceptions
 0.7.3	Experimental release with python2.4 support
 0.7.2	Return unknown for invalid ip address in mechanism
 	Recognize dynamic PTR names, and don't count them as authentication.

@@ -166,6 +166,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Mon Jun 06 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-3
+- properly log pydspam exceptions
 * Sat Jun 04 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-2
 - Include default softfail, strike3 templates
 * Wed May 25 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-1
