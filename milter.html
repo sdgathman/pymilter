@@ -24,11 +24,13 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated May 31, 2005</h4>
+Last updated Jun 09, 2005</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
-<a href="#overview">Overview</a>
+<a href="#overview">Overview</a> |
+<a href="/python/dspam.html">pydspam</a> |
+<a href="/libdspam/dspam.html">libdspam</a>
 <p>
 <a href="//www.python.org">
 <img src="python55.gif" align=left alt="A Python"></a>
@@ -39,17 +41,26 @@ provides a python interface to libmilter that exploits all its features.
 <p>
 Sendmail 8.12 officially releases libmilter.  
 Version 8.12 seems to be more robust, and includes new privilege
-separation features to enhance security.
-I recommend upgrading.
+separation features to enhance security.  Even better, sendmail 8.13
+supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
+efficient and secure.  I recommend upgrading.
 
 <h2> Recent Changes </h2>
 
-Python milter is being moved to
-<a href="http://sourceforge.net/projects/pymilter/">Sourceforge</a> for
-development.
+Python milter is being moved to 
+<a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
+project</a> for development.
+<p>
+Release 0.8.0 is the first <a href="http://sourceforge.net/">Sourceforge</a>
+release.  It supports Python-2.4, and provides an option to accept mail
+that gets an SPF softfail or fails the 3 strikes rule, provided the
+alleged sender accepts a DSN explaining the problem.  Python-2.3 is
+no longer supported by the reworked mime.py module, although API changes
+could be backported.  There are too many incompatible changes to the
+python email package.
 <p>
 Release 0.7.2 tightens the authentication screws with a "3 strikes and
-your out" policy.  A sender must have a valid PTR, HELO, or SPF record
+you're out" policy.  A sender must have a valid PTR, HELO, or SPF record
 to send email.  Specific senders can be whitelisted using the
 "delegate" option in the spf configuration section by adding a
 default SPF record for them.  The PTR and HELO are required
