@@ -46,6 +46,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.4  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
 # Revision 1.3  2005/06/02 02:08:12  customdesigned
 # Reject on PermErr
 #
@@ -684,13 +687,12 @@ class query(object):
 		    p = CIDParser(q=self)
 		    try:
 		      return p.spf_txt(domain)
-		    except xml.sax._exceptions.SAXParseException,x:
+		    except xml.sax._exceptions.SAXParseException:
 		      raise PermError("Caller-ID parse error",domain)
 
 		if len(a) == 1:
 			return a[0]
-		else:
-			return None
+		return None
 
 	def dns_txt(self, domainname):
 		"Get a list of TXT records for a domain name."
@@ -974,12 +976,12 @@ def bin2addr(addr):
 def expand_one(expansion, str, joiner):
 	if not str:
 		return expansion
-	len, reverse, delimiters = RE_ARGS.split(str)[1:4]
+	ln, reverse, delimiters = RE_ARGS.split(str)[1:4]
 	if not delimiters:
 		delimiters = '.'
 	expansion = split(expansion, delimiters, joiner)
 	if reverse: expansion.reverse()
-	if len: expansion = expansion[-int(len)*2+1:]
+	if ln: expansion = expansion[-int(ln)*2+1:]
 	return ''.join(expansion)
 
 def split(str, delimiters, joiner=None):
