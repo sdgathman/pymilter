@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.9  2005/06/14 21:55:29  customdesigned
+# Check internal_domains for outgoing mail.
+#
 # Revision 1.8  2005/06/06 18:24:59  customdesigned
 # Properly log exceptions from pydspam
 #
@@ -460,9 +463,9 @@ def parse_addr(t):
   return t.split('@')
 
 def parse_header(val):
-  h = decode_header(val)
-  if not len(h) or (not h[0][1] and len(h) == 1): return val
   try:
+    h = decode_header(val)
+    if not len(h) or (not h[0][1] and len(h) == 1): return val
     u = []
     for s,enc in h:
       if enc:
@@ -479,6 +482,7 @@ def parse_header(val):
       except UnicodeError: continue
   except UnicodeDecodeError: pass
   except LookupError: pass
+  except email.errors.HeaderParseError: pass
   return val
 
 class bmsMilter(Milter.Milter):
