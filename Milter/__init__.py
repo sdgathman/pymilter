@@ -141,16 +141,28 @@ def closecallback(ctx):
   m._setctx(None)	# release milterContext
   return rc
 
+def dictfromlist(args):
+  "Convert ESMTP parm list to keyword dictionary."
+  kw = {}
+  for s in args:
+    pos = s.find('=')
+    if pos > 0:
+      kw[s[:pos].upper()] = s[pos+1:]
+  return kw
+
 def envcallback(c,args):
-  """Convert ESMTP parms to keyword parameters.
+  """Call function c with ESMTP parms converted to keyword parameters.
   Can be used in the envfrom and/or envrcpt callbacks to process
   ESMTP parameters as python keyword parameters."""
   kw = {}
+  pargs = [args[0]]
   for s in args[1:]:
     pos = s.find('=')
     if pos > 0:
-      kw[s[:pos]] = s[pos+1:]
-  return apply(c,args,kw)
+      kw[s[:pos].upper()] = s[pos+1:]
+    else:
+      pargs.append(s)
+  return c(*pargs,**kw)
 
 def runmilter(name,socketname,timeout = 0):
   # This bit is here on the assumption that you will be starting this filter
@@ -177,14 +189,13 @@ def runmilter(name,socketname,timeout = 0):
   # milter.set_flags(milter.ADDHDRS)
   milter.set_connect_callback(connectcallback)
   milter.set_helo_callback(lambda ctx, host: ctx.getpriv().hello(host))
-  milter.set_envfrom_callback(lambda ctx,*str:
-  	ctx.getpriv().envfrom(*str))
-#  	envcallback(ctx.getpriv().envfrom,str))
-  milter.set_envrcpt_callback(lambda ctx,*str:
-  	ctx.getpriv().envrcpt(*str))
-#  	envcallback(ctx.getpriv().envrcpt,str))
-  milter.set_header_callback(lambda ctx,fld,val:
-  	ctx.getpriv().header(fld,val))
+  # For envfrom and envrcpt, we would like to convert ESMTP parms to keyword
+  # parms, but then all existing users would have to include **kw to accept
+  # arbitrary keywords without crashing.  We do provide envcallback and
+  # dictfromlist to make parsing the ESMTP args convenient.
+  milter.set_envfrom_callback(lambda ctx,*str: ctx.getpriv().envfrom(*str))
+  milter.set_envrcpt_callback(lambda ctx,*str: ctx.getpriv().envrcpt(*str))
+  milter.set_header_callback(lambda ctx,fld,val: ctx.getpriv().header(fld,val))
   milter.set_eoh_callback(lambda ctx: ctx.getpriv().eoh())
   milter.set_body_callback(lambda ctx,chunk: ctx.getpriv().body(chunk))
   milter.set_eom_callback(lambda ctx: ctx.getpriv().eom())
