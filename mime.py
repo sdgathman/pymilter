@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.3  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
 # Revision 1.2  2005/06/02 04:18:55  customdesigned
 # Update copyright notices after reading article on /.
 #
@@ -86,6 +89,16 @@ from email.Parser import Parser
 from email import Errors
 
 from types import ListType,StringType
+
+def zipnames(txt):
+  fp =  StringIO.StringIO(txt)
+  zipf = zipfile.ZipFile(fp,'r')
+  names = []
+  for nm in zipf.namelist():
+    names.append(('zipname',nm))
+    if nm.lower().endswith('.zip'):
+      names += zipnames(zipf.read(nm))
+  return names
 
 class MimeGenerator(Generator):
     def _dispatch(self, msg):
@@ -177,13 +190,10 @@ class MimeMessage(Message):
       names.append((attr,val))
     names += [("filename",self.get_filename())]
     if scan_zip:
-      for key,name in names:
+      for key,name in tuple(names):	# copy by converting to tuple
 	if name and name.lower().endswith('.zip'):
 	  txt = self.get_payload(decode=True)
-	  fp =  StringIO.StringIO(txt)
-	  zipf = zipfile.ZipFile(fp,'r')
-	  for nm in zipf.namelist():
-	    names.append(('zipname',nm))
+	  names += zipnames(txt)
     return names
 
   def ismodified(self):

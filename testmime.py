@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.2  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
 # Revision 1.1.1.2  2005/05/31 18:23:49  customdesigned
 # Development changes since 0.7.2
 #
@@ -126,10 +129,12 @@ class MimeTestCase(unittest.TestCase):
     self.failUnless(name == "Jim&amp;amp;Girlz.jpg","name=%s"%name)
 
   def testZip(self,vname="zip1",fname='zip.zip'):
-    self.testDefang('zip1',1,'zip.zip')
+    self.testDefang(vname,1,'zip.zip')
     msg = mime.message_from_file(open('test/'+vname,"r"))
     mime.defang(msg,scan_zip=False)
     self.failIf(msg.ismodified())
+    # test zip within zip
+    self.testDefang('ziploop',1,'stuart@bmsi.com.zip')
 
   def testHTML(self,fname=""):
     result = StringIO.StringIO()
@@ -153,3 +158,5 @@ if __name__ == '__main__':
     for fname in sys.argv[1:]:
       fp = open(fname,'r')
       msg = mime.message_from_file(fp)
+      mime.defang(msg,scan_zip=True)
+      print msg.as_string()
