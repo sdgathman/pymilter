@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.10  2005/06/16 18:35:51  customdesigned
+# Ignore HeaderParseError decoding header
+#
 # Revision 1.9  2005/06/14 21:55:29  customdesigned
 # Check internal_domains for outgoing mail.
 #
@@ -656,8 +659,6 @@ class bmsMilter(Milter.Milter):
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       return self.check_spf()
-    if self.internal_connection:
-      pass
     return Milter.CONTINUE
 
   def check_spf(self):

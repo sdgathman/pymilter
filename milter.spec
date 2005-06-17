@@ -1,6 +1,6 @@
 %define name milter
-%define version 0.8.0
-%define release 3.RH7
+%define version 0.8.1
+%define release 1.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -166,6 +166,10 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Thu Jun 16 2005 Stuart Gathman <stuart@bmsi.com> 0.8.1-1
+- Fix zip in zip loop in mime.py
+- Fix HeaderParseError in bms.py header callback
+- Check internal_domains for outgoing mail
 * Mon Jun 06 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-3
 - properly log pydspam exceptions
 * Sat Jun 04 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-2

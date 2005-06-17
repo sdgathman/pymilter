@@ -1,5 +1,8 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.1	Fix zip in zip loop in mime.py
+	Fix HeaderParseError in bms.py header callback
+	Check internal_domains for outgoing mail
 0.8.0	Move Milter module to subpackage.
 	DSN support for Three strikes rule and SPF SOFTFAIL
 	Move /*mime*/ and dynip to Milter subpackage
