@@ -1,10 +1,25 @@
 %define name milter
-%define version 0.8.0
-%define release 2.EL3
-# Redhat 7.x and earlier (multiple ps lines per thread)
-#define sysvinit milter.rc7
-# RH9, other systems (single ps line per process)
+%define version 0.8.1
+%define release 1.RH7
+# what version of RH are we building for?
+%define redhat9 0
+%define redhat7 1
+%define redhat6 0
+
+# Options for Redhat version 6.x:
+# rpm -ba|--rebuild --define "rh6 1"
+%{?rh6:%define redhat7 0}
+%{?rh6:%define redhat6 1}
+
+# some systems dont have initrddir defined
+%{?_initrddir:%define _initrddir /etc/rc.d/init.d}
+
+%if %{redhat9}
 %define sysvinit milter.rc
+%else	# Redhat 7.x and earlier (multiple ps lines per thread)
+%define sysvinit milter.rc7
+%endif
+# RH9, other systems (single ps line per process)
 %ifos Linux
 %define python python2.4
 %else
@@ -25,10 +40,10 @@ Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{python} >= 2.4, sendmail >= 8.12.10
-%ifnos aix4.1
+%ifos Linux
 Requires: chkconfig
 %endif
-BuildRequires: %{python}-devel >= 2.2.2, sendmail-devel >= 8.12.10
+BuildRequires: %{python}-devel , sendmail-devel >= 8.12.10
 
 %description
 This is a python extension module to enable python scripts to
@@ -48,7 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
-cp bms.py $RPM_BUILD_ROOT/var/log/milter
+cp bms.py strike3.txt softfail.txt $RPM_BUILD_ROOT/var/log/milter
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 
 # logfile rotation
@@ -145,12 +160,29 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter/save
 %config /var/log/milter/start.sh
 %config /var/log/milter/bms.py
+%config /var/log/milter/strike3.txt
+%config /var/log/milter/softfail.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Thu Jun 16 2005 Stuart Gathman <stuart@bmsi.com> 0.8.1-1
+- Fix zip in zip loop in mime.py
+- Fix HeaderParseError in bms.py header callback
+- Check internal_domains for outgoing mail
+* Mon Jun 06 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-3
+- properly log pydspam exceptions
+* Sat Jun 04 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-2
+- Include default softfail, strike3 templates
+* Wed May 25 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-1
+- Move Milter module to subpackage.
+- DSN support for Three strikes rule and SPF SOFTFAIL
+- Move /*mime*/ and dynip to Milter subpackage
+- Fix SPF unknown mechanism list not cleared
+- Make banned extensions configurable.
+- Option to scan zipfiles for bad extensions.
 * Tue Feb 08 2005 Stuart Gathman <stuart@bmsi.com> 0.7.3-1.EL3
-- Compile for EL3 and Python4
+- Support EL3 and Python2.4 (some scanning/defang support broken)
 * Mon Aug 30 2004 Stuart Gathman <stuart@bmsi.com> 0.7.2-1
 - Fix various SPF bugs
 - Recognize dynamic PTR names, and don't count them as authentication.

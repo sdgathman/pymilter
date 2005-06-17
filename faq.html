@@ -72,6 +72,9 @@ milter-0.4.5 or later to remove this dependency.
 <code>set_flags()</code> before calling <code>runmilter()</code>.  For
 instance, <code>Milter.set_flags(Milter.ADDRCPT)</code>.  You must add together
 all of <code>ADDHDRS, CHGBODY, ADDRCPT, DELRCPT, CHGHDRS</code> that apply.
+<p> NOTE - recent versions default flags to enabling all features.  You
+must now call <code>set_flags()</code> if you wish to disable features for
+efficiency.
 <p>
 
 <li> Q. Why does sendmail sometimes print something like:
@@ -94,14 +97,19 @@ for your specific needs.  We will of course continue to move generic
 code out of the sample as the project evolves.  Think of sample.py as
 an active config file.
 <p>
+If you are running bms.py, then the block_chinese option in 
+<code>/etc/mail/pymilter.cfg</code> controls this feature.
+<p>
 
 <li> Q. Why does sendmail coredump with milters on OpenBSD?
-<p>  A. Sendmail has a problem with unix sockets on OpenBSD.  Use
-an internet domain socket instead.  For example, in <code>sendmail.cf</code> use
+<p>  A. Sendmail has a problem with unix sockets on old versions of OpenBSD.
+Use an internet domain socket instead.  For example, in
+<code>sendmail.cf</code> use
 <pre>
 Xpythonfilter, S=inet:1234@localhost
 </pre>
 and change sample.py accordingly.
+<p> OpenBSD users report that this problem has been fixed.
 <p>
 
 <li> Q. How can I change the bounce message for an invalid recipient?
@@ -143,8 +151,8 @@ everything up for you.  For other systems:
 <li> Arrange to run bms.py in the background (as a service perhaps) and
      redirect output and errors to a logfile.  For instance, on AIX you'll want
      to use SRC (System Resource Controller).  
-<li> Copy milter.cfg to the directory you run bms.py in, and edit it.  The
-     comments should explain the options. 
+<li> Copy pymilter.cfg to the /etc/mail or the directory you run bms.py in,
+     and edit it.  The comments should explain the options. 
 <li> Start bms.py in the background as arranged.
 <li> Add Xpythonfilter to sendmail.cf or add an INPUT_MAIL_FILTER to
      sendmail.mc.  Regen sendmail.cf if you use sendmail.mc and restart 

@@ -1,3 +1,9 @@
+# Author: Stuart D. Gathman <stuart@bmsi.com>
+# Copyright 2005 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
+
+# Heuristically determine whether a domain name is for a dynamic IP.
+
 # examples we don't yet recognize:
 #
 # wiley-268-8196.roadrunner.nf.net at ('205.251.174.46', 4810)

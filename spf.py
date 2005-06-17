@@ -2,6 +2,7 @@
 """SPF (Sender-Permitted From) implementation.
 
 Copyright (c) 2003, Terence Way
+Portions Copyright (c) 2004,2005 Stuart Gathman <stuart@bmsi.com>
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -45,6 +46,15 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.4  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
+# Revision 1.3  2005/06/02 02:08:12  customdesigned
+# Reject on PermErr
+#
+# Revision 1.2  2005/05/31 18:57:59  customdesigned
+# Clear unknown mechanism list at proper time.
+#
 # Revision 1.24  2005/03/16 21:58:39  stuart
 # Change Milter module to package.
 #
@@ -401,6 +411,7 @@ class query(object):
 	Returns (result, mta-status-code, explanation) where
 	result in ['fail', 'softfail', 'neutral' 'unknown', 'pass', 'error']
 		"""
+		self.mech = []		# unknown mechanisms
 		if self.i.startswith('127.'):
 			return ('pass', 250, 'local connections always pass')
 
@@ -416,11 +427,12 @@ class query(object):
 		except TempError,x:
 			return ('error', 450, 'SPF Temporary Error: ' + str(x))
 		except PermError,x:
-			# Pre-Lentczner draft treats this as an unknown result
-			# and equivalent to no SPF record.
-			self.prob = x.msg
-			self.mech.append(x.mech)
-			return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
+		    self.prob = x.msg
+		    self.mech.append(x.mech)
+		    # Pre-Lentczner draft treats this as an unknown result
+		    # and equivalent to no SPF record.
+		    # return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
+		    return ('error', 550, 'SPF Permanent Error: ' + str(x))
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
@@ -456,7 +468,6 @@ class query(object):
 		# overridden with 'default=' modifier
 		#
 		default = 'neutral'
-		self.mech = []		# unknown mechanisms
 
 		# Look for modifiers
 		#
@@ -676,13 +687,12 @@ class query(object):
 		    p = CIDParser(q=self)
 		    try:
 		      return p.spf_txt(domain)
-		    except xml.sax._exceptions.SAXParseException,x:
+		    except xml.sax._exceptions.SAXParseException:
 		      raise PermError("Caller-ID parse error",domain)
 
 		if len(a) == 1:
 			return a[0]
-		else:
-			return None
+		return None
 
 	def dns_txt(self, domainname):
 		"Get a list of TXT records for a domain name."
@@ -966,12 +976,12 @@ def bin2addr(addr):
 def expand_one(expansion, str, joiner):
 	if not str:
 		return expansion
-	len, reverse, delimiters = RE_ARGS.split(str)[1:4]
+	ln, reverse, delimiters = RE_ARGS.split(str)[1:4]
 	if not delimiters:
 		delimiters = '.'
 	expansion = split(expansion, delimiters, joiner)
 	if reverse: expansion.reverse()
-	if len: expansion = expansion[-int(len)*2+1:]
+	if ln: expansion = expansion[-int(ln)*2+1:]
 	return ''.join(expansion)
 
 def split(str, delimiters, joiner=None):
