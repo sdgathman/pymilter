@@ -170,6 +170,7 @@ rm -rf $RPM_BUILD_ROOT
 - Fix zip in zip loop in mime.py
 - Fix HeaderParseError in bms.py header callback
 - Check internal_domains for outgoing mail
+- Fix inconsistent results from send_dsn
 * Mon Jun 06 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-3
 - properly log pydspam exceptions
 * Sat Jun 04 2005 Stuart Gathman <stuart@bmsi.com> 0.8.0-2
