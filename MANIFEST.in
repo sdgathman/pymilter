@@ -15,9 +15,12 @@ include spfquery.py
 include test.py
 include sample.py
 include test/*
+include Milter/*.py
 include *.spec
 include start.sh
 include milter.rc
 include milter.rc7
 include milter.cfg
 include rhsbl.m4
+include softfail.txt
+include strike3.txt

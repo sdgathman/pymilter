@@ -1,5 +1,17 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.1	Fix zip in zip loop in mime.py
+	Fix HeaderParseError in bms.py header callback
+	Check internal_domains for outgoing mail
+	Fix inconsistent results from send_dsn
+0.8.0	Move Milter module to subpackage.
+	DSN support for Three strikes rule and SPF SOFTFAIL
+	Move /*mime*/ and dynip to Milter subpackage
+	Fix SPF unknown mechanism list not cleared
+	Make banned extensions configurable.
+	Option to scan zipfiles for bad extensions.
+	Properly log pydspam exceptions
+0.7.3	Experimental release with python2.4 support
 0.7.2	Return unknown for invalid ip address in mechanism
 	Recognize dynamic PTR names, and don't count them as authentication.
 	Three strikes and yer out rule.
