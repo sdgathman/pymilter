@@ -23,7 +23,7 @@ SMTP (email) servers to prevent criminals from forging your
 domain.  The simplest step is usually to publish an SPF record
 with your Sender Policy.  
 
-For more information, see: http://spfhelp.net
+For more information, see: http://spf.pobox.com
 
 I hate to annoy you with a DSN (Delivery Status
 Notification) from a possibly forged email, but since you
