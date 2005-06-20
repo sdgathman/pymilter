@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.11  2005/06/17 02:07:20  customdesigned
+# Release 0.8.1
+#
 # Revision 1.10  2005/06/16 18:35:51  customdesigned
 # Ignore HeaderParseError decoding header
 #
@@ -1181,6 +1184,8 @@ class bmsMilter(Milter.Milter):
     if defanged:
       if self.rejectvirus and not self.hidepath:
 	self.log("REJECT virus from",self.mailfrom)
+	self.setreply('550','5.7.1','Attachment type not allowed.',
+		'You attempted to send an attachment with a banned extension.')
 	self.tempname = None
 	return Milter.REJECT
       self.log("Temp file:",self.tempname)
