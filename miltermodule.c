@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.2  2005/06/02 04:18:55  customdesigned
+ * Update copyright notices after reading article on /.
+ *
  * Revision 1.1.1.2  2005/05/31 18:09:06  customdesigned
  * Release 0.7.1
  *
@@ -715,7 +718,18 @@ milter_wrap_abort(SMFICTX *ctx) {
 
 static int
 milter_wrap_close(SMFICTX *ctx) {
-  int r = generic_noarg_wrapper(ctx,close_callback,"milter_wrap_close");
+  /* We can't use generic_noarg_wrapper because xxfi_close can be
+   * called out of order - even before connect.  There may not
+   * yet be a private context pointer. */
+  PyObject *cb = close_callback;
+  milter_ContextObject *self = smfi_getpriv(ctx);
+  int r = SMFIS_CONTINUE;
+  if (self != NULL && cb != NULL && self->ctx == ctx) {
+    PyObject *arglist;
+    PyEval_AcquireThread(self->t);
+    arglist = Py_BuildValue("(O)", self);
+    r = _generic_wrapper(self, cb, arglist);
+  }
   /* FIXME: It is inefficient to have released the interp lock only to
      acquire it again in _clear_context.  We can tell _generic_return and
      friends not to release the lock by, for instance, setting self->t to NULL.
