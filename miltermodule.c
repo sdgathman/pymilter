@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.3  2005/06/24 03:57:35  customdesigned
+ * Handle close called before connect.
+ *
  * Revision 1.2  2005/06/02 04:18:55  customdesigned
  * Update copyright notices after reading article on /.
  *
@@ -619,7 +622,7 @@ milter_wrap_helo(SMFICTX *ctx, char *helohost) {
 }
 
 static int
-generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv, const char *name) {
+generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv) {
    PyObject *arglist;
    milter_ContextObject *self;
    int count = 0;
@@ -656,12 +659,12 @@ generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv, const char *name) {
 
 static int
 milter_wrap_envfrom(SMFICTX *ctx, char **argv) {
-  return generic_env_wrapper(ctx,envfrom_callback,argv,"milter_wrap_envfrom");
+  return generic_env_wrapper(ctx,envfrom_callback,argv);
 }
 
 static int
 milter_wrap_envrcpt(SMFICTX *ctx, char **argv) {
-  return generic_env_wrapper(ctx,envrcpt_callback,argv,"milter_wrap_envrcpt");
+  return generic_env_wrapper(ctx,envrcpt_callback,argv);
 }    
   
 static int
@@ -677,7 +680,7 @@ milter_wrap_header(SMFICTX *ctx, char *headerf, char *headerv) {
 }
 
 static int
-generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb,const char *name) {
+generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb) {
    PyObject *arglist;
    milter_ContextObject *c;
    if (cb == NULL) return SMFIS_CONTINUE;
@@ -689,7 +692,7 @@ generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb,const char *name) {
 
 static int
 milter_wrap_eoh(SMFICTX *ctx) {
-  return generic_noarg_wrapper(ctx,eoh_callback,"milter_wrap_eoh");
+  return generic_noarg_wrapper(ctx,eoh_callback);
 }   
 
 static int
@@ -707,20 +710,22 @@ milter_wrap_body(SMFICTX *ctx, u_char *bodyp, size_t bodylen) {
 
 static int
 milter_wrap_eom(SMFICTX *ctx) {
-  return generic_noarg_wrapper(ctx,eom_callback,"milter_wrap_eom");
+  return generic_noarg_wrapper(ctx,eom_callback);
 }
 
 static int
 milter_wrap_abort(SMFICTX *ctx) {
   /* libmilter still calls close after abort */
-  return generic_noarg_wrapper(ctx,abort_callback,"milter_wrap_abort");
+  return generic_noarg_wrapper(ctx,abort_callback);
 }
 
 static int
 milter_wrap_close(SMFICTX *ctx) {
-  /* We can't use generic_noarg_wrapper because xxfi_close can be
-   * called out of order - even before connect.  There may not
-   * yet be a private context pointer. */
+  /* xxfi_close can be called out of order - even before connect.  
+   * There may not yet be a private context pointer.  To avoid
+   * creating a ThreadContext and allocating a milter context only
+   * to destroy them, and to avoid invoking the python close_callback when
+   * connect has never been called, we don't use generic_noarg_wrapper here. */
   PyObject *cb = close_callback;
   milter_ContextObject *self = smfi_getpriv(ctx);
   int r = SMFIS_CONTINUE;
