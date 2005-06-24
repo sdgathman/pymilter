@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.4  2005/06/24 04:12:43  customdesigned
+ * Remove unused name argument to generic wrappers.
+ *
  * Revision 1.3  2005/06/24 03:57:35  customdesigned
  * Handle close called before connect.
  *
@@ -200,7 +203,7 @@ $ python setup.py help
 
 
 /* Yes, these are static.  If you need multiple different callbacks, */
-/* it's cleaner to use multiple filters. */
+/* it's cleaner to use multiple filters, or convert to OO method calls. */
 static PyObject *connect_callback = NULL;
 static PyObject *helo_callback    = NULL;
 static PyObject *envfrom_callback = NULL;
@@ -245,8 +248,11 @@ _get_context(SMFICTX *ctx) {
     PyEval_AcquireThread(t);	/* lock interp */
     self = PyObject_New(milter_ContextObject,&milter_ContextType);
     if (!self) {
-      /* Can't pass on exception since we are called from libmilter */
-      PyErr_Clear();
+      /* Report and clear exception since we are called from libmilter */
+      if (PyErr_Occurred()) {
+	PyErr_Print();
+	PyErr_Clear();
+      }
       PyThreadState_Clear(t);
       PyEval_ReleaseThread(t);
       PyThreadState_Delete(t);
