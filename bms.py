@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.12  2005/06/20 22:35:35  customdesigned
+# Setreply for rejectvirus.
+#
 # Revision 1.11  2005/06/17 02:07:20  customdesigned
 # Release 0.8.1
 #
@@ -669,7 +672,8 @@ class bmsMilter(Milter.Milter):
     if len(t) == 2: t[1] = t[1].lower()
     receiver = self.receiver
     q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver)
-    q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
+    q.set_default_explanation(
+      'SPF fail: see http://spf.pobox.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
@@ -861,12 +865,6 @@ class bmsMilter(Milter.Milter):
 	or mailer.find('optin') >= 0:
         self.log('REJECT: %s: %s' % (name,val))
         return Milter.REJECT
-    elif self.trust_received and lname == 'received':
-      self.trust_received = False
-      self.log('%s: %s' % (name,val.splitlines()[0]))
-    elif self.trust_spf and lname == 'received-spf':
-      self.trust_spf = False
-      self.log('%s: %s' % (name,val.splitlines()[0]))
     return Milter.CONTINUE
 
   def forged_bounce(self):
@@ -901,6 +899,12 @@ class bmsMilter(Milter.Milter):
     # log selected headers
     if log_headers or lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
+    elif self.trust_received and lname == 'received':
+      self.trust_received = False
+      self.log('%s: %s' % (name,val.splitlines()[0]))
+    elif self.trust_spf and lname == 'received-spf':
+      self.trust_spf = False
+      self.log('%s: %s' % (name,val.splitlines()[0]))
     if self.fp:
       try:
         val = val.encode('us-ascii')
