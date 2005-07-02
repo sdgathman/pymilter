@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.13  2005/07/01 16:30:24  customdesigned
+# Always log trusted Received and Received-SPF headers.
+#
 # Revision 1.12  2005/06/20 22:35:35  customdesigned
 # Setreply for rejectvirus.
 #
@@ -549,10 +552,6 @@ class bmsMilter(Milter.Milter):
     else: ipaddr = ''
     self.connectip = ipaddr
     self.missing_ptr = dynip(hostname,self.connectip)
-    for pat in internal_connect:
-      if fnmatchcase(hostname,pat):
-	self.internal_connection = True
-	break
     if self.internal_connection:
       connecttype = 'INTERNAL'
     else:
