@@ -141,6 +141,36 @@ is a milter declaration for sendmail.cf with all timeouts specified:
 <pre>
 Xpythonfilter, S=local:/var/log/milter/pythonsock, F=T, T=C:5m;S:20s;R:60s;E:5m
 </pre>
+<li> Q. There is a Python traceback in the log file!  What happened to
+	my email?
+<p>  A. When the milter fails with an untrapped exception, a TEMPFAIL
+result (451) is returned to the sender.  The sender will then retry every
+hour or so for several days.  Hopefully, someone will notice the 
+traceback, and workaround or fix the problem.
+
+<li> Q. I read some notes such as "Check valid domains allowed by internal
+	senders to detect PCs infected with spam trojans." but could not
+	understand the idea. Could you clarify the content ?
+
+<p>  A. The <code>internal_domains</code> configuration specifies which
+MAIL FROM domains are used by internal connections.  If an internal
+PC tries to use some other domain, it is assumed to be a "Zombie".
+<p>
+Here is a sample log line:
+<pre>
+2005Jun22 12:01:04 [12430] REJECT: zombie PC at  192.168.100.171  sending MAIL FROM  debby@fedex.com
+</pre>
+No, fedex.com does not use pymilter, and there is no one named debby at my
+client.  But the idiot using the PC at 192.168.100.171 has downloaded and
+installed some stupid weatherbar/hotbar/aquariumscreensaver that is actually a
+spam bot.
+<p>
+The <code>internal_domains</code> option is simplistic, it assumes all
+valid senders of the domains are internal.  SPF provides a much more general
+check of IP and MAIL FROM for external email.  Pymilter should soon
+have a local policy feature for more general checking of internal mail.
+
+<h3> Using SPF </h3>
 
 <a name="spf">
 <li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
