@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.14  2005/07/02 23:27:31  customdesigned
+# Don't match hostnames for internal connects.
+#
 # Revision 1.13  2005/07/01 16:30:24  customdesigned
 # Always log trusted Received and Received-SPF headers.
 #
@@ -240,6 +243,7 @@ from email.Header import decode_header
 # Import pysrs if available
 try:
   import SRS
+  import SES
   srsre = re.compile(r'^SRS[01][+-=]',re.IGNORECASE)
 except: SRS = None
 
@@ -287,7 +291,7 @@ dspam_reject = ()
 dspam_sizelimit = 180000
 srs = None
 srs_reject_spoofed = False
-srs_fwdomain = None
+srs_domain = None
 spf_reject_neutral = ()
 spf_accept_softfail = ()
 spf_best_guess = False
@@ -455,7 +459,7 @@ def read_config(list):
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
   if SRS and srs_secret:
-    global srs,srs_reject_spoofed,srs_fwdomain
+    global ses,srs,srs_reject_spoofed,srs_domain
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
     maxage = cp.getint('srs','maxage')
@@ -468,7 +472,10 @@ def read_config(list):
     else:
       srs = SRS.Guarded.Guarded(secret=srs_secret,
         maxage=maxage,hashlength=hashlength,separator=separator)
-    srs_fwdomain = cp.getdefault('srs','fwdomain')
+    srs_domain = cp.getlist('srs','ses')
+    srs_domain.append(cp.getdefault('srs','fwdomain'))
+    ses = SES.new(secret=srs_secret,expiration=maxage)
+    print srs_domain
 
 def parse_addr(t):
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
@@ -777,17 +784,25 @@ class bmsMilter(Milter.Milter):
       	or self.canon_from.startswith('mailer-daemon@'):
         if self.recipients and not multiple_bounce_recipients:
 	  self.data_allowed = False
-        if srs and domain == srs_fwdomain:
+        if srs and domain in srs_domain:
 	  oldaddr = '@'.join(parse_addr(to))
 	  try:
-	    newaddr = srs.reverse(oldaddr)
-	    # Currently, a sendmail map reverses SRS.  We just log it here.
-	    self.log("srs rcpt:",newaddr)
+            newaddr = ses.verify(oldaddr)
+            if len(newaddr) > 1:
+	      self.log("ses rcpt:",newaddr[0])
+	    else:
+	      newaddr = srs.reverse(oldaddr)
+	      # Currently, a sendmail map reverses SRS.  We just log it here.
+	      self.log("srs rcpt:",newaddr)
 	  except:
             if not (self.internal_connection or self.trusted_relay):
 	      if srsre.match(oldaddr):
 		self.log("REJECT: srs spoofed:",oldaddr)
 		self.setreply('550','5.7.1','Invalid SRS signature')
+		return Milter.REJECT
+	      if oldaddr.startswith('SES='):
+		self.log("REJECT: ses spoofed:",oldaddr)
+		self.setreply('550','5.7.1','Invalid SES signature')
 		return Milter.REJECT
 	      self.data_allowed = not srs_reject_spoofed
       # non DSN mail to SRS address will bounce due to invalid local part
