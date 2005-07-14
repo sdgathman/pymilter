@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""SPF (Sender-Permitted From) implementation.
+"""SPF (Sender Policy Framework) implementation.
 
 Copyright (c) 2003, Terence Way
 Portions Copyright (c) 2004,2005 Stuart Gathman <stuart@bmsi.com>
@@ -19,10 +19,11 @@ AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
 SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 For more information about SPF, a tool against email forgery, see
-	http://spf.pobox.com
+	http://spf.pobox.com/
 
 For news, bugfixes, etc. visit the home page for this implementation at
 	http://www.wayforward.net/spf/
+	http://sourceforge.net/projects/pymilter/
 """
 
 # Changes:
@@ -46,6 +47,37 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.7  2005/07/12 21:43:56  kitterma
+# Added processing to clarify some cases of unknown
+# qualifier errors (to distinguish between unknown qualifier and
+# unknown mechanism).
+# Also cleaned up comments from previous updates.
+#
+# Revision 1.6  2005/06/29 14:46:26  customdesigned
+# Distinguish trivial recursion from missing arg for diagnostic purposes.
+#
+# Revision 1.5  2005/06/28 17:48:56  customdesigned
+# Support extended processing results when a PermError should strictly occur.
+#
+# Revision 1.4  2005/06/22 15:54:54  customdesigned
+# Correct spelling.
+#
+# Revision 1.3  2005/06/22 00:08:24  kitterma
+# Changes from draft-mengwong overall DNS lookup and recursion
+# depth limits to draft-schlitt-spf-classic-02 DNS lookup, MX lookup, and
+# PTR lookup limits.  Recursion code is still present and functioning, but
+# it should be impossible to trip it.
+#
+# Revision 1.2  2005/06/21 16:46:09  kitterma
+# Updated definition of SPF, added reference to the sourceforge project site,
+# and deleted obsolete Microsoft Caller ID for Email XML translation routine.
+#
+# Revision 1.1.1.1  2005/06/20 19:57:32  customdesigned
+# Move Python SPF to its own module.
+#
+# Revision 1.5  2005/06/14 20:31:26  customdesigned
+# fix pychecker nits
+#
 # Revision 1.4  2005/06/02 04:18:55  customdesigned
 # Update copyright notices after reading article on /.
 #
@@ -144,135 +176,6 @@ import struct  # for pack() and unpack()
 import time    # for time()
 
 import DNS	# http://pydns.sourceforge.net
-import xml.sax
-
-# -------------------------------------------------------------------------
-# Convert a MS Caller-ID entry (XML) to a SPF entry
-#
-# (c) 2004 by Ernesto Baschny
-# (c) 2004 Python version by Stuart Gathman
-#
-# Date: 2004-02-25
-#
-# A complete reverse translation (SPF -> CID) might be impossible, since
-# there are no ways to handle:
-# - PTR and EXISTS mechanism 
-# - MX mechanism with an different domain as argument
-# - macros
-# 
-# References:
-# http://www.microsoft.com/mscorp/twc/privacy/spam_callerid.mspx
-# http://spf.pobox.com/
-#
-# Known bugs:
-# - Currently it won't handle the exclusions provided in the A and R
-#   tags (prefix '!'). They will show up "as-is" in the SPF record
-# - I really haven't read the MS-CID specs in-depth, so there are probably
-#   other bugs too :)
-#
-# Ernesto Baschny <ernst@baschny.de>
-#
-
-class CIDParser(xml.sax.ContentHandler):
-  "Convert a MS Caller-ID entry (XML) to a SPF entry."
-
-  def __init__(self,q=None):
-    self.spf = []
-    self.action = '-all'
-    self.has_servers = None
-    self.spf_entry = None
-    if q:
-      self.spf_query = q
-    else:
-      self.spf_query = query(i='127.0.0.1', s='localhost', h='unknown')
-
-  def startElement(self,tag,attr):
-      if tag == 'm':
-	if self.has_servers != None and not self.has_servers:
-	  raise ValueError(
-    "Declared <noMailServers\> and later <m>, this CID entry is not valid."
-	  )
-	self.has_servers = True
-      elif tag == 'noMailServers':
-	if self.has_servers:
-	  raise ValueError(
-    "Declared <m> and later <noMailServers\>, this CID entry is not valid."
-	  )
-	self.has_servers = False
-      elif tag == 'ep':
-	if attr.has_key('testing') and attr.getValue('testing') == 'true':
-	  # A CID with 'testing' found:
-	  # From the MS-specs:
-	  #  "Documents in which such attribute is present with a true
-	  #  value SHOULD be entirely ignored (one should act as if the
-	  #  document were absent)"
-	  # From the SPF-specs:
-	  #  "Neutral (?): The SPF client MUST proceed as if a domain did
-	  #  not publish SPF data."
-	  # So we set SPF action to "neutral":
-	  self.action = '?all'
-      elif tag == 'mx':
-	  # The empty MX-tag, same as SPF's MX-mechanism
-	  self.spf.append('mx')
-      self.tag = tag
-
-  def characters(self,text):
-	tag = self.tag
-	# Remove starting and trailing spaces from text:
-	text = text.strip()
-
-	if tag == 'a' or tag == 'r':
-	    # The A and R tags from MS-CID are both handled by the 
-	    # ipv4/6-mechanisms from SPF:
-	    if text.find(':') < 0:
-	      mechanism = 'ip4'
-	    else:
-	      mechanism = 'ip6'
-	    self.spf.append(mechanism + ':' + text)
-	elif tag == 'indirect':
-	    # MS-CID's indirect is "sort of" the include from SPF:
-	    # Not really true, because the <indirect> tag from MS-CID also 
-	    # provides a fallback in case the included domain doesn't provide
-	    # _ep-records: The inbound MX-servers of the included domains
-	    # are added to the list of allowed outgoing mailservers for the
-	    # domain that declared the _ep-record with the <indirect> tag.
-	    # In SPF you would use the 'mx:domain' to handle this, but this
-	    # wouldn't depend on referred domain having or not SPF-records.
-	    cid_xml = self.cid_txt(text)
-	    if cid_xml:
-	      p = CIDParser()
-	      xml.sax.parseString(cid_xml,p)
-	      if p.has_servers != False:
-		self.spf += p.spf
-	    else:
-	      self.spf.append('mx:' + text)
-
-  def cid_txt(self,domain):
-    q = self.spf_query
-    domain='_ep.' + domain
-    a = q.dns_txt(domain)
-    if not a: return None
-    if a[0].lower().startswith('<ep ') and a[-1].lower().endswith('</ep>'):
-      return ''.join(a)
-    return None
-
-  def endElement(self,tag):
-      if tag == 'ep':
-	# This is the end... assemble what we've got
-	spf_entry = ['v=spf1']
-	if self.has_servers != False:
-	  spf_entry += self.spf
-	spf_entry.append(self.action)
-	self.spf_entry = ' '.join(spf_entry)
-
-  def spf_txt(self,cid_xml):
-    if not cid_xml.startswith('<'):
-      cid_xml = self.cid_txt(cid_xml)
-      if not cid_xml: return None
-    # Parse the beast. Any XML-problem will be reported by xlm.sax
-    self.spf_entry = None
-    xml.sax.parseString(cid_xml,self)
-    return self.spf_entry
 
 # 32-bit IPv4 address mask
 MASK = 0xFFFFFFFFL
@@ -297,7 +200,7 @@ RESULTS = {'+': 'pass', '-': 'fail', '?': 'neutral', '~': 'softfail',
 	   'none': 'none', 'deny': 'fail' }
 
 EXPLANATIONS = {'pass': 'sender SPF verified', 'fail': 'access denied',
-                'unknown': 'SPF unknown',
+                'unknown': 'SPF unknown (PermError)',
 		'softfail': 'domain in transition',
 		'neutral': 'access neither permitted nor denied',
 		'none': ''
@@ -320,7 +223,9 @@ except NameError:
 DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 
 # maximum DNS lookups allowed
-MAX_LOOKUP = 100
+MAX_LOOKUP = 10 #draft-schlitt-spf-classic-02 Para 10.1
+MAX_MX = 10 #draft-schlitt-spf-classic-02 Para 10.1
+MAX_PTR = 10 #draft-schlitt-spf-classic-02 Para 10.1
 MAX_RECURSION = 20
 
 class TempError(Exception):
@@ -328,10 +233,11 @@ class TempError(Exception):
 
 class PermError(Exception):
 	"Permanent SPF error"
-	def __init__(self,msg,mech=None):
+	def __init__(self,msg,mech=None,ext=None):
 	  Exception.__init__(self,msg,mech)
 	  self.msg = msg
 	  self.mech = mech
+	  self.ext = ext
 	def __str__(self):
 	  if self.mech:
 	    return '%s: %s'%(self.msg,self.mech)
@@ -372,7 +278,7 @@ class query(object):
 
 	Also keeps cache: DNS cache.
 	"""
-	def __init__(self, i, s, h,local=None,receiver=None):
+	def __init__(self, i, s, h,local=None,receiver=None,strict=True):
 		self.i, self.s, self.h = i, s, h
 		if not s and h:
 		  self.s = 'postmaster@' + h
@@ -387,6 +293,7 @@ class query(object):
 		self.exps = dict(EXPLANATIONS)
 		self.local = local	# local policy
     		self.lookups = 0
+		self.strict = strict
 
 	def set_default_explanation(self,exp):
 		exps = self.exps
@@ -412,6 +319,11 @@ class query(object):
 	result in ['fail', 'softfail', 'neutral' 'unknown', 'pass', 'error']
 		"""
 		self.mech = []		# unknown mechanisms
+		# If not strict, certain PermErrors (mispelled
+		# mechanisms, strict processing limits exceeded)
+		# will continue processing.  However, the exception
+		# that strict processing would raise is saved here
+		self.perm_error = None
 		if self.i.startswith('127.'):
 			return ('pass', 250, 'local connections always pass')
 
@@ -421,7 +333,12 @@ class query(object):
 			    spf = self.dns_spf(self.d)
 			if self.local and spf:
 			    spf += ' ' + self.local
-			return self.check1(spf, self.d, 0)
+			rc = self.check1(spf, self.d, 0)
+			if self.perm_error:
+			  # extended processing succeeded, but strict failed
+			  self.perm_error.ext = rc
+			  raise self.perm_error
+			return rc
 		except DNS.DNSError,x:
 			return ('error', 450, 'SPF DNS Error: ' + str(x))
 		except TempError,x:
@@ -431,8 +348,8 @@ class query(object):
 		    self.mech.append(x.mech)
 		    # Pre-Lentczner draft treats this as an unknown result
 		    # and equivalent to no SPF record.
-		    # return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
-		    return ('error', 550, 'SPF Permanent Error: ' + str(x))
+		    return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
+		    # return ('error', 550, 'SPF Permanent Error: ' + str(x))
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
@@ -472,19 +389,20 @@ class query(object):
 		# Look for modifiers
 		#
 		for m in spf:
-			m = RE_MODIFIER.split(m)[1:]
-			if len(m) != 2: continue
+		    m = RE_MODIFIER.split(m)[1:]
+		    if len(m) != 2: continue
 
-			if m[0] == 'exp':
-				exps['fail'] = exps['unknown'] = \
-					self.get_explanation(m[1])
-			elif m[0] == 'redirect':
-				redirect = self.expand(m[1])
-			elif m[0] == 'default':
-				# default=- is the same as default=fail
-				default = RESULTS.get(m[1], default)
+		    if m[0] == 'exp':
+			exps['fail'] = exps['unknown'] = \
+				self.get_explanation(m[1])
+		    elif m[0] == 'redirect':
+		        self.check_lookups()
+			redirect = self.expand(m[1])
+		    elif m[0] == 'default':
+			# default=- is the same as default=fail
+			default = RESULTS.get(m[1], default)
 
-			# spf rfc: 3.6 Unrecognized Mechanisms and Modifiers
+		    # spf rfc: 3.6 Unrecognized Mechanisms and Modifiers
 
 		# Look for mechanisms
 		#
@@ -502,22 +420,24 @@ class query(object):
 			    # default pass
 			    result = 'pass'
 
-		    if m in ['a', 'mx', 'ptr', 'prt', 'exists', 'include']:
+		    if m in ('a', 'mx', 'ptr', 'exists', 'include'):
+		    	    self.check_lookups()
 			    arg = self.expand(arg)
 
 		    if m == 'include':
-		      if arg != self.d:
-			res,code,txt = self.check1(self.dns_spf(arg),
-					  arg, recursion + 1)
-			if res == 'pass':
-			  break
-			if res == 'none':
-			  raise PermError(
-			    'No valid SPF record for included domain: %s'%arg,
-			    mech)
-			continue
-		      else:
+		      if arg == self.d:
+		        if mech != 'include':
+			  raise PermError('include has trivial recursion',mech)
 			raise PermError('include mechanism missing domain',mech)
+		      res,code,txt = self.check1(self.dns_spf(arg),
+					arg, recursion + 1)
+		      if res == 'pass':
+			break
+		      if res == 'none':
+			raise PermError(
+			  'No valid SPF record for included domain: %s'%arg,
+			  mech)
+		      continue
 		    elif m == 'all':
 			    break
 
@@ -536,6 +456,13 @@ class query(object):
 				    break
 
 		    elif m in ('ip4', 'ipv4', 'ip') and arg != self.d:
+		        try:
+			  if m != 'ip4':
+			    raise PermError('Unknown mechanism found',mech)
+			except PermError, x:
+			  if self.strict: raise
+			  if not self.perm_error:
+			    self.perm_error = x
 			try:
 			    if cidrmatch(self.i, [arg], cidrlength):
 				break
@@ -543,20 +470,42 @@ class query(object):
 			    raise PermError('syntax error',mech)
 			    
 		    elif m in ('ip6', 'ipv6'):
-		    # Until we support IPV6, we should never
-		    # get an IPv6 connection.  So this mech
-		    # will never match.
-			    pass
+		        try:
+			  if m != 'ip6':
+			    raise PermError('Unknown mechanism found',mech)
+			except PermError, x:
+			  if self.strict: raise
+			  if not self.perm_error:
+			    self.perm_error = x
+			# Until we support IPV6, we should never
+			# get an IPv6 connection.  So this mech
+			# will never match.
+			pass
 
 		    elif m in ('ptr', 'prt'):
-			    if domainmatch(self.validated_ptrs(self.i),
-					   arg):
-				    break
+		        try:
+			  if m != 'ptr':
+			    raise PermError('Unknown mechanism found',mech)
+			except PermError, x:
+			  if self.strict: raise
+			  if not self.perm_error:
+			    self.perm_error = x
+			  self.check_lookups()
+			if domainmatch(self.validated_ptrs(self.i), arg):
+				break
 
 		    else:
-		      # unknown mechanisms cause immediate unknown
+		      # unknown mechanisms cause immediate PermError
 		      # abort results
-		      raise PermError('Unknown mechanism found',mech)
+		      # first see if it might be an bad qualifier instead
+		      # of an unknown mechanism (no change to the result, just
+		      # fine tune the error).
+		      # eat one character and try again:
+		      m = m[1:]
+		      if m in ['a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all']:
+                          raise PermError('Unknown qualifier, IETF draft para 4.6.1, found in',mech)
+		      else:
+                          raise PermError('Unknown mechanism found',mech)
 		else:
 		    # no matches
 		    if redirect:
@@ -569,6 +518,17 @@ class query(object):
 		    return (result, 550, exps[result])
 		else:
 		    return (result, 250, exps[result])
+
+	def check_lookups(self):
+	    self.lookups = self.lookups + 1
+	    if self.lookups > MAX_LOOKUP:
+	      try:
+		if self.strict or not self.perm_error:
+		  raise PermError('Too many DNS lookups')
+	      except PermError,x:
+		if self.strict or self.lookups > MAX_LOOKUP*4:
+		  raise x
+		self.perm_error = x
 
 	def get_explanation(self, spec):
 		"""Expand an explanation."""
@@ -682,13 +642,6 @@ class query(object):
 		      for t in self.dns_txt(domain+'._spf.'+DELEGATE)
 			if t.startswith('v=spf1')
 		    ]
-		  if not a:
-		    # No SPF record: convert and return CID if present
-		    p = CIDParser(q=self)
-		    try:
-		      return p.spf_txt(domain)
-		    except xml.sax._exceptions.SAXParseException:
-		      raise PermError("Caller-ID parse error",domain)
 
 		if len(a) == 1:
 			return a[0]
@@ -739,15 +692,22 @@ class query(object):
 		pre: qtype in ['A', 'AAAA', 'MX', 'PTR', 'TXT', 'SPF']
 		post: isinstance(__return__, types.ListType)
 		"""
-		self.lookups += 1
-		if self.lookups > MAX_LOOKUP:
-			raise PermError('Too many DNS lookups')
 		result = self.cache.get( (name, qtype) )
 		cname = None
 		if not result:
+                        mxcount = 0
+                        ptrcount = 0
 			req = DNS.DnsRequest(name, qtype=qtype)
 			resp = req.req()
 			for a in resp.answers:
+                                if a['typename'] == 'MX':
+                                    mxcount = mxcount + 1
+                                    if mxcount > MAX_MX:
+                                        raise PermError('Too many MX lookups')
+                                if a['typename'] == 'PTR':
+                                    ptrcount = ptrcount + 1
+                                    if ptrcount > MAX_PTR:
+                                        raise PermError('Too many PTR lookups')
 				# key k: ('wayforward.net', 'A'), value v
 				k, v = (a['name'], a['typename']), a['data']
 				if k == (name, 'CNAME'):
@@ -838,6 +798,9 @@ def parse_mechanism(str, d):
 
 	>>> parse_mechanism('a:bar.com/16', 'foo.com')
 	('a', 'bar.com', 16)
+
+	>>> parse_mechanism('A:bar.com/16', 'foo.com')
+	('a', 'bar.com', 16)
 	"""
 	a = str.split('/')
 	if len(a) == 2:
@@ -847,9 +810,9 @@ def parse_mechanism(str, d):
 
 	b = a.split(':')
 	if len(b) == 2:
-		return b[0], b[1], port
+		return b[0].lower(), b[1], port
 	else:
-		return a, d, port
+		return a.lower(), d, port
 
 def reverse_dots(name):
 	"""Reverse dotted IP addresses or domain names.
