@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.15  2005/07/06 04:05:40  customdesigned
+# Initial SES integration.
+#
 # Revision 1.14  2005/07/02 23:27:31  customdesigned
 # Don't match hostnames for internal connects.
 #
@@ -243,9 +246,11 @@ from email.Header import decode_header
 # Import pysrs if available
 try:
   import SRS
-  import SES
   srsre = re.compile(r'^SRS[01][+-=]',re.IGNORECASE)
 except: SRS = None
+try:
+  import SES
+except: SES = None
 
 # Import spf if available
 try: import spf
@@ -290,6 +295,7 @@ dspam_internal = True	# True if internal mail should be dspammed
 dspam_reject = ()
 dspam_sizelimit = 180000
 srs = None
+ses = None
 srs_reject_spoofed = False
 srs_domain = None
 spf_reject_neutral = ()
@@ -472,10 +478,13 @@ def read_config(list):
     else:
       srs = SRS.Guarded.Guarded(secret=srs_secret,
         maxage=maxage,hashlength=hashlength,separator=separator)
-    srs_domain = cp.getlist('srs','ses')
+    if SES:
+      ses = SES.new(secret=srs_secret,expiration=maxage)
+      srs_domain = cp.getlist('srs','ses')
+    else:
+      srs_domain = []
     srs_domain.append(cp.getdefault('srs','fwdomain'))
-    ses = SES.new(secret=srs_secret,expiration=maxage)
-    print srs_domain
+    #print srs_domain
 
 def parse_addr(t):
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
@@ -501,7 +510,7 @@ def parse_header(val):
       except UnicodeError: continue
   except UnicodeDecodeError: pass
   except LookupError: pass
-  except email.errors.HeaderParseError: pass
+  except email.Errors.HeaderParseError: pass
   return val
 
 class bmsMilter(Milter.Milter):
@@ -648,7 +657,7 @@ class bmsMilter(Milter.Milter):
 	else:
 	  self.log("REJECT: zombie PC at ",self.connectip," sending MAIL FROM ",
 	  	self.canon_from)
-	  self.setreply('550','5.7.1','Get rid of your virus!',
+	  self.setreply('550','5.7.1',
 	  'Your PC is using an unauthorized MAIL FROM.',
 	  'It is either badly misconfigured or controlled by organized crime.'
 	  )
@@ -787,7 +796,10 @@ class bmsMilter(Milter.Milter):
         if srs and domain in srs_domain:
 	  oldaddr = '@'.join(parse_addr(to))
 	  try:
-            newaddr = ses.verify(oldaddr)
+	    if ses:
+	      newaddr = ses.verify(oldaddr)
+	    else:
+	      newaddr = oldaddr,
             if len(newaddr) > 1:
 	      self.log("ses rcpt:",newaddr[0])
 	    else:
@@ -1048,6 +1060,11 @@ class bmsMilter(Milter.Milter):
 	    elif not self.internal_connection or dspam_internal:
 	      if len(txt) > dspam_sizelimit:
 		self.log("Large message:",len(txt))
+		return False
+	      if user == 'honeypot':
+	        ds.check_spam(user,txt,force_result=dspam.DSR_ISSPAM)
+		self.log("HONEYPOT:",rcpt)
+		self.fp = None
 		return False
 	      txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
