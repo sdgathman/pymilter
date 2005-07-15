@@ -47,6 +47,12 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.13  2005/07/15 20:01:22  customdesigned
+# Allow extended results for MX limit
+#
+# Revision 1.12  2005/07/15 19:12:09  customdesigned
+# Official IANA SPF record (type 99) support.
+#
 # Revision 1.11  2005/07/15 18:03:02  customdesigned
 # Fix unknown Received-SPF header broken by result changes
 #
@@ -193,6 +199,10 @@ import struct  # for pack() and unpack()
 import time    # for time()
 
 import DNS	# http://pydns.sourceforge.net
+# patch in type99
+DNS.Type.SPF = 99
+DNS.Type.typemap[99] = 'SPF'
+DNS.Lib.RRunpacker.getSPFdata = DNS.Lib.RRunpacker.getTXTdata
 
 # 32-bit IPv4 address mask
 MASK = 0xFFFFFFFFL
@@ -654,12 +664,12 @@ class query(object):
 		name.  Returns None if not found, or if more than one record
 		is found.
 		"""
+		a = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
+		if len(a) == 1:
+			return a[0]
 		a = [t for t in self.dns_txt(domain) if t.startswith('v=spf1')]
 		if len(a) == 1:
 			return a[0]
-		#a = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
-		#if len(a) == 1:
-		#	return a[0]
 		if DELEGATE:
 		  a = [t
 		    for t in self.dns_txt(domain+'._spf.'+DELEGATE)
@@ -675,9 +685,9 @@ class query(object):
 		  return [''.join(a) for a in self.dns(domainname, 'TXT')]
 		return []
 	def dns_99(self, domainname):
-		"Get a list of TYPE99 records for a domain name."
+		"Get a list of type SPF=99 records for a domain name."
 		if domainname:
-		  return [''.join(a) for a in self.dns(domainname, 'TYPE99')]
+		  return [''.join(a) for a in self.dns(domainname, 'SPF')]
 		return []
 
 	def dns_mx(self, domainname):
@@ -726,20 +736,29 @@ class query(object):
                         ptrcount = 0
 			req = DNS.DnsRequest(name, qtype=qtype)
 			resp = req.req()
+			#resp.show()
 			for a in resp.answers:
-                                if a['typename'] == 'MX':
-                                    mxcount = mxcount + 1
-                                    if mxcount > MAX_MX:
-                                        raise PermError('Too many MX lookups')
-                                if a['typename'] == 'PTR':
-                                    ptrcount = ptrcount + 1
-                                    if ptrcount > MAX_PTR:
-                                        raise PermError('Too many PTR lookups')
-				# key k: ('wayforward.net', 'A'), value v
-				k, v = (a['name'], a['typename']), a['data']
-				if k == (name, 'CNAME'):
-					cname = v
-				self.cache.setdefault(k, []).append(v)
+			    if a['typename'] == 'MX':
+				mxcount = mxcount + 1
+				if mxcount > MAX_MX:
+				  print mxcount,self.strict,self.perm_error
+				  try:
+				    if self.strict or not self.perm_error:
+				      raise PermError('Too many MX lookups')
+				  except PermError,x:
+				    if self.strict or mxcount > MAX_MX*4:
+				      raise x
+				    self.perm_error = x
+				  print "lax"
+			    if a['typename'] == 'PTR':
+				ptrcount = ptrcount + 1
+				if ptrcount > MAX_PTR:
+				    raise PermError('Too many PTR lookups')
+			    # key k: ('wayforward.net', 'A'), value v
+			    k, v = (a['name'], a['typename']), a['data']
+			    if k == (name, 'CNAME'):
+				    cname = v
+			    self.cache.setdefault(k, []).append(v)
 			result = self.cache.get( (name, qtype), [])
 		if not result and cname:
 			result = self.dns(cname, qtype)
@@ -825,8 +844,8 @@ def parse_mechanism(str, d):
 	>>> parse_mechanism('a/24', 'foo.com')
 	('a', 'foo.com', 24)
 
-	>>> parse_mechanism('A:bar.com/16', 'foo.com')
-	('a', 'bar.com', 16)
+	>>> parse_mechanism('A:foo:bar.com/16', 'foo.com')
+	('a', 'foo:bar.com', 16)
 
 	>>> parse_mechanism('-exists:%{i}.%{s1}.100/86400.rate.%{d}','foo.com')
 	('-exists', '%{i}.%{s1}.100/86400.rate.%{d}', 32)
@@ -1025,7 +1044,9 @@ if __name__ == '__main__':
 			receiver=socket.gethostname())
 	elif len(sys.argv) == 5:
 		i, s, h = sys.argv[2:]
-		q = query(i=i, s=s, h=h, receiver=socket.gethostname())
+		q = query(i=i, s=s, h=h, receiver=socket.gethostname(),
+			strict=False)
 		print q.check(sys.argv[1])
+		if q.perm_error: print q.perm_error.ext
 	else:
 		print USAGE

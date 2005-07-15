@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.16  2005/07/14 03:23:33  customdesigned
+# Make SES package optional.  Initial honeypot support.
+#
 # Revision 1.15  2005/07/06 04:05:40  customdesigned
 # Initial SES integration.
 #
@@ -690,6 +693,7 @@ class bmsMilter(Milter.Milter):
     q.set_default_explanation(
       'SPF fail: see http://spf.pobox.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
+    ores = res	# original result
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
 	# check hello name via spf
@@ -712,12 +716,17 @@ class bmsMilter(Milter.Milter):
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
 		'SPF guess: see http://spf.pobox.com/why.html')
+	q.strict = False
 	# best_guess should not result in fail
 	if self.missing_ptr:
 	  # ignore dynamic PTR for best guess
 	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
 	else:
 	  res,code,txt = q.best_guess()
+        ores = res	# original result
+        if q.perm_error:
+          res,code,txt = q.perm_error.ext	# extended result
+	  txt = 'EXT: ' + txt
 	receiver += ': guessing'
       if self.missing_ptr and res in ('neutral', 'none') and hres != 'pass':
 	if spf_reject_noptr:
@@ -765,16 +774,16 @@ class bmsMilter(Milter.Milter):
 	'servers for %s should accomplish this.' % q.o
       )
       return Milter.REJECT
+    if res == 'unknown':
+      self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+      # latest SPF draft recommends 5.5.2 instead of 5.7.1
+      self.setreply(str(code),'5.5.2',txt)
+      return Milter.REJECT
     if res == 'error':
-      if code >= 500:
-        self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	# latest SPF draft recommends 5.5.2 instead of 5.7.1
-	self.setreply(str(code),'5.5.2',txt)
-	return Milter.REJECT
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    self.add_header('Received-SPF',q.get_header(res,receiver))
+    self.add_header('Received-SPF',q.get_header(ores,receiver))
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
