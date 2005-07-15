@@ -12,7 +12,7 @@ if sys.version < '2.2.3':
   DistributionMetadata.classifiers = None
   DistributionMetadata.download_url = None
 
-setup(name = "milter", version = "0.8.1",
+setup(name = "milter", version = "0.8.2",
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to

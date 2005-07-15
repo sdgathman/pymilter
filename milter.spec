@@ -1,5 +1,5 @@
 %define name milter
-%define version 0.8.1
+%define version 0.8.2
 %define release 1.RH7
 # what version of RH are we building for?
 %define redhat9 0
@@ -166,6 +166,14 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-1
+- Strict processing limits per SPF RFC
+- Fixed several parsing bugs under RFC 
+- Support official IANA SPF record (type99)
+- Honeypot support (requires pydspam-1.1.9)
+- Extended SPF processing results beyond strict RFC limits
+- Support original SES for local bounce protection (requires pysrs-0.30.10)
+- Callback exception processing option in milter module
 * Thu Jun 16 2005 Stuart Gathman <stuart@bmsi.com> 0.8.1-1
 - Fix zip in zip loop in mime.py
 - Fix HeaderParseError in bms.py header callback
