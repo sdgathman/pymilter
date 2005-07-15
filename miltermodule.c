@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.5  2005/06/24 04:20:07  customdesigned
+ * Report context allocation error.
+ *
  * Revision 1.4  2005/06/24 04:12:43  customdesigned
  * Remove unused name argument to generic wrappers.
  *
@@ -343,7 +346,8 @@ CHGHDRS - filter may change/delete headers";
 
 static PyObject *
 milter_set_flags(PyObject *self, PyObject *args) {
-  if (!PyArg_ParseTuple(args, "i", &description.xxfi_flags)) return NULL;
+  if (!PyArg_ParseTuple(args, "i:set_flags", &description.xxfi_flags))
+    return NULL;
   Py_INCREF(Py_None);
   return Py_None;
 }
@@ -509,6 +513,28 @@ milter_set_close_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_close_callback", &close_callback);
 }
 
+static int exception_policy = SMFIS_TEMPFAIL;
+
+static char milter_set_exception_policy__doc__[] =
+"set_exception_policy(i) -> None\n\
+Sets the policy for untrapped Python exceptions during a callback.\n\
+Must be one of TEMPFAIL,REJECT,CONTINUE";
+
+static PyObject *
+milter_set_exception_policy(PyObject *self, PyObject *args) {
+  int i;
+  if (!PyArg_ParseTuple(args, "i:set_exception_policy", &i))
+    return NULL;
+  switch (i) {
+  case SMFIS_REJECT: case SMFIS_TEMPFAIL: case SMFIS_CONTINUE:
+    exception_policy = i;
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+  PyErr_SetString(MilterError,"invalid exception policy");
+  return NULL;
+}
+
 /** Report and clear any python exception before returning to libmilter. 
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
@@ -516,8 +542,15 @@ static int _report_exception(milter_ContextObject *self) {
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */
     PyEval_ReleaseThread(self->t);
-    smfi_setreply(self->ctx, "451", "4.3.0", "Filter failure");
-    return SMFIS_TEMPFAIL;
+    switch (exception_policy) {
+      case SMFIS_REJECT:
+	smfi_setreply(self->ctx, "554", "5.3.0", "Filter failure");
+	return SMFIS_REJECT;
+      case SMFIS_TEMPFAIL:
+	smfi_setreply(self->ctx, "451", "4.3.0", "Filter failure");
+	return SMFIS_TEMPFAIL;
+    }
+    return SMFIS_CONTINUE;
   }
   PyEval_ReleaseThread(self->t);
   return SMFIS_CONTINUE;
@@ -1180,6 +1213,8 @@ static PyMethodDef milter_methods[] = {
    { "set_eom_callback",     milter_set_eom_callback,     METH_VARARGS, milter_set_eom_callback__doc__},
    { "set_abort_callback",   milter_set_abort_callback,   METH_VARARGS, milter_set_abort_callback__doc__},
    { "set_close_callback",   milter_set_close_callback,   METH_VARARGS, milter_set_close_callback__doc__},
+   { "set_exception_policy",   milter_set_exception_policy,METH_VARARGS, milter_set_exception_policy__doc__},
+   { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
    { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
    { "main",                 milter_main,                 METH_VARARGS, milter_main__doc__},
    { "setdbg",               milter_setdbg,               METH_VARARGS, milter_setdbg__doc__},
