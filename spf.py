@@ -47,6 +47,12 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.15  2005/07/15 21:17:36  customdesigned
+# Recursion limit raises AssertionError in strict mode, PermError otherwise.
+#
+# Revision 1.14  2005/07/15 20:34:11  customdesigned
+# Check whether DNS package already supports SPF before patching
+#
 # Revision 1.13  2005/07/15 20:01:22  customdesigned
 # Allow extended results for MX limit
 #
@@ -199,10 +205,11 @@ import struct  # for pack() and unpack()
 import time    # for time()
 
 import DNS	# http://pydns.sourceforge.net
-# patch in type99
-DNS.Type.SPF = 99
-DNS.Type.typemap[99] = 'SPF'
-DNS.Lib.RRunpacker.getSPFdata = DNS.Lib.RRunpacker.getTXTdata
+if not hasattr(DNS.Type,'SPF'):
+  # patch in type99 support
+  DNS.Type.SPF = 99
+  DNS.Type.typemap[99] = 'SPF'
+  DNS.Lib.RRunpacker.getSPFdata = DNS.Lib.RRunpacker.getTXTdata
 
 # 32-bit IPv4 address mask
 MASK = 0xFFFFFFFFL
@@ -385,8 +392,16 @@ class query(object):
 		# spf rfc: 3.7 Processing Limits
 		#
 		if recursion > MAX_RECURSION:
-			self.prob =  'Too many levels of recursion'
-			return ('unknown', 250, 'SPF recursion limit exceeded')
+			# This should never happen in strict mode
+			# because of the other limits we check,
+			# so if it does, there is something wrong with
+			# our code.  It is not a PermError because there is not
+			# necessarily anything wrong with the SPF record.
+			if self.strict:
+			  raise AssertionError('Too many levels of recursion')
+			# As an extended result, however, it should be
+			# a PermError.
+			raise PermError('Too many levels of recursion')
 		try:
 			tmp, self.d = self.d, domain
 			return self.check0(spf,recursion)
@@ -664,10 +679,12 @@ class query(object):
 		name.  Returns None if not found, or if more than one record
 		is found.
 		"""
-		a = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
+		# for performance, check for most common case of TXT first
+		a = [t for t in self.dns_txt(domain) if t.startswith('v=spf1')]
 		if len(a) == 1:
 			return a[0]
-		a = [t for t in self.dns_txt(domain) if t.startswith('v=spf1')]
+		# check official SPF type first when it becomes more popular
+		a = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
 		if len(a) == 1:
 			return a[0]
 		if DELEGATE:
@@ -849,6 +866,9 @@ def parse_mechanism(str, d):
 
 	>>> parse_mechanism('-exists:%{i}.%{s1}.100/86400.rate.%{d}','foo.com')
 	('-exists', '%{i}.%{s1}.100/86400.rate.%{d}', 32)
+
+	>>> parse_mechanism('mx::%%%_/.Claranet.de/27','foo.com')
+	('mx', ':%%%_/.Claranet.de', 27)
 	"""
 	a = RE_CIDR.split(str)
 	if len(a) == 3:
