@@ -47,6 +47,23 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.11  2005/07/15 18:03:02  customdesigned
+# Fix unknown Received-SPF header broken by result changes
+#
+# Revision 1.10  2005/07/15 16:17:05  customdesigned
+# Start type99 support.
+# Make Scott's "/" support in parse_mechanism more elegant as requested.
+# Add test case for "/" support.
+#
+# Revision 1.9  2005/07/15 03:33:14  kitterma
+# Fix for bug 1238403 - Crash if non-CIDR / present.  Also added
+# validation check for valid IPv4 CIDR range.
+#
+# Revision 1.8  2005/07/14 04:18:01  customdesigned
+# Bring explanations and Received-SPF header into line with
+# the unknown=PermErr and error=TempErr convention.
+# Hope my case-sensitive mech fix doesn't clash with Scotts.
+#
 # Revision 1.7  2005/07/12 21:43:56  kitterma
 # Added processing to clarify some cases of unknown
 # qualifier errors (to distinguish between unknown qualifier and
@@ -189,6 +206,8 @@ RE_CHAR = re.compile(r'%(%|_|-|(\{[a-zA-Z][0-9]*r?[^\}]*\}))')
 # Regular expression to break up a macro expansion
 RE_ARGS = re.compile(r'([0-9]*)(r?)([^0-9a-zA-Z]*)')
 
+RE_CIDR = re.compile(r'/(1[0-9]*|2[0-9]*|3[0-2]*)$')
+
 # Local parts and senders have their delimiters replaced with '.' during
 # macro expansion
 #
@@ -196,11 +215,12 @@ JOINERS = {'l': '.', 's': '.'}
 
 RESULTS = {'+': 'pass', '-': 'fail', '?': 'neutral', '~': 'softfail',
            'pass': 'pass', 'fail': 'fail', 'unknown': 'unknown',
-	   'neutral': 'neutral', 'softfail': 'softfail',
+	   'error': 'error', 'neutral': 'neutral', 'softfail': 'softfail',
 	   'none': 'none', 'deny': 'fail' }
 
 EXPLANATIONS = {'pass': 'sender SPF verified', 'fail': 'access denied',
-                'unknown': 'SPF unknown (PermError)',
+                'unknown': 'permanent error in processing',
+                'error': 'temporary error in processing',
 		'softfail': 'domain in transition',
 		'neutral': 'access neither permitted nor denied',
 		'none': ''
@@ -345,11 +365,11 @@ class query(object):
 			return ('error', 450, 'SPF Temporary Error: ' + str(x))
 		except PermError,x:
 		    self.prob = x.msg
-		    self.mech.append(x.mech)
+		    if x.mech:
+		      self.mech.append(x.mech)
 		    # Pre-Lentczner draft treats this as an unknown result
 		    # and equivalent to no SPF record.
 		    return ('unknown', 550, 'SPF Permanent Error: ' + str(x))
-		    # return ('error', 550, 'SPF Permanent Error: ' + str(x))
 
 	def check1(self, spf, domain, recursion):
 		# spf rfc: 3.7 Processing Limits
@@ -393,8 +413,7 @@ class query(object):
 		    if len(m) != 2: continue
 
 		    if m[0] == 'exp':
-			exps['fail'] = exps['unknown'] = \
-				self.get_explanation(m[1])
+			self.set_default_explanation(self.get_explanation(m[1]))
 		    elif m[0] == 'redirect':
 		        self.check_lookups()
 			redirect = self.expand(m[1])
@@ -502,7 +521,7 @@ class query(object):
 		      # fine tune the error).
 		      # eat one character and try again:
 		      m = m[1:]
-		      if m in ['a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all']:
+		      if m in ('a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all'):
                           raise PermError('Unknown qualifier, IETF draft para 4.6.1, found in',mech)
 		      else:
                           raise PermError('Unknown mechanism found',mech)
@@ -636,21 +655,29 @@ class query(object):
 		is found.
 		"""
 		a = [t for t in self.dns_txt(domain) if t.startswith('v=spf1')]
-		if not a:
-		  if DELEGATE:
-		    a = [t
-		      for t in self.dns_txt(domain+'._spf.'+DELEGATE)
-			if t.startswith('v=spf1')
-		    ]
-
 		if len(a) == 1:
 			return a[0]
+		#a = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
+		#if len(a) == 1:
+		#	return a[0]
+		if DELEGATE:
+		  a = [t
+		    for t in self.dns_txt(domain+'._spf.'+DELEGATE)
+		      if t.startswith('v=spf1')
+		  ]
+		  if len(a) == 1:
+			  return a[0]
 		return None
 
 	def dns_txt(self, domainname):
 		"Get a list of TXT records for a domain name."
 		if domainname:
 		  return [''.join(a) for a in self.dns(domainname, 'TXT')]
+		return []
+	def dns_99(self, domainname):
+		"Get a list of TYPE99 records for a domain name."
+		if domainname:
+		  return [''.join(a) for a in self.dns(domainname, 'TYPE99')]
 		return []
 
 	def dns_mx(self, domainname):
@@ -718,7 +745,9 @@ class query(object):
 			result = self.dns(cname, qtype)
 		return result
 
-	def get_header(self,res,receiver):
+	def get_header(self,res,receiver=None):
+	  if not receiver:
+	    receiver = self.r
 	  if res in ('pass','fail','softfail'):
 	    return '%s (%s: %s) client-ip=%s; envelope-from=%s; helo=%s;' % (
 	  	res,receiver,self.get_header_comment(res),self.i,
@@ -749,10 +778,10 @@ class query(object):
 		    	% (self.i,sender)
 		    #"%s does not designate permitted sender hosts" % sender
 		elif res == 'unknown': return \
-		    "error in processing during lookup of domain of %s: %s" \
+		    "permanent error in processing domain of %s: %s" \
 		    	% (sender, self.prob)
 		elif res == 'error': return \
-		    "error in processing during lookup of %s" % sender
+		    "temporary error in processing during lookup of %s" % sender
 		elif res == 'fail': return \
 		    "domain of %s does not designate %s as permitted sender" \
 			% (sender,self.i)
@@ -796,19 +825,19 @@ def parse_mechanism(str, d):
 	>>> parse_mechanism('a/24', 'foo.com')
 	('a', 'foo.com', 24)
 
-	>>> parse_mechanism('a:bar.com/16', 'foo.com')
-	('a', 'bar.com', 16)
-
 	>>> parse_mechanism('A:bar.com/16', 'foo.com')
 	('a', 'bar.com', 16)
+
+	>>> parse_mechanism('-exists:%{i}.%{s1}.100/86400.rate.%{d}','foo.com')
+	('-exists', '%{i}.%{s1}.100/86400.rate.%{d}', 32)
 	"""
-	a = str.split('/')
-	if len(a) == 2:
+	a = RE_CIDR.split(str)
+	if len(a) == 3:
 		a, port = a[0], int(a[1])
 	else:
 		a, port = str, 32
 
-	b = a.split(':')
+	b = a.split(':',1)
 	if len(b) == 2:
 		return b[0].lower(), b[1], port
 	else:
