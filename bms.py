@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.17  2005/07/15 20:25:36  customdesigned
+# Use extended results processing for best_guess.
+#
 # Revision 1.16  2005/07/14 03:23:33  customdesigned
 # Make SES package optional.  Initial honeypot support.
 #
@@ -693,7 +696,6 @@ class bmsMilter(Milter.Milter):
     q.set_default_explanation(
       'SPF fail: see http://spf.pobox.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
-    ores = res	# original result
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
 	# check hello name via spf
@@ -723,11 +725,10 @@ class bmsMilter(Milter.Milter):
 	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
 	else:
 	  res,code,txt = q.best_guess()
-        ores = res	# original result
+	receiver += ': guessing'
         if q.perm_error:
           res,code,txt = q.perm_error.ext	# extended result
 	  txt = 'EXT: ' + txt
-	receiver += ': guessing'
       if self.missing_ptr and res in ('neutral', 'none') and hres != 'pass':
 	if spf_reject_noptr:
 	  self.log('REJECT: no PTR, HELO or SPF')
@@ -783,7 +784,7 @@ class bmsMilter(Milter.Milter):
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    self.add_header('Received-SPF',q.get_header(ores,receiver))
+    self.add_header('Received-SPF',q.get_header(res,receiver))
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
