@@ -11,6 +11,7 @@ include testdspam.py
 include rejects.py
 include bms.py
 include spf.py
+include cid2spf.py
 include spfquery.py
 include test.py
 include sample.py

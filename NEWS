@@ -1,5 +1,12 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.2	Strict processing limits per SPF RFC
+	Fixed several parsing bugs under RFC 
+	Support official IANA SPF record (type99)
+	Honeypot support (requires pydspam-1.1.9)
+	Extended SPF processing results beyond strict RFC limits
+	Support original SES for bounce protection (requires pysrs-0.30.10)
+	Callback exception processing option in milter module
 0.8.1	Fix zip in zip loop in mime.py
 	Fix HeaderParseError in bms.py header callback
 	Check internal_domains for outgoing mail
