@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.9  2005/07/15 22:17:41  customdesigned
+# Latest pyspf updates
+#
 # Revision 1.15  2005/07/15 21:17:36  customdesigned
 # Recursion limit raises AssertionError in strict mode, PermError otherwise.
 #
@@ -758,7 +761,6 @@ class query(object):
 			    if a['typename'] == 'MX':
 				mxcount = mxcount + 1
 				if mxcount > MAX_MX:
-				  print mxcount,self.strict,self.perm_error
 				  try:
 				    if self.strict or not self.perm_error:
 				      raise PermError('Too many MX lookups')
@@ -766,7 +768,6 @@ class query(object):
 				    if self.strict or mxcount > MAX_MX*4:
 				      raise x
 				    self.perm_error = x
-				  print "lax"
 			    if a['typename'] == 'PTR':
 				ptrcount = ptrcount + 1
 				if ptrcount > MAX_PTR:
