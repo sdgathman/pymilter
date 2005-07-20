@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.4  2005/06/17 01:49:39  customdesigned
+# Handle zip within zip.
+#
 # Revision 1.3  2005/06/02 15:00:17  customdesigned
 # Configure banned extensions.  Scan zipfile option with test case.
 #
@@ -193,7 +196,8 @@ class MimeMessage(Message):
       for key,name in tuple(names):	# copy by converting to tuple
 	if name and name.lower().endswith('.zip'):
 	  txt = self.get_payload(decode=True)
-	  names += zipnames(txt)
+	  if txt.strip():
+	    names += zipnames(txt)
     return names
 
   def ismodified(self):
@@ -304,19 +308,25 @@ See your administrator.
 
 def check_name(msg,savname=None,ckname=check_ext,scan_zip=False):
   "Replace attachment with a warning if its name is suspicious."
-  for key,name in msg.getnames(scan_zip):
-    badname = ckname(name)
-    if badname:
-      hostname = socket.gethostname()
-      if key == 'zipname':
-        badname = msg.get_filename()
-      msg.set_payload(virus_msg % (badname,hostname,savname))
-      del msg["content-type"]
-      del msg["content-disposition"]
-      del msg["content-transfer-encoding"]
-      name = "WARNING.TXT"
-      msg["Content-Type"] = "text/plain; name="+name
-      break
+  try:
+    for key,name in msg.getnames(scan_zip):
+      badname = ckname(name)
+      if badname:
+        if key == 'zipname':
+          badname = msg.get_filename()
+	break
+    else:
+      return Milter.CONTINUE
+  except zipfile.BadZipfile:
+    # a ZIP that is not a zip is very suspicious
+    badname = msg.get_filename()
+  hostname = socket.gethostname()
+  msg.set_payload(virus_msg % (badname,hostname,savname))
+  del msg["content-type"]
+  del msg["content-disposition"]
+  del msg["content-transfer-encoding"]
+  name = "WARNING.TXT"
+  msg["Content-Type"] = "text/plain; name="+name
   return Milter.CONTINUE
 
 import email.Iterators

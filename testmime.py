@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.3  2005/06/17 01:49:39  customdesigned
+# Handle zip within zip.
+#
 # Revision 1.2  2005/06/02 15:00:17  customdesigned
 # Configure banned extensions.  Scan zipfile option with test case.
 #
@@ -130,9 +133,16 @@ class MimeTestCase(unittest.TestCase):
 
   def testZip(self,vname="zip1",fname='zip.zip'):
     self.testDefang(vname,1,'zip.zip')
+    # test scan_zip flag
     msg = mime.message_from_file(open('test/'+vname,"r"))
     mime.defang(msg,scan_zip=False)
     self.failIf(msg.ismodified())
+    # test ignoring empty zip (often found in DSNs)
+    msg = mime.message_from_file(open('test/zip2','r'))
+    mime.defang(msg,scan_zip=True)
+    self.failIf(msg.ismodified())
+    # test corrupt zip (often an EXE named as a ZIP)
+    self.testDefang('zip3',1,'zip.zip')
     # test zip within zip
     self.testDefang('ziploop',1,'stuart@bmsi.com.zip')
 
