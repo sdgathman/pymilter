@@ -7,6 +7,7 @@ Here is a history of user visible changes to Python milter.
 	Extended SPF processing results beyond strict RFC limits
 	Support original SES for bounce protection (requires pysrs-0.30.10)
 	Callback exception processing option in milter module
+	Handle corrupt ZIP attachments
 0.8.1	Fix zip in zip loop in mime.py
 	Fix HeaderParseError in bms.py header callback
 	Check internal_domains for outgoing mail

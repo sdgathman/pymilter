@@ -174,6 +174,7 @@ rm -rf $RPM_BUILD_ROOT
 - Extended SPF processing results beyond strict RFC limits
 - Support original SES for local bounce protection (requires pysrs-0.30.10)
 - Callback exception processing option in milter module
+- Handle corrupt ZIP attachments
 * Thu Jun 16 2005 Stuart Gathman <stuart@bmsi.com> 0.8.1-1
 - Fix zip in zip loop in mime.py
 - Fix HeaderParseError in bms.py header callback
