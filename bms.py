@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.18  2005/07/17 01:25:44  customdesigned
+# Log as well as use extended result for best guess.
+#
 # Revision 1.17  2005/07/15 20:25:36  customdesigned
 # Use extended results processing for best_guess.
 #
@@ -1071,7 +1074,7 @@ class bmsMilter(Milter.Milter):
 	      if len(txt) > dspam_sizelimit:
 		self.log("Large message:",len(txt))
 		return False
-	      if user == 'honeypot':
+	      if user == 'honeypot' and Dspam.VERSION >= '1.1.9':
 	        ds.check_spam(user,txt,force_result=dspam.DSR_ISSPAM)
 		self.log("HONEYPOT:",rcpt)
 		self.fp = None

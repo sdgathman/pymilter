@@ -10,7 +10,8 @@ Other contributors:
 Terence Way
   for providing a Python port of SPF
 Scott Kitterman
-  for doing lots of testing and debugging of SPF against draft standard
+  for doing lots of testing and debugging of SPF against draft standard,
+  and for putting up a web page that validates SPF records using spf.py
 Alexander Kourakos
   for plugging several memory leaks
 George Graf at Vienna University of Economics and Business Administration

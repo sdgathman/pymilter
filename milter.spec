@@ -1,6 +1,6 @@
 %define name milter
 %define version 0.8.2
-%define release 1.RH7
+%define release 2.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
