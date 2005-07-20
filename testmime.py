@@ -1,4 +1,13 @@
 # $Log$
+# Revision 1.3  2005/06/17 01:49:39  customdesigned
+# Handle zip within zip.
+#
+# Revision 1.2  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
+# Revision 1.1.1.2  2005/05/31 18:23:49  customdesigned
+# Development changes since 0.7.2
+#
 # Revision 1.23  2005/02/11 18:34:14  stuart
 # Handle garbage after quote in boundary.
 #
@@ -63,7 +72,7 @@ class MimeTestCase(unittest.TestCase):
   def testDefang(self,vname='virus1',part=1,
   	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
     msg = mime.message_from_file(open('test/'+vname,"r"))
-    mime.defang(msg)
+    mime.defang(msg,scan_zip=True)
     self.failUnless(msg.ismodified(),"virus not removed")
     oname = vname + '.out'
     msg.dump(open('test/'+oname,"w"))
@@ -71,7 +80,8 @@ class MimeTestCase(unittest.TestCase):
     txt2 = msg.get_payload()
     if type(txt2) == list:
       txt2 = txt2[part].get_payload()
-    self.failUnless(txt2.rstrip()+'\n' == mime.virus_msg % (fname,hostname,None),txt2)
+    self.failUnless(
+      txt2.rstrip()+'\n' == mime.virus_msg % (fname,hostname,None),txt2)
 
   def testDefang3(self):
     self.testDefang('virus3',0,'READER_DIGEST_LETTER.TXT.pif')
@@ -121,6 +131,21 @@ class MimeTestCase(unittest.TestCase):
     name = parts[1].getname()
     self.failUnless(name == "Jim&amp;amp;Girlz.jpg","name=%s"%name)
 
+  def testZip(self,vname="zip1",fname='zip.zip'):
+    self.testDefang(vname,1,'zip.zip')
+    # test scan_zip flag
+    msg = mime.message_from_file(open('test/'+vname,"r"))
+    mime.defang(msg,scan_zip=False)
+    self.failIf(msg.ismodified())
+    # test ignoring empty zip (often found in DSNs)
+    msg = mime.message_from_file(open('test/zip2','r'))
+    mime.defang(msg,scan_zip=True)
+    self.failIf(msg.ismodified())
+    # test corrupt zip (often an EXE named as a ZIP)
+    self.testDefang('zip3',1,'zip.zip')
+    # test zip within zip
+    self.testDefang('ziploop',1,'stuart@bmsi.com.zip')
+
   def testHTML(self,fname=""):
     result = StringIO.StringIO()
     filter = mime.HTMLScriptFilter(result)
@@ -143,3 +168,5 @@ if __name__ == '__main__':
     for fname in sys.argv[1:]:
       fp = open(fname,'r')
       msg = mime.message_from_file(fp)
+      mime.defang(msg,scan_zip=True)
+      print msg.as_string()

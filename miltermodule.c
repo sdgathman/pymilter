@@ -1,4 +1,5 @@
 /* Copyright (C) 2001  James Niemira (niemira@colltech.com, urmane@urmane.org)
+ * Portions Copyright (C) 2001,2002,2003,2004  Stuart Gathman (stuart@bmsi.com)
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,6 +34,21 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.5  2005/06/24 04:20:07  customdesigned
+ * Report context allocation error.
+ *
+ * Revision 1.4  2005/06/24 04:12:43  customdesigned
+ * Remove unused name argument to generic wrappers.
+ *
+ * Revision 1.3  2005/06/24 03:57:35  customdesigned
+ * Handle close called before connect.
+ *
+ * Revision 1.2  2005/06/02 04:18:55  customdesigned
+ * Update copyright notices after reading article on /.
+ *
+ * Revision 1.1.1.2  2005/05/31 18:09:06  customdesigned
+ * Release 0.7.1
+ *
  * Revision 2.31  2004/08/23 02:24:36  stuart
  * Support setbacklog
  *
@@ -190,7 +206,7 @@ $ python setup.py help
 
 
 /* Yes, these are static.  If you need multiple different callbacks, */
-/* it's cleaner to use multiple filters. */
+/* it's cleaner to use multiple filters, or convert to OO method calls. */
 static PyObject *connect_callback = NULL;
 static PyObject *helo_callback    = NULL;
 static PyObject *envfrom_callback = NULL;
@@ -235,8 +251,11 @@ _get_context(SMFICTX *ctx) {
     PyEval_AcquireThread(t);	/* lock interp */
     self = PyObject_New(milter_ContextObject,&milter_ContextType);
     if (!self) {
-      /* Can't pass on exception since we are called from libmilter */
-      PyErr_Clear();
+      /* Report and clear exception since we are called from libmilter */
+      if (PyErr_Occurred()) {
+	PyErr_Print();
+	PyErr_Clear();
+      }
       PyThreadState_Clear(t);
       PyEval_ReleaseThread(t);
       PyThreadState_Delete(t);
@@ -327,7 +346,8 @@ CHGHDRS - filter may change/delete headers";
 
 static PyObject *
 milter_set_flags(PyObject *self, PyObject *args) {
-  if (!PyArg_ParseTuple(args, "i", &description.xxfi_flags)) return NULL;
+  if (!PyArg_ParseTuple(args, "i:set_flags", &description.xxfi_flags))
+    return NULL;
   Py_INCREF(Py_None);
   return Py_None;
 }
@@ -493,6 +513,28 @@ milter_set_close_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_close_callback", &close_callback);
 }
 
+static int exception_policy = SMFIS_TEMPFAIL;
+
+static char milter_set_exception_policy__doc__[] =
+"set_exception_policy(i) -> None\n\
+Sets the policy for untrapped Python exceptions during a callback.\n\
+Must be one of TEMPFAIL,REJECT,CONTINUE";
+
+static PyObject *
+milter_set_exception_policy(PyObject *self, PyObject *args) {
+  int i;
+  if (!PyArg_ParseTuple(args, "i:set_exception_policy", &i))
+    return NULL;
+  switch (i) {
+  case SMFIS_REJECT: case SMFIS_TEMPFAIL: case SMFIS_CONTINUE:
+    exception_policy = i;
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+  PyErr_SetString(MilterError,"invalid exception policy");
+  return NULL;
+}
+
 /** Report and clear any python exception before returning to libmilter. 
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
@@ -500,8 +542,15 @@ static int _report_exception(milter_ContextObject *self) {
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */
     PyEval_ReleaseThread(self->t);
-    smfi_setreply(self->ctx, "451", "4.3.0", "Filter failure");
-    return SMFIS_TEMPFAIL;
+    switch (exception_policy) {
+      case SMFIS_REJECT:
+	smfi_setreply(self->ctx, "554", "5.3.0", "Filter failure");
+	return SMFIS_REJECT;
+      case SMFIS_TEMPFAIL:
+	smfi_setreply(self->ctx, "451", "4.3.0", "Filter failure");
+	return SMFIS_TEMPFAIL;
+    }
+    return SMFIS_CONTINUE;
   }
   PyEval_ReleaseThread(self->t);
   return SMFIS_CONTINUE;
@@ -612,7 +661,7 @@ milter_wrap_helo(SMFICTX *ctx, char *helohost) {
 }
 
 static int
-generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv, const char *name) {
+generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv) {
    PyObject *arglist;
    milter_ContextObject *self;
    int count = 0;
@@ -649,12 +698,12 @@ generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv, const char *name) {
 
 static int
 milter_wrap_envfrom(SMFICTX *ctx, char **argv) {
-  return generic_env_wrapper(ctx,envfrom_callback,argv,"milter_wrap_envfrom");
+  return generic_env_wrapper(ctx,envfrom_callback,argv);
 }
 
 static int
 milter_wrap_envrcpt(SMFICTX *ctx, char **argv) {
-  return generic_env_wrapper(ctx,envrcpt_callback,argv,"milter_wrap_envrcpt");
+  return generic_env_wrapper(ctx,envrcpt_callback,argv);
 }    
   
 static int
@@ -670,7 +719,7 @@ milter_wrap_header(SMFICTX *ctx, char *headerf, char *headerv) {
 }
 
 static int
-generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb,const char *name) {
+generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb) {
    PyObject *arglist;
    milter_ContextObject *c;
    if (cb == NULL) return SMFIS_CONTINUE;
@@ -682,7 +731,7 @@ generic_noarg_wrapper(SMFICTX *ctx,PyObject *cb,const char *name) {
 
 static int
 milter_wrap_eoh(SMFICTX *ctx) {
-  return generic_noarg_wrapper(ctx,eoh_callback,"milter_wrap_eoh");
+  return generic_noarg_wrapper(ctx,eoh_callback);
 }   
 
 static int
@@ -700,18 +749,31 @@ milter_wrap_body(SMFICTX *ctx, u_char *bodyp, size_t bodylen) {
 
 static int
 milter_wrap_eom(SMFICTX *ctx) {
-  return generic_noarg_wrapper(ctx,eom_callback,"milter_wrap_eom");
+  return generic_noarg_wrapper(ctx,eom_callback);
 }
 
 static int
 milter_wrap_abort(SMFICTX *ctx) {
   /* libmilter still calls close after abort */
-  return generic_noarg_wrapper(ctx,abort_callback,"milter_wrap_abort");
+  return generic_noarg_wrapper(ctx,abort_callback);
 }
 
 static int
 milter_wrap_close(SMFICTX *ctx) {
-  int r = generic_noarg_wrapper(ctx,close_callback,"milter_wrap_close");
+  /* xxfi_close can be called out of order - even before connect.  
+   * There may not yet be a private context pointer.  To avoid
+   * creating a ThreadContext and allocating a milter context only
+   * to destroy them, and to avoid invoking the python close_callback when
+   * connect has never been called, we don't use generic_noarg_wrapper here. */
+  PyObject *cb = close_callback;
+  milter_ContextObject *self = smfi_getpriv(ctx);
+  int r = SMFIS_CONTINUE;
+  if (self != NULL && cb != NULL && self->ctx == ctx) {
+    PyObject *arglist;
+    PyEval_AcquireThread(self->t);
+    arglist = Py_BuildValue("(O)", self);
+    r = _generic_wrapper(self, cb, arglist);
+  }
   /* FIXME: It is inefficient to have released the interp lock only to
      acquire it again in _clear_context.  We can tell _generic_return and
      friends not to release the lock by, for instance, setting self->t to NULL.
@@ -1151,6 +1213,8 @@ static PyMethodDef milter_methods[] = {
    { "set_eom_callback",     milter_set_eom_callback,     METH_VARARGS, milter_set_eom_callback__doc__},
    { "set_abort_callback",   milter_set_abort_callback,   METH_VARARGS, milter_set_abort_callback__doc__},
    { "set_close_callback",   milter_set_close_callback,   METH_VARARGS, milter_set_close_callback__doc__},
+   { "set_exception_policy",   milter_set_exception_policy,METH_VARARGS, milter_set_exception_policy__doc__},
+   { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
    { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
    { "main",                 milter_main,                 METH_VARARGS, milter_main__doc__},
    { "setdbg",               milter_setdbg,               METH_VARARGS, milter_setdbg__doc__},

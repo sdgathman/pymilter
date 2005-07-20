@@ -72,6 +72,9 @@ milter-0.4.5 or later to remove this dependency.
 <code>set_flags()</code> before calling <code>runmilter()</code>.  For
 instance, <code>Milter.set_flags(Milter.ADDRCPT)</code>.  You must add together
 all of <code>ADDHDRS, CHGBODY, ADDRCPT, DELRCPT, CHGHDRS</code> that apply.
+<p> NOTE - recent versions default flags to enabling all features.  You
+must now call <code>set_flags()</code> if you wish to disable features for
+efficiency.
 <p>
 
 <li> Q. Why does sendmail sometimes print something like:
@@ -94,14 +97,19 @@ for your specific needs.  We will of course continue to move generic
 code out of the sample as the project evolves.  Think of sample.py as
 an active config file.
 <p>
+If you are running bms.py, then the block_chinese option in 
+<code>/etc/mail/pymilter.cfg</code> controls this feature.
+<p>
 
 <li> Q. Why does sendmail coredump with milters on OpenBSD?
-<p>  A. Sendmail has a problem with unix sockets on OpenBSD.  Use
-an internet domain socket instead.  For example, in <code>sendmail.cf</code> use
+<p>  A. Sendmail has a problem with unix sockets on old versions of OpenBSD.
+Use an internet domain socket instead.  For example, in
+<code>sendmail.cf</code> use
 <pre>
 Xpythonfilter, S=inet:1234@localhost
 </pre>
 and change sample.py accordingly.
+<p> OpenBSD users report that this problem has been fixed.
 <p>
 
 <li> Q. How can I change the bounce message for an invalid recipient?
@@ -133,6 +141,36 @@ is a milter declaration for sendmail.cf with all timeouts specified:
 <pre>
 Xpythonfilter, S=local:/var/log/milter/pythonsock, F=T, T=C:5m;S:20s;R:60s;E:5m
 </pre>
+<li> Q. There is a Python traceback in the log file!  What happened to
+	my email?
+<p>  A. When the milter fails with an untrapped exception, a TEMPFAIL
+result (451) is returned to the sender.  The sender will then retry every
+hour or so for several days.  Hopefully, someone will notice the 
+traceback, and workaround or fix the problem.
+
+<li> Q. I read some notes such as "Check valid domains allowed by internal
+	senders to detect PCs infected with spam trojans." but could not
+	understand the idea. Could you clarify the content ?
+
+<p>  A. The <code>internal_domains</code> configuration specifies which
+MAIL FROM domains are used by internal connections.  If an internal
+PC tries to use some other domain, it is assumed to be a "Zombie".
+<p>
+Here is a sample log line:
+<pre>
+2005Jun22 12:01:04 [12430] REJECT: zombie PC at  192.168.100.171  sending MAIL FROM  debby@fedex.com
+</pre>
+No, fedex.com does not use pymilter, and there is no one named debby at my
+client.  But the idiot using the PC at 192.168.100.171 has downloaded and
+installed some stupid weatherbar/hotbar/aquariumscreensaver that is actually a
+spam bot.
+<p>
+The <code>internal_domains</code> option is simplistic, it assumes all
+valid senders of the domains are internal.  SPF provides a much more general
+check of IP and MAIL FROM for external email.  Pymilter should soon
+have a local policy feature for more general checking of internal mail.
+
+<h3> Using SPF </h3>
 
 <a name="spf">
 <li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
@@ -143,8 +181,8 @@ everything up for you.  For other systems:
 <li> Arrange to run bms.py in the background (as a service perhaps) and
      redirect output and errors to a logfile.  For instance, on AIX you'll want
      to use SRC (System Resource Controller).  
-<li> Copy milter.cfg to the directory you run bms.py in, and edit it.  The
-     comments should explain the options. 
+<li> Copy pymilter.cfg to the /etc/mail or the directory you run bms.py in,
+     and edit it.  The comments should explain the options. 
 <li> Start bms.py in the background as arranged.
 <li> Add Xpythonfilter to sendmail.cf or add an INPUT_MAIL_FILTER to
      sendmail.mc.  Regen sendmail.cf if you use sendmail.mc and restart 

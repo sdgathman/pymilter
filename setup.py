@@ -12,7 +12,7 @@ if sys.version < '2.2.3':
   DistributionMetadata.classifiers = None
   DistributionMetadata.download_url = None
 
-setup(name = "milter", version = "0.8.0",
+setup(name = "milter", version = "0.8.2",
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to
@@ -26,7 +26,8 @@ querying SPF records.
 	maintainer_email="stuart@bmsi.com",
 	license="GPL",
 	url="http://www.bmsi.com/python/milter.html",
-	py_modules=["Milter","mime","spf"],
+	py_modules=["mime","spf"],
+	packages = ['Milter'],
 	ext_modules=[
 	  Extension("milter", ["miltermodule.c"],
 	    libraries=libs,
@@ -42,6 +43,7 @@ querying SPF records.
 	  'Natural Language :: English',
 	  'Operating System :: POSIX',
 	  'Programming Language :: Python',
-	  'Topic :: Communications :: Email :: Mail Transport Agents'
+	  'Topic :: Communications :: Email :: Mail Transport Agents',
+	  'Topic :: Communications :: Email :: Filters'
 	]
 )

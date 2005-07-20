@@ -9,6 +9,9 @@ Other contributors:
 
 Terence Way
   for providing a Python port of SPF
+Scott Kitterman
+  for doing lots of testing and debugging of SPF against draft standard,
+  and for putting up a web page that validates SPF records using spf.py
 Alexander Kourakos
   for plugging several memory leaks
 George Graf at Vienna University of Economics and Business Administration
@@ -22,6 +25,9 @@ John Draper
   then pointing out that it would be easier to just write the MTA in Python.
 Eric S. Johansson
   for helpful design discussions while working on camram
+Alex Savguira
+  for finding bugs with international headers and
+  suggesting the scan_zip option.
 Business Management Systems - http://www.bmsi.com
   for hosting the website, and providing paying clients who need milter service
   so I can work on it as part of my day job.

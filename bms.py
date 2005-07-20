@@ -1,6 +1,58 @@
 #!/usr/bin/env python
-# A simple milter.
+# A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.18  2005/07/17 01:25:44  customdesigned
+# Log as well as use extended result for best guess.
+#
+# Revision 1.17  2005/07/15 20:25:36  customdesigned
+# Use extended results processing for best_guess.
+#
+# Revision 1.16  2005/07/14 03:23:33  customdesigned
+# Make SES package optional.  Initial honeypot support.
+#
+# Revision 1.15  2005/07/06 04:05:40  customdesigned
+# Initial SES integration.
+#
+# Revision 1.14  2005/07/02 23:27:31  customdesigned
+# Don't match hostnames for internal connects.
+#
+# Revision 1.13  2005/07/01 16:30:24  customdesigned
+# Always log trusted Received and Received-SPF headers.
+#
+# Revision 1.12  2005/06/20 22:35:35  customdesigned
+# Setreply for rejectvirus.
+#
+# Revision 1.11  2005/06/17 02:07:20  customdesigned
+# Release 0.8.1
+#
+# Revision 1.10  2005/06/16 18:35:51  customdesigned
+# Ignore HeaderParseError decoding header
+#
+# Revision 1.9  2005/06/14 21:55:29  customdesigned
+# Check internal_domains for outgoing mail.
+#
+# Revision 1.8  2005/06/06 18:24:59  customdesigned
+# Properly log exceptions from pydspam
+#
+# Revision 1.7  2005/06/04 19:41:16  customdesigned
+# Fix bugs from testing RPM
+#
+# Revision 1.6  2005/06/03 04:57:05  customdesigned
+# Organize config reader by section.  Create defang section.
+#
+# Revision 1.5  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
+# Revision 1.4  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
+# Revision 1.3  2005/06/02 02:09:00  customdesigned
+# Record timestamp in send_dsn.log
+#
+# Revision 1.2  2005/06/02 01:00:36  customdesigned
+# Support configurable templates for DSNs.
+#
+#
 # Revision 1.134  2005/05/25 15:36:43  stuart
 # Use dynip module.
 # Support smart aliasing of wiretap destination.
@@ -179,8 +231,8 @@
 # Release 0.6.4
 #
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001 Business Management Systems, Inc.
-# This code is under GPL.  See COPYING for details.
+# Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
 
 import sys
 import os
@@ -190,6 +242,7 @@ import mime
 import email.Errors
 import Milter
 import tempfile
+import traceback
 import ConfigParser
 import time
 import re
@@ -204,6 +257,9 @@ try:
   import SRS
   srsre = re.compile(r'^SRS[01][+-=]',re.IGNORECASE)
 except: SRS = None
+try:
+  import SES
+except: SES = None
 
 # Import spf if available
 try: import spf
@@ -229,6 +285,8 @@ log_headers = False
 block_chinese = False
 spam_words = ()
 porn_words = ()
+banned_exts = mime.extlist.split(',')
+scan_zip = False
 scan_html = True
 scan_rfc822 = True
 internal_connect = ()
@@ -246,17 +304,28 @@ dspam_internal = True	# True if internal mail should be dspammed
 dspam_reject = ()
 dspam_sizelimit = 180000
 srs = None
+ses = None
 srs_reject_spoofed = False
-srs_fwdomain = None
+srs_domain = None
 spf_reject_neutral = ()
 spf_accept_softfail = ()
 spf_best_guess = False
 spf_reject_noptr = False
+multiple_bounce_recipients = True
+time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
 try:
-  for rcpt in open('send_dsn.log'):
-    cbv_cache[rcpt.strip()] = None
+  too_old = time.time() - 30*24*60*60	# 30 days
+  for ln in open('send_dsn.log'):
+    try:
+      rcpt,ts = ln.strip().split(None,1)
+      l = time.strptime(ts,time_format)
+      t = time.mktime(l)
+      if t > too_old:
+	cbv_cache[rcpt] = None
+    except:
+      cbv_cache[ln.strip()] = None
 except IOError: pass
 
 class MilterConfigParser(ConfigParser.ConfigParser):
@@ -264,7 +333,7 @@ class MilterConfigParser(ConfigParser.ConfigParser):
   def getlist(self,sect,opt):
     if self.has_option(sect,opt):
       return [q.strip() for q in self.get(sect,opt).split(',')]
-    return ()
+    return []
 
   def getaddrset(self,sect,opt):
     if not self.has_option(sect,opt):
@@ -311,6 +380,7 @@ def read_config(list):
     'timeout': '600',
     'scan_html': 'no',
     'scan_rfc822': 'yes',
+    'scan_zip': 'no',
     'block_chinese': 'no',
     'log_headers': 'no',
     'blind_wiretap': 'yes',
@@ -322,19 +392,44 @@ def read_config(list):
     'dspam_internal': 'yes'
   })
   cp.read(list)
+
+  # milter section
   tempfile.tempdir = cp.get('milter','tempdir')
-  global socketname, scan_rfc822, scan_html, block_chinese, timeout
+  global socketname, timeout, check_user, log_headers
+  global internal_connect, internal_domains, trusted_relay, hello_blacklist
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
-  scan_rfc822 = cp.getboolean('milter','scan_rfc822')
-  scan_html = cp.getboolean('milter','scan_html')
-  block_chinese = cp.getboolean('milter','block_chinese')
-
-  global hide_path, block_forward, log_headers
-  hide_path = cp.getlist('scrub','hide_path')
-  block_forward = cp.getaddrset('milter','block_forward')
+  check_user = cp.getaddrset('milter','check_user')
   log_headers = cp.getboolean('milter','log_headers')
+  internal_connect = cp.getlist('milter','internal_connect')
+  internal_domains = cp.getlist('milter','internal_domains')
+  trusted_relay = cp.getlist('milter','trusted_relay')
+  hello_blacklist = cp.getlist('milter','hello_blacklist')
 
+  # defang section
+  global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
+  global banned_exts, porn_words, spam_words
+  if cp.has_section('defang'):
+    section = 'defang'
+    # for backward compatibility,
+    # banned extensions defaults to empty only when defang section exists
+    banned_exts = cp.getlist(section,'banned_exts')
+  else:	# use milter section if no defang section for compatibility
+    section = 'milter'
+  scan_rfc822 = cp.getboolean(section,'scan_rfc822')
+  scan_zip = cp.getboolean(section,'scan_zip')
+  scan_html = cp.getboolean(section,'scan_html')
+  block_chinese = cp.getboolean(section,'block_chinese')
+  block_forward = cp.getaddrset(section,'block_forward')
+  porn_words = cp.getlist(section,'porn_words')
+  spam_words = cp.getlist(section,'spam_words')
+
+  # scrub section
+  global hide_path, reject_virus_from
+  hide_path = cp.getlist('scrub','hide_path')
+  reject_virus_from = cp.getlist('scrub','reject_virus_from')
+
+  # wiretap section
   global blind_wiretap, wiretap_users, wiretap_dest, discard_users
   blind_wiretap = cp.getboolean('wiretap','blind')
   wiretap_users = cp.getaddrset('wiretap','users')
@@ -342,17 +437,7 @@ def read_config(list):
   wiretap_dest = cp.getdefault('wiretap','dest')
   if wiretap_dest: wiretap_dest = '<%s>' % wiretap_dest
 
-  global check_user, reject_virus_from, internal_connect, internal_domains
-  check_user = cp.getaddrset('milter','check_user')
-  reject_virus_from = cp.getlist('scrub','reject_virus_from')
-  internal_connect = cp.getlist('milter','internal_connect')
-  internal_domains = cp.getlist('milter','internal_domains')
-
-  global porn_words, spam_words, smart_alias, trusted_relay, hello_blacklist
-  trusted_relay = cp.getlist('milter','trusted_relay')
-  porn_words = cp.getlist('milter','porn_words')
-  spam_words = cp.getlist('milter','spam_words')
-  hello_blacklist = cp.getlist('milter','hello_blacklist')
+  global smart_alias
   for sa in cp.getlist('wiretap','smart_alias'):
     sm = cp.getlist('wiretap',sa)
     if len(sm) < 2:
@@ -362,10 +447,9 @@ def read_config(list):
     key = (sm[0],sm[1])
     smart_alias[key] = sm[2:]
 
+  # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
-  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
-  global spf_accept_softfail
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -377,6 +461,9 @@ def read_config(list):
   if cp.has_option('dspam','dspam_sizelimit'):
     dspam_sizelimit = cp.getint('dspam','dspam_sizelimit')
 
+  # spf section
+  global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
+  global spf_accept_softfail
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
@@ -387,7 +474,7 @@ def read_config(list):
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
   if SRS and srs_secret:
-    global srs,srs_reject_spoofed,srs_fwdomain
+    global ses,srs,srs_reject_spoofed,srs_domain
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
     maxage = cp.getint('srs','maxage')
@@ -400,16 +487,22 @@ def read_config(list):
     else:
       srs = SRS.Guarded.Guarded(secret=srs_secret,
         maxage=maxage,hashlength=hashlength,separator=separator)
-    srs_fwdomain = cp.getdefault('srs','fwdomain')
+    if SES:
+      ses = SES.new(secret=srs_secret,expiration=maxage)
+      srs_domain = cp.getlist('srs','ses')
+    else:
+      srs_domain = []
+    srs_domain.append(cp.getdefault('srs','fwdomain'))
+    #print srs_domain
 
 def parse_addr(t):
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
   return t.split('@')
 
 def parse_header(val):
-  h = decode_header(val)
-  if not len(h) or (not h[0][1] and len(h) == 1): return val
   try:
+    h = decode_header(val)
+    if not len(h) or (not h[0][1] and len(h) == 1): return val
     u = []
     for s,enc in h:
       if enc:
@@ -426,6 +519,7 @@ def parse_header(val):
       except UnicodeError: continue
   except UnicodeDecodeError: pass
   except LookupError: pass
+  except email.Errors.HeaderParseError: pass
   return val
 
 class bmsMilter(Milter.Milter):
@@ -483,10 +577,6 @@ class bmsMilter(Milter.Milter):
     else: ipaddr = ''
     self.connectip = ipaddr
     self.missing_ptr = dynip(hostname,self.connectip)
-    for pat in internal_connect:
-      if fnmatchcase(hostname,pat):
-	self.internal_connection = True
-	break
     if self.internal_connection:
       connecttype = 'INTERNAL'
     else:
@@ -570,6 +660,17 @@ class bmsMilter(Milter.Milter):
 	    self.log("REJECT: spam from self",pat)
 	    self.setreply('550','5.7.1','I hate talking to myself.')
 	    return Milter.REJECT
+      elif internal_domains:
+	for pat in internal_domains:
+	  if fnmatchcase(domain,pat): break
+	else:
+	  self.log("REJECT: zombie PC at ",self.connectip," sending MAIL FROM ",
+	  	self.canon_from)
+	  self.setreply('550','5.7.1',
+	  'Your PC is using an unauthorized MAIL FROM.',
+	  'It is either badly misconfigured or controlled by organized crime.'
+	  )
+	  return Milter.REJECT
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
         self.add_recipient(wiretap_dest)
@@ -595,7 +696,8 @@ class bmsMilter(Milter.Milter):
     if len(t) == 2: t[1] = t[1].lower()
     receiver = self.receiver
     q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver)
-    q.set_default_explanation('SPF fail: see http://spf.pobox.com/why.html')
+    q.set_default_explanation(
+      'SPF fail: see http://spf.pobox.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
@@ -619,6 +721,7 @@ class bmsMilter(Milter.Milter):
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
 		'SPF guess: see http://spf.pobox.com/why.html')
+	q.strict = False
 	# best_guess should not result in fail
 	if self.missing_ptr:
 	  # ignore dynamic PTR for best guess
@@ -626,6 +729,9 @@ class bmsMilter(Milter.Milter):
 	else:
 	  res,code,txt = q.best_guess()
 	receiver += ': guessing'
+        if q.perm_error:
+          res,code,txt = q.perm_error.ext	# extended result
+	  txt = 'EXT: ' + txt
       if self.missing_ptr and res in ('neutral', 'none') and hres != 'pass':
 	if spf_reject_noptr:
 	  self.log('REJECT: no PTR, HELO or SPF')
@@ -637,6 +743,7 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
         if self.mailfrom != '<>':
+	  q.result = res
 	  self.cbv_needed = q
     if res in ('deny', 'fail'):
       self.log('REJECT: SPF %s %i %s' % (res,code,txt))
@@ -658,6 +765,7 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
       if self.mailfrom != '<>':
+        q.result = res
 	self.cbv_needed = q
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
@@ -670,11 +778,12 @@ class bmsMilter(Milter.Milter):
 	'servers for %s should accomplish this.' % q.o
       )
       return Milter.REJECT
+    if res == 'unknown':
+      self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+      # latest SPF draft recommends 5.5.2 instead of 5.7.1
+      self.setreply(str(code),'5.5.2',txt)
+      return Milter.REJECT
     if res == 'error':
-      if code >= 500:
-        self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	self.setreply(str(code),'5.7.1',txt)
-	return Milter.REJECT
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
@@ -695,19 +804,30 @@ class bmsMilter(Milter.Milter):
       user,domain = t
       if self.mailfrom == '<>' or self.canon_from.startswith('postmaster@') \
       	or self.canon_from.startswith('mailer-daemon@'):
-        if self.recipients:
+        if self.recipients and not multiple_bounce_recipients:
 	  self.data_allowed = False
-        if srs and domain == srs_fwdomain:
+        if srs and domain in srs_domain:
 	  oldaddr = '@'.join(parse_addr(to))
 	  try:
-	    newaddr = srs.reverse(oldaddr)
-	    # Currently, a sendmail map reverses SRS.  We just log it here.
-	    self.log("srs rcpt:",newaddr)
+	    if ses:
+	      newaddr = ses.verify(oldaddr)
+	    else:
+	      newaddr = oldaddr,
+            if len(newaddr) > 1:
+	      self.log("ses rcpt:",newaddr[0])
+	    else:
+	      newaddr = srs.reverse(oldaddr)
+	      # Currently, a sendmail map reverses SRS.  We just log it here.
+	      self.log("srs rcpt:",newaddr)
 	  except:
             if not (self.internal_connection or self.trusted_relay):
 	      if srsre.match(oldaddr):
 		self.log("REJECT: srs spoofed:",oldaddr)
 		self.setreply('550','5.7.1','Invalid SRS signature')
+		return Milter.REJECT
+	      if oldaddr.startswith('SES='):
+		self.log("REJECT: ses spoofed:",oldaddr)
+		self.setreply('550','5.7.1','Invalid SES signature')
 		return Milter.REJECT
 	      self.data_allowed = not srs_reject_spoofed
       # non DSN mail to SRS address will bounce due to invalid local part
@@ -784,12 +904,6 @@ class bmsMilter(Milter.Milter):
 	or mailer.find('optin') >= 0:
         self.log('REJECT: %s: %s' % (name,val))
         return Milter.REJECT
-    elif self.trust_received and lname == 'received':
-      self.trust_received = False
-      self.log('%s: %s' % (name,val.splitlines()[0]))
-    elif self.trust_spf and lname == 'received-spf':
-      self.trust_spf = False
-      self.log('%s: %s' % (name,val.splitlines()[0]))
     return Milter.CONTINUE
 
   def forged_bounce(self):
@@ -824,6 +938,12 @@ class bmsMilter(Milter.Milter):
     # log selected headers
     if log_headers or lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
+    elif self.trust_received and lname == 'received':
+      self.trust_received = False
+      self.log('%s: %s' % (name,val.splitlines()[0]))
+    elif self.trust_spf and lname == 'received-spf':
+      self.trust_spf = False
+      self.log('%s: %s' % (name,val.splitlines()[0]))
     if self.fp:
       try:
         val = val.encode('us-ascii')
@@ -843,8 +963,9 @@ class bmsMilter(Milter.Milter):
     # copy headers to a temp file for scanning the body
     headers = self.fp.getvalue()
     self.fp.close()
-    self.tempname = fname = tempfile.mktemp(".defang")
-    self.fp = open(fname,"w+b")
+    fd,fname = tempfile.mkstemp(".defang")
+    self.tempname = fname
+    self.fp = os.fdopen(fd,"w+b")
     self.fp.write(headers)	# IOError (e.g. disk full) causes TEMPFAIL
     # check if headers are really spammy
     if dspam_dict and not self.internal_connection:
@@ -876,11 +997,22 @@ class bmsMilter(Milter.Milter):
 	for i in range(len(h),0,-1):
 	  self.chgheader(name,i-1,'')
 
+  def _chk_ext(self,name):
+    "Check a name for dangerous Winblows extensions."
+    if not name: return name
+    lname = name.lower()
+    for ext in self.bad_extensions:
+      if lname.endswith(ext): return name
+    return None
+
+    
   def _chk_attach(self,msg):
     "Filter attachments by content."
-    mime.check_name(msg,self.tempname)	# check for bad extensions
+    # check for bad extensions
+    mime.check_name(msg,self.tempname,ckname=self._chk_ext,scan_zip=scan_zip)
+    # remove scripts from HTML
     if scan_html:
-      mime.check_html(msg,self.tempname)	# remove scripts from HTML
+      mime.check_html(msg,self.tempname)	
     # don't let a tricky virus slip one past us
     if scan_rfc822:
       msg = msg.get_submsg()
@@ -942,6 +1074,11 @@ class bmsMilter(Milter.Milter):
 	      if len(txt) > dspam_sizelimit:
 		self.log("Large message:",len(txt))
 		return False
+	      if user == 'honeypot' and Dspam.VERSION >= '1.1.9':
+	        ds.check_spam(user,txt,force_result=dspam.DSR_ISSPAM)
+		self.log("HONEYPOT:",rcpt)
+		self.fp = None
+		return False
 	      txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
 	        # DISCARD if quarrantined for any recipient.  It
@@ -953,7 +1090,8 @@ class bmsMilter(Milter.Milter):
 	      self.fp = StringIO.StringIO(txt)
 	      modified = True
 	  except Exception,x:
-	    print x
+	    self.log("check_spam:",x)
+	    traceback.print_exc()
     # screen if no recipients are dspam_users
     if not modified and dspam_screener and not self.internal_connection \
     	and self.dspam:
@@ -993,6 +1131,7 @@ class bmsMilter(Milter.Milter):
 
       # filter leaf attachments through _chk_attach
       assert not msg.ismodified()
+      self.bad_extensions = ['.' + x for x in banned_exts]
       rc = mime.check_attachments(msg,self._chk_attach)
     except:	# milter crashed trying to analyze mail
       exc_type,exc_value = sys.exc_info()[0:2]
@@ -1048,14 +1187,21 @@ class bmsMilter(Milter.Milter):
       self.addheader(name,val)
 
     if self.cbv_needed:
-      sender = self.cbv_needed.s
+      q = self.cbv_needed
+      sender = q.s
       cached = cbv_cache.has_key(sender)
       if cached:
 	self.log('CBV:',sender,'(cached)')
         res = cbv_cache[sender]
       else:
 	self.log('CBV:',sender)
-	m = dsn.create_msg(self.cbv_needed,self.recipients,msg)
+	try:
+	  if q.result == 'softfail':
+	    template = file('softfail.txt').read()
+	  else:
+	    template = file('strike3.txt').read()
+	except IOError: template = None
+	m = dsn.create_msg(q,self.recipients,msg,template)
         m = m.as_string()
         print >>open('last_dsn','w'),m
 	res = dsn.send_dsn(sender,self.receiver,m)
@@ -1065,13 +1211,15 @@ class bmsMilter(Milter.Milter):
 	  self.log('TEMPFAIL:',desc)
           self.setreply('450','4.2.0',*desc.splitlines())
 	  return Milter.TEMPFAIL
+	if len(res) < 3: res += time.time(),
 	cbv_cache[sender] = res
 	self.log('REJECT:',desc)
         self.setreply('550','5.7.1',*desc.splitlines())
 	return Milter.REJECT
       cbv_cache[sender] = res
       if not cached:
-	print >>open('send_dsn.log','a'),sender # log who we sent DSNs to
+        s = time.strftime(time_format,time.localtime())
+	print >>open('send_dsn.log','a'),sender,s # log who we sent DSNs to
       self.cbv_needed = None
 
     if not defanged and not spam_checked:
@@ -1084,6 +1232,8 @@ class bmsMilter(Milter.Milter):
     if defanged:
       if self.rejectvirus and not self.hidepath:
 	self.log("REJECT virus from",self.mailfrom)
+	self.setreply('550','5.7.1','Attachment type not allowed.',
+		'You attempted to send an attachment with a banned extension.')
 	self.tempname = None
 	return Milter.REJECT
       self.log("Temp file:",self.tempname)
