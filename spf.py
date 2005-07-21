@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.11  2005/07/20 03:30:04  customdesigned
+# Check pydspam version for honeypot, include latest pyspf changes.
+#
 # Revision 1.26  2005/07/20 03:12:40  customdesigned
 # When not in strict mode, don't give PermErr for bad mechanism until
 # encountered during evaluation.
@@ -872,6 +875,7 @@ class query(object):
 			    self.cache.setdefault(k, []).append(v)
 			result = self.cache.get( (name, qtype), [])
 		if not result and cname:
+			self.check_lookups()
 			result = self.dns(cname, qtype)
 		return result
 
