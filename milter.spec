@@ -1,6 +1,6 @@
 %define name milter
 %define version 0.8.2
-%define release 2.RH7
+%define release 4.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -31,7 +31,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
-#Patch: %{name}-%{version}.patch
+Patch: %{name}-%{version}.patch
 Copyright: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -52,7 +52,7 @@ modules provide for navigating and modifying MIME parts.
 
 %prep
 %setup
-#%patch -p1
+%patch -p1
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{python} setup.py build
@@ -166,6 +166,12 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-4
+- Limit each CNAME chain independently like PTR and MX
+* Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-3
+- Limit CNAME lookups (regression)
+* Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-2
+- Handle corrupt ZIP attachments
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-1
 - Strict processing limits per SPF RFC
 - Fixed several parsing bugs under RFC 
@@ -174,7 +180,6 @@ rm -rf $RPM_BUILD_ROOT
 - Extended SPF processing results beyond strict RFC limits
 - Support original SES for local bounce protection (requires pysrs-0.30.10)
 - Callback exception processing option in milter module
-- Handle corrupt ZIP attachments
 * Thu Jun 16 2005 Stuart Gathman <stuart@bmsi.com> 0.8.1-1
 - Fix zip in zip loop in mime.py
 - Fix HeaderParseError in bms.py header callback

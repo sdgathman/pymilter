@@ -47,8 +47,24 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
-# Revision 1.11  2005/07/20 03:30:04  customdesigned
-# Check pydspam version for honeypot, include latest pyspf changes.
+# Revision 1.31  2005/07/22 02:11:50  customdesigned
+# Use dictionary to check for CNAME loops.  Check limit independently for
+# each top level name, just like for PTR.
+#
+# Revision 1.30  2005/07/21 20:07:31  customdesigned
+# Translate DNS error in DNSLookup.  This completely isolates DNS
+# dependencies to the DNSLookup method.
+#
+# Revision 1.29  2005/07/21 17:49:39  customdesigned
+# My best guess at what RFC intended for limiting CNAME loops.
+#
+# Revision 1.28  2005/07/21 17:37:08  customdesigned
+# Break out external DNSLookup method so that test suite can
+# duplicate CNAME loop bug.  Test zone data dictionary now
+# mirrors structure of real DNS.
+#
+# Revision 1.27  2005/07/21 15:26:06  customdesigned
+# First cut at updating docs.  Test suite is obsolete.
 #
 # Revision 1.26  2005/07/20 03:12:40  customdesigned
 # When not in strict mode, don't give PermErr for bad mechanism until
@@ -256,6 +272,16 @@ if not hasattr(DNS.Type,'SPF'):
   DNS.Type.typemap[99] = 'SPF'
   DNS.Lib.RRunpacker.getSPFdata = DNS.Lib.RRunpacker.getTXTdata
 
+def DNSLookup(name,qtype):
+  try:
+    req = DNS.DnsRequest(name, qtype=qtype)
+    resp = req.req()
+    #resp.show()
+    # key k: ('wayforward.net', 'A'), value v
+    return [((a['name'], a['typename']), a['data']) for a in resp.answers]
+  except DNS.DNSError,x:
+    raise TempError,'DNS ' + str(x)
+
 # 32-bit IPv4 address mask
 MASK = 0xFFFFFFFFL
 
@@ -308,6 +334,7 @@ DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 MAX_LOOKUP = 10 #draft-schlitt-spf-classic-02 Para 10.1
 MAX_MX = 10 #draft-schlitt-spf-classic-02 Para 10.1
 MAX_PTR = 10 #draft-schlitt-spf-classic-02 Para 10.1
+MAX_CNAME = 10 # analogous interpretation to MAX_PTR
 MAX_RECURSION = 20
 ALL_MECHANISMS = ('a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all')
 COMMON_MISTAKES = { 'prt': 'ptr', 'ip': 'ip4', 'ipv4': 'ip4', 'ipv6': 'ip6' }
@@ -412,6 +439,9 @@ class query(object):
 	>>> q.check(spf='v=spf1 ip4:192.0.0.0/8 ?all moo')
 	('unknown', 550, 'SPF Permanent Error: Unknown mechanism found: moo')
 
+	>>> q.check(spf='v=spf1 =a ?all moo')
+	('unknown', 550, 'SPF Permanent Error: Unknown qualifier, IETF draft para 4.6.1, found in: =a')
+
 	>>> q.check(spf='v=spf1 ip4:192.0.0.0/8 ~all')
 	('pass', 250, 'sender SPF verified')
 
@@ -453,8 +483,6 @@ class query(object):
 			  self.perm_error.ext = rc
 			  raise self.perm_error
 			return rc
-		except DNS.DNSError,x:
-			return ('error', 450, 'SPF DNS Error: ' + str(x))
 		except TempError,x:
 			return ('error', 450, 'SPF Temporary Error: ' + str(x))
 		except PermError,x:
@@ -847,7 +875,7 @@ class query(object):
 		"""Get a list of domain names for an IP address."""
 		return self.dns(reverse_dots(i) + ".in-addr.arpa", 'PTR')
 
-	def dns(self, name, qtype):
+	def dns(self, name, qtype, cnames=None):
 		"""DNS query.
 
 		If the result is in cache, return that.  Otherwise pull the
@@ -864,19 +892,21 @@ class query(object):
 		result = self.cache.get( (name, qtype) )
 		cname = None
 		if not result:
-			req = DNS.DnsRequest(name, qtype=qtype)
-			resp = req.req()
-			#resp.show()
-			for a in resp.answers:
-			    # key k: ('wayforward.net', 'A'), value v
-			    k, v = (a['name'], a['typename']), a['data']
+			for k,v in DNSLookup(name,qtype):
 			    if k == (name, 'CNAME'):
-				    cname = v
+				cname = v
 			    self.cache.setdefault(k, []).append(v)
 			result = self.cache.get( (name, qtype), [])
 		if not result and cname:
-			self.check_lookups()
-			result = self.dns(cname, qtype)
+			if not cnames:
+			  cnames = {}
+			elif len(cnames) >= MAX_CNAME:
+			  raise PermError(
+			    'Length of CNAME chain exceeds %d' % MAX_CNAME)
+			cnames[name] = cname
+			if cname in cnames:
+			  raise PermError,'CNAME loop'
+			result = self.dns(cname, qtype, cnames=cnames)
 		return result
 
 	def get_header(self,res,receiver=None):
