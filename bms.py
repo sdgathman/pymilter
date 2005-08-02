@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.19  2005/07/20 03:30:04  customdesigned
+# Check pydspam version for honeypot, include latest pyspf changes.
+#
 # Revision 1.18  2005/07/17 01:25:44  customdesigned
 # Log as well as use extended result for best guess.
 #
@@ -697,7 +700,7 @@ class bmsMilter(Milter.Milter):
     receiver = self.receiver
     q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver)
     q.set_default_explanation(
-      'SPF fail: see http://spf.pobox.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
+      'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
     if res in ('none', 'softfail'):
       if self.mailfrom != '<>':
@@ -1075,8 +1078,15 @@ class bmsMilter(Milter.Milter):
 		self.log("Large message:",len(txt))
 		return False
 	      if user == 'honeypot' and Dspam.VERSION >= '1.1.9':
-	        ds.check_spam(user,txt,force_result=dspam.DSR_ISSPAM)
-		self.log("HONEYPOT:",rcpt)
+	        keep = False	# keep honeypot mail
+	        if len(self.recipients) > 1:
+		  ds.check_spam(user,txt,self.recipients,quarantine=True,
+		  	force_result=dspam.DSR_ISSPAM)
+		  self.log("HONEYPOT:",rcpt,'SCREENED')
+		else:
+		  ds.check_spam(user,txt,self.recipients,quarantine=keep,
+		  	force_result=dspam.DSR_ISSPAM)
+		  self.log("HONEYPOT:",rcpt)
 		self.fp = None
 		return False
 	      txt = ds.check_spam(user,txt,self.recipients)
