@@ -103,7 +103,7 @@ def send_dsn(mailfrom,receiver,msg=None):
   q = spf.query(None,None,None)
   mxlist = q.dns(domain,'MX')
   if not mxlist:
-    mxlist = (0,domain),
+    mxlist = (0,domain),	# fallback to A record when no MX
   else:
     mxlist.sort()
   smtp = smtplib.SMTP()
@@ -151,13 +151,13 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   connectip = q.i
   receiver = q.r
   sender_domain = q.o
+  result = q.result
+  perm_error = q.perm_error
   rcpt = '\n\t'.join(rcptlist)
   try: subject = origmsg['Subject']
   except: subject = '(none)'
   try:
     spf_result = origmsg['Received-SPF']
-    if not spf_result.startswith('softfail'):
-      spf_result = None
   except: spf_result = None
 
   msg = Message()
@@ -168,8 +168,10 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   msg.set_type('text/plain')
 
   if not template:
-    if spf_result: template = softfail_msg
-    else: template = nospf_msg
+    if spf_result and spf_result.startswith('softfail'):
+      template = softfail_msg
+    else:
+      template = nospf_msg
   hdrs,body = template.split('\n',1)
   for ln in hdrs.splitlines():
     name,val = ln.split(':',1)

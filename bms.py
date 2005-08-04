@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.20  2005/08/02 18:04:35  customdesigned
+# Keep screened honeypot mail, but optionally discard honeypot only mail.
+#
 # Revision 1.19  2005/07/20 03:30:04  customdesigned
 # Check pydspam version for honeypot, include latest pyspf changes.
 #
@@ -312,6 +315,7 @@ srs_reject_spoofed = False
 srs_domain = None
 spf_reject_neutral = ()
 spf_accept_softfail = ()
+spf_accept_fail = ()
 spf_best_guess = False
 spf_reject_noptr = False
 multiple_bounce_recipients = True
@@ -466,11 +470,12 @@ def read_config(list):
 
   # spf section
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
-  global spf_accept_softfail
+  global spf_accept_softfail,spf_accept_fail
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
     spf_accept_softfail = cp.getlist('spf','accept_softfail')
+    spf_accept_fail = cp.getlist('spf','accept_fail')
     spf_best_guess = cp.getboolean('spf','best_guess')
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
   srs_config = cp.getdefault('srs','config')
@@ -698,11 +703,17 @@ class bmsMilter(Milter.Milter):
     t = parse_addr(self.mailfrom)
     if len(t) == 2: t[1] = t[1].lower()
     receiver = self.receiver
-    q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver)
+    q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver,
+    	strict=False)
     q.set_default_explanation(
       'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
-    if res in ('none', 'softfail'):
+    if res == 'unknown' and q.perm_error:
+      q.result = res
+      self.cbv_needed = q	# report SPF syntax error to sender
+      res,code,txt = q.perm_error.ext	# extended (lax processing) result
+      txt = 'EXT: ' + txt
+    if res in ('none','softfail','deny','fail'):
       if self.mailfrom != '<>':
 	# check hello name via spf
 	h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
@@ -724,7 +735,6 @@ class bmsMilter(Milter.Milter):
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
 		'SPF guess: see http://spf.pobox.com/why.html')
-	q.strict = False
 	# best_guess should not result in fail
 	if self.missing_ptr:
 	  # ignore dynamic PTR for best guess
@@ -749,12 +759,16 @@ class bmsMilter(Milter.Milter):
 	  q.result = res
 	  self.cbv_needed = q
     if res in ('deny', 'fail'):
-      self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-      self.setreply(str(code),'5.7.1',txt)
-      # A proper SPF fail error message would read:
-      # forger.biz [1.2.3.4] is not allowed to send mail with the domain
-      # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
-      return Milter.REJECT
+      if hres == 'pass' and q.o in spf_accept_fail:
+	q.result = res
+	self.cbv_needed = q
+      else:
+	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+	self.setreply(str(code),'5.7.1',txt)
+	# A proper SPF fail error message would read:
+	# forger.biz [1.2.3.4] is not allowed to send mail with the domain
+	# "forged.org" in the sender address.  Contact <postmaster@forged.org>.
+	return Milter.REJECT
     if res == 'softfail' and not q.o in spf_accept_softfail:
       if self.missing_ptr and hres != 'pass':
         if spf_reject_noptr or q.o in spf_reject_neutral:
@@ -1206,8 +1220,10 @@ class bmsMilter(Milter.Milter):
       else:
 	self.log('CBV:',sender)
 	try:
-	  if q.result == 'softfail':
+	  if q.result in ('softfail','fail','deny'):
 	    template = file('softfail.txt').read()
+	  elif q.result == 'unknown':
+	    template = file('permerror.txt').read()
 	  else:
 	    template = file('strike3.txt').read()
 	except IOError: template = None

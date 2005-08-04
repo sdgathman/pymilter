@@ -1,4 +1,4 @@
-Subject: SPF softfail (POSSIBLE FORGERY)
+Subject: SPF %(result)s (POSSIBLE FORGERY)
 
 This is an automatically generated Delivery Status Notification.
 
