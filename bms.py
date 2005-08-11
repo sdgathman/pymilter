@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.21  2005/08/04 21:21:31  customdesigned
+# Treat fail like softfail for selected (braindead) domains.
+# Treat mail according to extended processing results, but
+# report any PermError that would officially result via DSN.
+#
 # Revision 1.20  2005/08/02 18:04:35  customdesigned
 # Keep screened honeypot mail, but optionally discard honeypot only mail.
 #
@@ -659,6 +664,19 @@ class bmsMilter(Milter.Milter):
     self.cbv_needed = None
     t = parse_addr(f.lower())
     self.canon_from = '@'.join(t)
+
+    # Check SMTP AUTH, also available:
+    #   auth_author  (ESMTP AUTH= param)
+    #   auth_ssf     (connection security, 0 = unencrypted)
+    #   auth_type    (authentication method, CRAM-MD5, DIGEST-MD5, PLAIN, etc)
+    self.user = self.getsymval('{auth_authen}')
+    if self.user:
+      # any successful authentication is considered INTERNAL
+      self.internal_connection = True
+      self.log("SMTP AUTH:",self.user,
+      self.getsymval('{auth_type}'),'ssf =',self.getsymval('{auth_ssf}'),
+      "INTERNAL")
+
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     if len(t) == 2:
       user,domain = t
@@ -1125,6 +1143,9 @@ class bmsMilter(Milter.Milter):
 	self.log("Large message:",len(txt))
 	return False
       screener = dspam_screener[self.id % len(dspam_screener)]
+      # FIXME: if screener is 'honeypot', classify with no quarantine.  
+      # If spam, send DSN and reject if not accepted.  Otherwise, use
+      # force_result to quarantine.
       if not ds.check_spam(screener,txt,self.recipients,
       	classify=True,quarantine=not self.reject_spam):
 	self.fp = None

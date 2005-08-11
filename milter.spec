@@ -168,7 +168,8 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.3-1
 - Keep screened honeypot mail, but optionally discard honeypot only mail.
-- spf_accept_fail option for braindead SPF senders
+- spf_accept_fail option for braindead SPF senders (treats fail like softfail)
+- Consider SMTP AUTH connections internal.
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-4
 - Limit each CNAME chain independently like PTR and MX
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-3
