@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.13  2005/07/22 16:00:23  customdesigned
+# Limit CNAME chains independently of DNS lookup limit
+#
 # Revision 1.31  2005/07/22 02:11:50  customdesigned
 # Use dictionary to check for CNAME loops.  Check limit independently for
 # each top level name, just like for PTR.
@@ -632,9 +635,15 @@ class query(object):
 		      if res == 'pass':
 			break
 		      if res == 'none':
-			raise PermError(
-			  'No valid SPF record for included domain: %s'%arg,
-			  mech)
+			try:
+			  if self.strict or not self.perm_error:
+			    raise PermError(
+			      'No valid SPF record for included domain: %s'%arg,
+			      mech)
+			except PermError,x:
+			  if self.strict:
+			    raise x
+			  self.perm_error = x
 		      continue
 		    elif m == 'all':
 			    break
