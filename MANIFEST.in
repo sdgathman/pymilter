@@ -23,5 +23,4 @@ include milter.rc
 include milter.rc7
 include milter.cfg
 include rhsbl.m4
-include softfail.txt
-include strike3.txt
+include *.txt

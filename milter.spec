@@ -162,6 +162,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /var/log/milter/bms.py
 %config /var/log/milter/strike3.txt
 %config /var/log/milter/softfail.txt
+%config /var/log/milter/quarantine.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
