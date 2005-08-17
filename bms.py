@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.22  2005/08/11 22:17:58  customdesigned
+# Consider SMTP AUTH connections internal.
+#
 # Revision 1.21  2005/08/04 21:21:31  customdesigned
 # Treat fail like softfail for selected (braindead) domains.
 # Treat mail according to extended processing results, but
@@ -726,8 +729,8 @@ class bmsMilter(Milter.Milter):
     q.set_default_explanation(
       'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
+    q.result = res
     if res == 'unknown' and q.perm_error:
-      q.result = res
       self.cbv_needed = q	# report SPF syntax error to sender
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
@@ -774,11 +777,9 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
         if self.mailfrom != '<>':
-	  q.result = res
 	  self.cbv_needed = q
     if res in ('deny', 'fail'):
       if hres == 'pass' and q.o in spf_accept_fail:
-	q.result = res
 	self.cbv_needed = q
       else:
 	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
@@ -800,7 +801,6 @@ class bmsMilter(Milter.Milter):
 	  )
 	  return Milter.REJECT
       if self.mailfrom != '<>':
-        q.result = res
 	self.cbv_needed = q
     if res == 'neutral' and q.o in spf_reject_neutral:
       self.log('REJECT: SPF neutral for',q.s)
@@ -823,6 +823,7 @@ class bmsMilter(Milter.Milter):
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(res,receiver))
+    self.spf = q
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
@@ -1075,6 +1076,7 @@ class bmsMilter(Milter.Milter):
   #	   this will give a fast start to stats
 
   def check_spam(self):
+    "return True/False if self.fp, else return Milter.REJECT/TEMPFAIL/etc"
     if not dspam_userdir: return False
     ds = Dspam.DSpamDirectory(dspam_userdir)
     ds.log = self.log
@@ -1094,7 +1096,7 @@ class bmsMilter(Milter.Milter):
 		ds.add_spam(sender,txt)
 		txt = None
 		self.fp = None
-		return False
+		return Milter.DISCARD
 	    elif user == 'falsepositive' and self.internal_connection:
 	      sender = dspam_users.get(self.canon_from)
 	      if sender:
@@ -1111,16 +1113,23 @@ class bmsMilter(Milter.Milter):
 		return False
 	      if user == 'honeypot' and Dspam.VERSION >= '1.1.9':
 	        keep = False	# keep honeypot mail
+		self.fp = None
 	        if len(self.recipients) > 1:
+		  self.log("HONEYPOT:",rcpt,'SCREENED')
+		  if self.spf:
+		    # check that sender accepts quarantine DSN
+		    msg = mime.message_from_file(StringIO.StringIO(txt))
+		    rc = self.send_dsn(self.spf,msg,'quarantine.txt')
+		    del msg
+		    if rc != Milter.CONTINUE:
+		      return rc	
 		  ds.check_spam(user,txt,self.recipients,quarantine=True,
 		  	force_result=dspam.DSR_ISSPAM)
-		  self.log("HONEYPOT:",rcpt,'SCREENED')
 		else:
 		  ds.check_spam(user,txt,self.recipients,quarantine=keep,
 		  	force_result=dspam.DSR_ISSPAM)
 		  self.log("HONEYPOT:",rcpt)
-		self.fp = None
-		return False
+		return Milter.DISCARD
 	      txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
 	        # DISCARD if quarrantined for any recipient.  It
@@ -1128,7 +1137,7 @@ class bmsMilter(Milter.Milter):
 		# as a false positive.
 		self.log("DSPAM:",user,rcpt)
 		self.fp = None
-		return False
+		return Milter.DISCARD
 	      self.fp = StringIO.StringIO(txt)
 	      modified = True
 	  except Exception,x:
@@ -1143,18 +1152,25 @@ class bmsMilter(Milter.Milter):
 	self.log("Large message:",len(txt))
 	return False
       screener = dspam_screener[self.id % len(dspam_screener)]
-      # FIXME: if screener is 'honeypot', classify with no quarantine.  
-      # If spam, send DSN and reject if not accepted.  Otherwise, use
-      # force_result to quarantine.
       if not ds.check_spam(screener,txt,self.recipients,
-      	classify=True,quarantine=not self.reject_spam):
+      	classify=True,quarantine=False):
 	self.fp = None
 	if self.reject_spam:
 	  self.log("DSPAM:",screener,
 	  	'REJECT: X-DSpam-Score: %f' % ds.probability)
 	  self.setreply('550','5.7.1','Your Message looks spammy')
-	  return True
+	  return Milter.REJECT
 	self.log("DSPAM:",screener,"SCREENED")
+	if self.spf:
+	  # check that sender accepts quarantine DSN
+	  msg = mime.message_from_file(StringIO.StringIO(txt))
+	  rc = self.send_dsn(self.spf,msg,'quarantine.txt')
+	  del msg
+	  if rc != Milter.CONTINUE:
+	    return rc
+	ds.check_spam(screener,txt,self.recipients,quarantine=True,
+	      force_result=dspam.DSR_ISSPAM)
+	return Milter.DISCARD
     return modified
 
   def eom(self):
@@ -1165,8 +1181,7 @@ class bmsMilter(Milter.Milter):
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam
       if not self.fp:
-        if spam_checked: return Milter.REJECT
-	return Milter.DISCARD	# message quarantined for all recipients
+        return spam_checked
 
       # analyze all mail for dangerous attachments and scripts
       self.fp.seek(0)
@@ -1233,41 +1248,15 @@ class bmsMilter(Milter.Milter):
 
     if self.cbv_needed:
       q = self.cbv_needed
-      sender = q.s
-      cached = cbv_cache.has_key(sender)
-      if cached:
-	self.log('CBV:',sender,'(cached)')
-        res = cbv_cache[sender]
+      if q.result in ('softfail','fail','deny'):
+	template_name = 'softfail.txt'
+      elif q.result == 'unknown':
+	template_name = 'permerror.txt'
       else:
-	self.log('CBV:',sender)
-	try:
-	  if q.result in ('softfail','fail','deny'):
-	    template = file('softfail.txt').read()
-	  elif q.result == 'unknown':
-	    template = file('permerror.txt').read()
-	  else:
-	    template = file('strike3.txt').read()
-	except IOError: template = None
-	m = dsn.create_msg(q,self.recipients,msg,template)
-        m = m.as_string()
-        print >>open('last_dsn','w'),m
-	res = dsn.send_dsn(sender,self.receiver,m)
-      if res:
-        desc = "CBV: %d %s" % res[:2]
-        if 400 <= res[0] < 500:
-	  self.log('TEMPFAIL:',desc)
-          self.setreply('450','4.2.0',*desc.splitlines())
-	  return Milter.TEMPFAIL
-	if len(res) < 3: res += time.time(),
-	cbv_cache[sender] = res
-	self.log('REJECT:',desc)
-        self.setreply('550','5.7.1',*desc.splitlines())
-	return Milter.REJECT
-      cbv_cache[sender] = res
-      if not cached:
-        s = time.strftime(time_format,time.localtime())
-	print >>open('send_dsn.log','a'),sender,s # log who we sent DSNs to
+	template_name = 'strike3.txt'
+      rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
+      if rc != Milter.CONTINUE: return rc
 
     if not defanged and not spam_checked:
       os.remove(self.tempname)
@@ -1300,6 +1289,38 @@ class bmsMilter(Milter.Milter):
     finally:
       out.close()
     return Milter.TEMPFAIL
+
+  def send_dsn(self,q,msg,template_name):
+    sender = q.s
+    cached = cbv_cache.has_key(sender)
+    if cached:
+      self.log('CBV:',sender,'(cached)')
+      res = cbv_cache[sender]
+    else:
+      self.log('CBV:',sender)
+      try:
+	template = file(template_name).read()
+      except IOError: template = None
+      m = dsn.create_msg(q,self.recipients,msg,template)
+      m = m.as_string()
+      print >>open('last_dsn','w'),m
+      res = dsn.send_dsn(sender,self.receiver,m)
+    if res:
+      desc = "CBV: %d %s" % res[:2]
+      if 400 <= res[0] < 500:
+	self.log('TEMPFAIL:',desc)
+	self.setreply('450','4.2.0',*desc.splitlines())
+	return Milter.TEMPFAIL
+      if len(res) < 3: res += time.time(),
+      cbv_cache[sender] = res
+      self.log('REJECT:',desc)
+      self.setreply('550','5.7.1',*desc.splitlines())
+      return Milter.REJECT
+    cbv_cache[sender] = res
+    if not cached:
+      s = time.strftime(time_format,time.localtime())
+      print >>open('send_dsn.log','a'),sender,s # log who we sent DSNs to
+    return Milter.CONTINUE
 
   def close(self):
     sys.stdout.flush()		# make log messages visible

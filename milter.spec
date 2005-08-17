@@ -160,9 +160,10 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter/save
 %config /var/log/milter/start.sh
 %config /var/log/milter/bms.py
-%config /var/log/milter/strike3.txt
-%config /var/log/milter/softfail.txt
-%config /var/log/milter/quarantine.txt
+%config(noreplace) /var/log/milter/strike3.txt
+%config(noreplace) /var/log/milter/softfail.txt
+%config(noreplace) /var/log/milter/quarantine.txt
+%config(noreplace) /var/log/milter/permerror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
@@ -171,6 +172,8 @@ rm -rf $RPM_BUILD_ROOT
 - Keep screened honeypot mail, but optionally discard honeypot only mail.
 - spf_accept_fail option for braindead SPF senders (treats fail like softfail)
 - Consider SMTP AUTH connections internal.
+- Send DSN for SPF errors corrected by extended processing.
+- Send DSN before SCREENED mail is quarantined
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-4
 - Limit each CNAME chain independently like PTR and MX
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-3

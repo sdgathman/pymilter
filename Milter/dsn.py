@@ -112,8 +112,11 @@ def send_dsn(mailfrom,receiver,msg=None):
       smtp.connect(host)
       code,resp = smtp.helo(receiver)
       # some wiley spammers have MX records that resolve to 127.0.0.1
-      if resp.split()[0] == receiver:
-        return (553,'Fraudulent MX for %s' % domain)
+      a = resp.split()
+      if not a:
+        return (553,'MX for %s has no hostname in banner: %s' % (domain,host))
+      if a[0] == receiver:
+        return (553,'Fraudulent MX for %s: %s' % (domain,host))
       if not (200 <= code <= 299):
 	raise smtplib.SMTPHeloError(code, resp)
       if msg:
