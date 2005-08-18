@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.23  2005/08/17 19:35:27  customdesigned
+# Send DSN before adding message to quarantine.
+#
 # Revision 1.22  2005/08/11 22:17:58  customdesigned
 # Consider SMTP AUTH connections internal.
 #
@@ -665,7 +668,8 @@ class bmsMilter(Milter.Milter):
     self.new_headers = []
     self.recipients = []
     self.cbv_needed = None
-    t = parse_addr(f.lower())
+    t = parse_addr(f)
+    if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
 
     # Check SMTP AUTH, also available:
@@ -718,14 +722,13 @@ class bmsMilter(Milter.Milter):
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       return self.check_spf()
+    self.spf = None
     return Milter.CONTINUE
 
   def check_spf(self):
-    t = parse_addr(self.mailfrom)
-    if len(t) == 2: t[1] = t[1].lower()
     receiver = self.receiver
-    q = spf.query(self.connectip,'@'.join(t),self.hello_name,receiver=receiver,
-    	strict=False)
+    q = spf.query(self.connectip,self.canon_from,self.hello_name,
+    	receiver=receiver,strict=False)
     q.set_default_explanation(
       'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
@@ -1154,23 +1157,26 @@ class bmsMilter(Milter.Milter):
       screener = dspam_screener[self.id % len(dspam_screener)]
       if not ds.check_spam(screener,txt,self.recipients,
       	classify=True,quarantine=False):
-	self.fp = None
 	if self.reject_spam:
 	  self.log("DSPAM:",screener,
 	  	'REJECT: X-DSpam-Score: %f' % ds.probability)
 	  self.setreply('550','5.7.1','Your Message looks spammy')
+	  self.fp = None
 	  return Milter.REJECT
 	self.log("DSPAM:",screener,"SCREENED")
 	if self.spf:
 	  # check that sender accepts quarantine DSN
-	  msg = mime.message_from_file(StringIO.StringIO(txt))
+	  self.fp.seek(0)
+	  msg = mime.message_from_file(self.fp)
 	  rc = self.send_dsn(self.spf,msg,'quarantine.txt')
-	  del msg
 	  if rc != Milter.CONTINUE:
+	    self.fp = None
 	    return rc
-	ds.check_spam(screener,txt,self.recipients,quarantine=True,
-	      force_result=dspam.DSR_ISSPAM)
-	return Milter.DISCARD
+	  del msg
+	if not ds.check_spam(screener,txt,self.recipients,classify=True):
+	  self.fp = None
+	  return Milter.DISCARD
+	# Message no longer looks spammy, deliver normally. We lied in the DSN.
     return modified
 
   def eom(self):
