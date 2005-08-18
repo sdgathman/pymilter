@@ -16,6 +16,8 @@ from milter import ACCEPT,CONTINUE,REJECT,DISCARD,TEMPFAIL,	\
 try: from milter import QUARANTINE
 except: pass
 
+__version__ = '0.8.3'
+
 _seq_lock = thread.allocate_lock()
 _seq = 0
 
@@ -215,6 +217,6 @@ def runmilter(name,socketname,timeout = 0):
     raise milter.error("out of thread resources")
 
 __all__ = globals().copy()
-for priv in ('os','milter','thread','factory','_seq','_seq_lock'):
+for priv in ('os','milter','thread','factory','_seq','_seq_lock','__version__'):
   del __all__[priv]
 __all__ = __all__.keys()

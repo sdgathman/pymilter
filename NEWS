@@ -1,5 +1,11 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.3   Keep screened honeypot mail, but optionally discard honeypot only mail.
+	spf_accept_fail option for braindead SPF senders 
+	  (treats fail like softfail)
+	Consider SMTP AUTH connections internal.
+	Send DSN for SPF errors corrected by extended processing.
+	Send DSN before SCREENED mail is quarantined
 0.8.2	Strict processing limits per SPF RFC
 	Fixed several parsing bugs under RFC 
 	Support official IANA SPF record (type99)

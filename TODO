@@ -6,36 +6,17 @@ Option to add Received-SPF header, but never reject on SPF.
 Create null config that does nothing - except maybe add Received-SPF
 headers.  Many admins would like to turn features on one at a time.
 
-Checking in mime.py;
-/bms/cvs/milter/mime.py,v  <--  mime.py
-new revision: 1.56; previous revision: 1.55
-done
-Checking in spf.py;
-/bms/cvs/milter/spf.py,v  <--  spf.py
-new revision: 1.18; previous revision: 1.17
-done
-Checking in testmime.py;
-/bms/cvs/milter/testmime.py,v  <--  testmime.py
-new revision: 1.19; previous revision: 1.18
-
 Auto whitelist based on outgoing email - perhaps with magic subject
 or recipient prefix.
 
 Can't output messages with malformed rfc822 attachments.
 
-Example malformed SPF:
-onvunvuvvx.usafisnews.org text "v=spf1 mx ptr ip4:207.44.199.970 -all"
-
 Move milter,Milter,mime,spf modules to pymilter
 milter package will have bms.py application
 
-Support SMTP AUTH and disable SPF checks when connection is authorized.
 Web admin interface
-Check valid domains allowed by internal senders to detect PCs infected
-with spam trojans.
-Do CBV (callback verification) for mail with no published SPF record.
 message log for automated stats and blacklisting
-Skip dspam when SPF pass?
+Skip dspam when SPF pass? NO
 Report 551 with rcpt on SPF fail?
 check spam keywords with character classes, e.g.
 	{a}=[a@гд], {i}=[i1н], {e}=[eл], {o}=[o0ц]
@@ -46,9 +27,6 @@ user to give to the forwarder.  Alias only works for mail from that
 forwarder.  Milter gets forwarder domain from alias and uses it to
 SPF check forwarder.
 
-Another special dspam user, 'honeypot', can be listed in innoculations.
-All email to those addresses is treated as known spam.
-
 Framework for modular Python milter components within a single VM.
 Python milters can be already be composed through sendmail by running each in
 a separate process.  However, a significant amount of memory is wasted
@@ -57,8 +35,7 @@ is cumbersome (e.g., adding mail headers, writing external files).
 
 Backup copies for outgoing/incoming mail.
 
-Allow multiple wiretap groups, each with its own destination.  Perhaps 
-also copy incoming wiretap mail, even though sendmail alias works perfectly
+Copy incoming wiretap mail, even though sendmail alias works perfectly
 for the purpose, to avoid having to change two configs for a wiretap.
 
 Provide a way to reload milter.cfg without stopping/restarting milter.
@@ -72,10 +49,6 @@ Keep separate ismodified flag for headers and body.  This is important
 when rejecting outgoing mail with viruses removed (so as not to
 embarrass yourself), and also removing Received headers with hidepath.
 
-Wrap smfi_setbacklog(int) - but it is only available in sendmail >= 8.12.3,
-  so how can we detect whether to wrap it?
-
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
-

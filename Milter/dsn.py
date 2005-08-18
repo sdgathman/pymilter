@@ -9,6 +9,7 @@ import smtplib
 import spf
 import socket
 from email.Message import Message
+import Milter
 
 nospf_msg = """Subject: Critical mail server configuration error
 
@@ -168,6 +169,7 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   msg.add_header('To',sender)
   msg.add_header('From','postmaster@%s'%receiver)
   msg.add_header('Auto-Submitted','auto-generated (configuration error)')
+  msg.add_header('X-Mailer','PyMilter-'+Milter.__version__)
   msg.set_type('text/plain')
 
   if not template:
