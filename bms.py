@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.24  2005/08/18 03:36:54  customdesigned
+# Don't innoculate with SCREENED mail.
+#
 # Revision 1.23  2005/08/17 19:35:27  customdesigned
 # Send DSN before adding message to quarantine.
 #
@@ -334,7 +337,7 @@ time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
 try:
-  too_old = time.time() - 30*24*60*60	# 30 days
+  too_old = time.time() - 7*24*60*60	# 7 days
   for ln in open('send_dsn.log'):
     try:
       rcpt,ts = ln.strip().split(None,1)
@@ -515,7 +518,22 @@ def read_config(list):
     #print srs_domain
 
 def parse_addr(t):
+  """Split email into user,domain.
+
+  >>> parse_addr('user@example.com')
+  ['user', 'example.com']
+  >>> parse_addr('"user@example.com"')
+  ['"user@example.com"']
+  >>> parse_addr('"user@bar"@example.com')
+  ['"user@bar"','example.com']
+  >>> parse_addr('foo')
+  ['foo']
+  """
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
+  if t.startswith('"'):
+    if t.endswith('"'): return [t[1:-1]]
+    pos = t.find('"@')
+    if pos > 0: return [t[1:pos],t[pos+2:]]
   return t.split('@')
 
 def parse_header(val):
@@ -733,7 +751,7 @@ class bmsMilter(Milter.Milter):
       'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
     q.result = res
-    if res == 'unknown' and q.perm_error:
+    if res == 'unknown' and q.perm_error and q.perm_error.ext:
       self.cbv_needed = q	# report SPF syntax error to sender
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
@@ -999,7 +1017,21 @@ class bmsMilter(Milter.Milter):
       self.fp.write("%s: %s\n" % (name,val))	# add new headers to buffer
     self.fp.write("\n")				# terminate headers
     self.fp.seek(0)
+    # log when neither sender nor from domains matches mail from domain
+    mf_domain = self.canon_from.split('@')[-1]
+    msg = rfc822.Message(self.fp)
+    for rn,hf in msg.getaddrlist('from')+msg.getaddrlist('sender'):
+      t = parse_addr(hf)
+      if len(t) == 2 and t[1].lower() == mf_domain:
+        break
+    else:
+      self.log("NOTE: MFROM domain doesn't match From or Sender");
+      for f in msg.getallmatchingheaders('from') \
+      	+ msg.getallmatchingheaders('sender'):
+	self.log(f)
+    del msg
     # copy headers to a temp file for scanning the body
+    self.fp.seek(0)
     headers = self.fp.getvalue()
     self.fp.close()
     fd,fname = tempfile.mkstemp(".defang")

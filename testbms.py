@@ -1,4 +1,5 @@
 import unittest
+import doctest
 import Milter
 import bms
 import mime
@@ -22,7 +23,7 @@ class TestMilter(bms.bmsMilter):
 
   def getsymval(self,name):
     if name == 'j': return 'test.milter.org'
-    return bms.bmsMilter.getsymval(self,name)
+    return ''
 
   def replacebody(self,chunk):
     if self._body:
@@ -284,7 +285,10 @@ class BMSMilterTestCase(unittest.TestCase):
 #    self.failUnless(rc == Milter.REJECT)
 #    milter.close();
 
-def suite(): return unittest.makeSuite(BMSMilterTestCase,'test')
+def suite(): 
+  s = unittest.makeSuite(BMSMilterTestCase,'test')
+  s.addTest(doctest.DocTestSuite(bms))
+  return s
 
 if __name__ == '__main__':
   if len(sys.argv) > 1:
