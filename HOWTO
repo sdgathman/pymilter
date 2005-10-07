@@ -1,0 +1,122 @@
+	Step one.  Which DSPAM is right for you?
+
+The DSPAM project makes dspam part of the LDA (Local Delivery Agent).
+Pydspam puts dspam into the MTA (Mail Transfer Agent - sendmail with pymilter).
+
+The advantage of doing dspam in the LDA is that any aliasing has already been
+resolved.  You need only configure mailboxes.
+
+The advantage of doing dspam in the MTA is it can screen an entire 
+company as a gateway with multiple domains.  Unfortunately, this
+means you have to tell it about all the aliases that comprise each
+account.  (Also, pydspam is still uses dspam-2.6.5.2 - the Dspam API
+has changed for newer versions.)
+
+If the LDA is right for you, you'll want to use the official Dspam 
+package.  http://www.nuclearelephant.com/projects/dspam/
+
+If the MTA approach is what you want, then pydspam is what you want.
+
+In either case, you will still want pymilter to block forgeries, Windows 
+executables, etc.
+
+So, lets assume you want to install pymilter, and may or may not
+wish to install pydspam.
+
+	Step two.  Obtaining RPMS.
+
+For basic pymilter you'll need:
+
+python-2.4
+milter-0.8.2	(the RH9 rpm should work on Fedora Core - let me know)
+sendmail-8.13.x	(with milter support enabled)
+
+and for SPF you'll need:
+
+pydns-2.3.0-2.4
+
+and for SRS you'll need:
+
+pysrs-0.30.9-1.py24
+
+I'm pretty sure you will want to have SPF and SRS available.
+
+	Step three.  Activate basic milter.
+
+Activate the basic milter by editing /etc/mail/sendmail.mc and adding:
+
+INPUT_MAIL_FILTER(`pythonfilter', `S=local:/var/run/milter/pythonsock, F=T, T=C:5m;S:20s;R:5m;E:5m')
+
+You can then "make sendmail.cf" and restart sendmail.
+
+Tail /var/log/milter/milter.log while SMTP clients connect to your
+sendmail instance.  This should show you what the milter is doing.
+
+By default, milter-0.8.2 rejects on SPF fail, except for listed domains
+(that are known to be broken).  Some admins don't like that, and 0.8.3 will use
+the /etc/mail/access database to configure SPF responses.  For now,
+if you don't like SPF, you can disable spf by replacing "import spf"
+with "spf = None" around line 285 in /var/log/milter/bms.py.
+
+	Step four.  Tweaking the basic config.
+
+Most pymilter configuration is in /etc/mail/pymilter.cfg.
+
+By default, milter scans attachments for executable extensions.  You can
+turn this off by setting banned_exts to the empty list.  There are options
+to scan ZIP attachments and rfc822 attachments.  When it finds a banned
+file type, milter saves the original message in /var/log/milter/save,
+and replaces the attachment with a plain text warning message.
+
+Configure hello_blacklist with your own helo name and domains - which
+you know cannot legitimately be used by external MTAs.
+
+Configure trusted_relay with your secondary MX servers, if any.  These
+should also run pymilter with similar policies.  (But this isn't
+needed for initial testing.)
+
+Configure internal_connect with subnets of your internal SMTP clients.
+Internal connections skip SPF testing and other policies.
+
+Configure internal_domains with domains used by your internal SMTP clients.
+If they attempt to use any other domain, the attempt is blocked and the
+client is logged as a "zombie".  Conversely, any attempt by an external
+MTA to use one of your internal domains is treated as a forgery and
+blocked (a simplified form of local SPF).
+
+Adjust porn_words and spam_words - these block emails with a Subject
+containing the listed strings.  They can be empty to disable Subject
+string blocking.
+
+	Advanced SPF configuration.
+
+The sendmail access file, or another readonly database with that
+format, can be used for detail spf policy.  SPF access policy
+record are tagged with "SPF-{Result}:".  Results are
+Pass, Neutral, Softfail, Fail, TempError, PermError.  Currently supported
+policy keywords are OK, CBV, REJECT, TEMPFAIL, ERROR:"550 description".
+
+The default policies are as follows:
+
+SPF-Fail:	REJECT
+SPF-Softfail:	CBV
+SPF-Neutral:	OK
+SPF-PermError:	REJECT
+SPF-TempError:	TEMPFAIL
+SPF-Pass:	OK
+
+The tag may be followed by a specific domain.  For instance, to
+require a Pass from aol.com:
+
+SPF-Neutral:aol.com	ERROR:"550 AOL mail must get SPF PASS"
+SPF-Softfail:aol.com	ERROR:"550 AOL mail must get SPF PASS"
+
+	To be continued.
+
+Forthcoming topics:
+
+SRS config
+
+
+pydspam config
+wiretap config

@@ -1,7 +1,17 @@
+Find rfc2822 policy for MFROM quoting.
+
+Use /etc/mail/access for domain specific SPF policies.
+
+SPF-Fail:	REJECT
+SPF-Softfail:	OK
+SPF-Neutral:	OK
+SPF-Neutral:aol.com	ERROR:"550 AOL mail must get SPF PASS"
+
 Defer TEMPERROR in SPF evaluation - give precedence to security
 (only defer for PASS mechanisms).
 
 Option to add Received-SPF header, but never reject on SPF.
+  I think the above will handle this.
 
 Create null config that does nothing - except maybe add Received-SPF
 headers.  Many admins would like to turn features on one at a time.

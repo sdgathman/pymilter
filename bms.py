@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.25  2005/09/08 03:55:08  customdesigned
+# Handle perverse MFROM quoting.
+#
 # Revision 1.24  2005/08/18 03:36:54  customdesigned
 # Don't innoculate with SCREENED mail.
 #
@@ -312,6 +315,7 @@ scan_rfc822 = True
 internal_connect = ()
 trusted_relay = ()
 internal_domains = ()
+banned_users = ()
 hello_blacklist = ()
 smart_alias = {}
 dspam_dict = None
@@ -332,7 +336,6 @@ spf_accept_softfail = ()
 spf_accept_fail = ()
 spf_best_guess = False
 spf_reject_noptr = False
-multiple_bounce_recipients = True
 time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
@@ -496,7 +499,7 @@ def read_config(list):
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
   if SRS and srs_secret:
-    global ses,srs,srs_reject_spoofed,srs_domain
+    global ses,srs,srs_reject_spoofed,srs_domain,banned_users
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
     maxage = cp.getint('srs','maxage')
@@ -515,6 +518,7 @@ def read_config(list):
     else:
       srs_domain = []
     srs_domain.append(cp.getdefault('srs','fwdomain'))
+    banned_users = cp.getlist('srs','banned_users')
     #print srs_domain
 
 def parse_addr(t):
@@ -537,6 +541,8 @@ def parse_addr(t):
   return t.split('@')
 
 def parse_header(val):
+  """Decode headers gratuitously encoded to hide the content.
+  """
   try:
     h = decode_header(val)
     if not len(h) or (not h[0][1] and len(h) == 1): return val
@@ -689,18 +695,37 @@ class bmsMilter(Milter.Milter):
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
+    # Some braindead MTAs can't be relied upon to properly flag DSNs.
+    # This heuristic tries to recognize such.
+    self.is_bounce = (f == '<>' or t[0].lower() in banned_users
+        #and t[1] == self.hello_name
+    )
 
     # Check SMTP AUTH, also available:
+    #   auth_authen  authenticated user
     #   auth_author  (ESMTP AUTH= param)
     #   auth_ssf     (connection security, 0 = unencrypted)
     #   auth_type    (authentication method, CRAM-MD5, DIGEST-MD5, PLAIN, etc)
+    # cipher_bits  SSL encryption strength
+    # cert_subject SSL cert subject
+    # verify       SSL cert verified
+
     self.user = self.getsymval('{auth_authen}')
     if self.user:
-      # any successful authentication is considered INTERNAL
+      # Very simple SMTP AUTH policy by defaul:
+      #   any successful authentication is considered INTERNAL
+      # FIXME: configure allowed MAIL FROM by user
       self.internal_connection = True
-      self.log("SMTP AUTH:",self.user,
-      self.getsymval('{auth_type}'),'ssf =',self.getsymval('{auth_ssf}'),
-      "INTERNAL")
+      self.log(
+        "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),
+        "sslbits =",self.getsymval('{cipher_bits}'),
+        "ssf =",self.getsymval('{auth_ssf}'), "INTERNAL"
+      )
+      if self.getsymval('{verify}'):
+	self.log("SSL AUTH:",
+	  self.getsymval('{cert_subject}'),
+	  "verify =",self.getsymval('{verify}')
+	)
 
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     if len(t) == 2:
@@ -859,34 +884,31 @@ class bmsMilter(Milter.Milter):
     t = parse_addr(to.lower())
     if len(t) == 2:
       user,domain = t
-      if self.mailfrom == '<>' or self.canon_from.startswith('postmaster@') \
-      	or self.canon_from.startswith('mailer-daemon@'):
-        if self.recipients and not multiple_bounce_recipients:
-	  self.data_allowed = False
-        if srs and domain in srs_domain:
-	  oldaddr = '@'.join(parse_addr(to))
-	  try:
-	    if ses:
-	      newaddr = ses.verify(oldaddr)
-	    else:
-	      newaddr = oldaddr,
-            if len(newaddr) > 1:
-	      self.log("ses rcpt:",newaddr[0])
-	    else:
-	      newaddr = srs.reverse(oldaddr)
-	      # Currently, a sendmail map reverses SRS.  We just log it here.
-	      self.log("srs rcpt:",newaddr)
-	  except:
-            if not (self.internal_connection or self.trusted_relay):
-	      if srsre.match(oldaddr):
-		self.log("REJECT: srs spoofed:",oldaddr)
-		self.setreply('550','5.7.1','Invalid SRS signature')
-		return Milter.REJECT
-	      if oldaddr.startswith('SES='):
-		self.log("REJECT: ses spoofed:",oldaddr)
-		self.setreply('550','5.7.1','Invalid SES signature')
-		return Milter.REJECT
-	      self.data_allowed = not srs_reject_spoofed
+      if self.is_bounce and srs and domain in srs_domain:
+	oldaddr = '@'.join(parse_addr(to))
+	try:
+	  if ses:
+	    newaddr = ses.verify(oldaddr)
+	  else:
+	    newaddr = oldaddr,
+	  if len(newaddr) > 1:
+	    self.log("ses rcpt:",newaddr[0])
+	  else:
+	    newaddr = srs.reverse(oldaddr)
+	    # Currently, a sendmail map reverses SRS.  We just log it here.
+	    self.log("srs rcpt:",newaddr)
+	except:
+	  if not (self.internal_connection or self.trusted_relay):
+	    if srsre.match(oldaddr):
+	      self.log("REJECT: srs spoofed:",oldaddr)
+	      self.setreply('550','5.7.1','Invalid SRS signature')
+	      return Milter.REJECT
+	    if oldaddr.startswith('SES='):
+	      self.log("REJECT: ses spoofed:",oldaddr)
+	      self.setreply('550','5.7.1','Invalid SES signature')
+	      return Milter.REJECT
+	    self.data_allowed = not srs_reject_spoofed
+
       # non DSN mail to SRS address will bounce due to invalid local part
       self.recipients.append('@'.join(t))
       users = check_user.get(domain)
@@ -964,15 +986,20 @@ class bmsMilter(Milter.Milter):
     return Milter.CONTINUE
 
   def forged_bounce(self):
-    if len(self.recipients) > 1:
-      self.log('REJECT: Multiple bounce recipients')
-      self.setreply('550','5.7.1','Multiple bounce recipients')
+    if self.mailfrom != '<>':
+      self.log("REJECT: bogus DSN")
+      self.setreply('550','5.7.1',
+	"I do not accept mail from postmaster, mailer-daemon, or clamav.",
+	"All such mail has turned out to be Delivery Status Notifications",
+	"which failed to be marked as such.  Please send a real DSN if",
+	"you need to.  Use another MAIL FROM if you need to send me mail."
+      )
     else:
       self.log('REJECT: bounce with no SRS encoding')
       self.setreply('550','5.7.1',
-      "I did not send you that message. Please consider implementing SPF",
-      "(http://spf.pobox.com) to avoid bouncing mail to spoofed senders.",
-      "Thank you."
+	"I did not send you that message. Please consider implementing SPF",
+	"(http://openspf.com) to avoid bouncing mail to spoofed senders.",
+	"Thank you."
       )
     return Milter.REJECT
     
@@ -1018,18 +1045,24 @@ class bmsMilter(Milter.Milter):
     self.fp.write("\n")				# terminate headers
     self.fp.seek(0)
     # log when neither sender nor from domains matches mail from domain
-    mf_domain = self.canon_from.split('@')[-1]
-    msg = rfc822.Message(self.fp)
-    for rn,hf in msg.getaddrlist('from')+msg.getaddrlist('sender'):
-      t = parse_addr(hf)
-      if len(t) == 2 and t[1].lower() == mf_domain:
-        break
-    else:
-      self.log("NOTE: MFROM domain doesn't match From or Sender");
-      for f in msg.getallmatchingheaders('from') \
-      	+ msg.getallmatchingheaders('sender'):
-	self.log(f)
-    del msg
+    if self.mailfrom != '<>':
+      mf_domain = self.canon_from.split('@')[-1]
+      msg = rfc822.Message(self.fp)
+      for rn,hf in msg.getaddrlist('from')+msg.getaddrlist('sender'):
+	t = parse_addr(hf)
+	if len(t) == 2 and t[1].lower() == mf_domain:
+	  break
+      else:
+	for f in msg.getallmatchingheaders('from'):
+	  self.log(f)
+	sender = msg.getallmatchingheaders('sender')
+	if sender:
+	  for f in sender:
+	    self.log(f)
+	else:
+	  self.log("NOTE: Supplying MFROM as Sender");
+	  self.add_header('Sender',self.mailfrom)
+      del msg
     # copy headers to a temp file for scanning the body
     self.fp.seek(0)
     headers = self.fp.getvalue()
