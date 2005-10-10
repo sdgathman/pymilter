@@ -1,0 +1,34 @@
+Subject: SPF %(result)s (POSSIBLE FORGERY)
+
+This is an automatically generated Delivery Status Notification.
+
+THIS IS A WARNING MESSAGE ONLY.
+
+YOU DO *NOT* NEED TO RESEND YOUR MESSAGE.
+
+Delivery to the following recipients has been delayed.
+
+       %(rcpt)s
+
+Subject: %(subject)s
+Received-SPF: %(spf_result)s
+
+Your sender policy (or lack thereof) indicated that the above email was not
+sent via an authorized SMTP server, but may still be legitimate.  Since there
+is no positive confirmation that the message is really from you, we have
+to give it extra scrutiny - including verifying that the sender really
+exists by sending you this DSN.  We will remember this sender and not
+bother you again for while.  You can avoid this message entirely for
+legitimate mail by using an authorized SMTP server.  Contact your mail
+administrator and ask how to configure your email client to use an
+authorized server.  
+
+If you never sent the above message, then your domain has been forged.
+Your mail admin needs to publish a strict SPF record so that I can reject
+those forgeries instead of bugging you about them.
+
+If you need further assistance, please do not hesitate to contact me.
+
+Kind regards,
+
+postmaster@%(receiver)s

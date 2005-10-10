@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.26  2005/10/07 03:23:40  customdesigned
+# Banned users option.  Experimental feature to supply Sender when
+# missing and MFROM domain doesn't match From.  Log cipher bits for
+# SMTP AUTH.  Sketch access file feature.
+#
 # Revision 1.25  2005/09/08 03:55:08  customdesigned
 # Handle perverse MFROM quoting.
 #
@@ -269,6 +274,7 @@ import traceback
 import ConfigParser
 import time
 import re
+import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
 
@@ -336,6 +342,8 @@ spf_accept_softfail = ()
 spf_accept_fail = ()
 spf_best_guess = False
 spf_reject_noptr = False
+supply_sender = False
+access_file = None
 time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
@@ -412,6 +420,7 @@ def read_config(list):
     'hashlength': '8',
     'reject_spoofed': 'no',
     'reject_noptr': 'no',
+    'supply_sender': 'no',
     'best_guess': 'no',
     'dspam_internal': 'yes'
   })
@@ -487,7 +496,7 @@ def read_config(list):
 
   # spf section
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
-  global spf_accept_softfail,spf_accept_fail
+  global spf_accept_softfail,spf_accept_fail,supply_sender,access_file
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
@@ -495,6 +504,8 @@ def read_config(list):
     spf_accept_fail = cp.getlist('spf','accept_fail')
     spf_best_guess = cp.getboolean('spf','best_guess')
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
+    supply_sender = cp.getboolean('spf','supply_sender')
+    access_file = cp.getdefault('spf','access_file')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
@@ -564,6 +575,76 @@ def parse_header(val):
   except LookupError: pass
   except email.Errors.HeaderParseError: pass
   return val
+
+class SPFPolicy(object):
+  "Get SPF policy by result, defaulting to classic policy from pymilter.cfg"
+  def __init__(self,domain):
+    self.domain = domain.lower()
+    if access_file:
+      try: acf = anydbm.open(access_file,'r')
+      except: acf = None
+    else: acf = None
+    self.acf = acf
+
+  def getPolicy(self,pfx):
+    acf = self.acf
+    if not acf: return None
+    try:
+      return acf[pfx + self.domain]
+    except KeyError:
+      try:
+	return acf[pfx]
+      except KeyError:
+        return None
+
+  def getFailPolicy(self):
+    policy = self.getPolicy('SPF-Fail:')
+    if not policy:
+      if self.domain in spf_accept_fail:
+        policy = 'CBV'
+      else:
+	policy = 'REJECT'
+    return policy
+
+  def getNonePolicy(self):
+    policy = self.getPolicy('SPF-None:')
+    if not policy:
+      if spf_reject_noptr:
+	policy = 'REJECT'
+      else:
+        policy = 'CBV'
+    return policy
+
+  def getSoftfailPolicy(self):
+    policy = self.getPolicy('SPF-Softfail:')
+    if not policy:
+      if self.domain in spf_accept_softfail:
+        policy = 'OK'
+      elif self.domain in spf_reject_neutral:
+        policy = 'REJECT'
+      else:
+        policy = 'CBV'
+    return policy
+
+  def getNeutralPolicy(self):
+    policy = self.getPolicy('SPF-Neutral:')
+    if not policy:
+      if self.domain in spf_reject_neutral:
+        policy = 'REJECT'
+      policy = 'OK'
+    return policy
+
+  def getPermErrorPolicy(self):
+    policy = self.getPolicy('SPF-PermError:')
+    if not policy:
+      policy = 'REJECT'
+    return policy
+
+  def getPassPolicy(self):
+    policy = self.getPolicy('SPF-Pass:')
+    if not policy:
+      policy = 'OK'
+    return policy
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -776,13 +857,14 @@ class bmsMilter(Milter.Milter):
       'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
     res,code,txt = q.check()
     q.result = res
-    if res == 'unknown' and q.perm_error and q.perm_error.ext:
+    if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
       self.cbv_needed = q	# report SPF syntax error to sender
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
-    if res in ('none','softfail','deny','fail'):
+    p = SPFPolicy(q.o)
+    if res in ('none','softfail','deny','fail','neutral'):
       if self.mailfrom != '<>':
-	# check hello name via spf
+	# check hello name via spf unless spf pass
 	h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
 	hres,hcode,htxt = h.check()
 	if hres in ('deny','fail','neutral','softfail'):
@@ -798,6 +880,7 @@ class bmsMilter(Milter.Milter):
 	  and not dynip(self.hello_name,self.connectip):
 	  hres,hcode,htxt = h.best_guess()
       else: hres = res
+      ores = res
       if spf_best_guess and res == 'none':
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
@@ -809,62 +892,82 @@ class bmsMilter(Milter.Milter):
 	else:
 	  res,code,txt = q.best_guess()
 	receiver += ': guessing'
-        if q.perm_error:
+        if q.perm_error:	# FIXME: should never happen?
           res,code,txt = q.perm_error.ext	# extended result
 	  txt = 'EXT: ' + txt
-      if self.missing_ptr and res in ('neutral', 'none') and hres != 'pass':
-	if spf_reject_noptr:
+      if self.missing_ptr and ores == 'none' and res != 'pass' \
+      		and hres != 'pass':
+	policy = p.getNonePolicy()
+	if policy == 'CBV':
+	  if self.mailfrom != '<>':
+	    q.result = ores
+	    self.cbv_needed = q	# accept, but inform sender via DSN
+	elif policy != 'OK':
 	  self.log('REJECT: no PTR, HELO or SPF')
 	  self.setreply('550','5.7.1',
-    'You must have a reverse lookup or publish SPF: http://spf.pobox.com',
-    'Contact your mail administrator IMMEDIATELY!  Your mail server is',
-    'severely misconfigured.  It has no PTR record (dynamic PTR records',
+    "You must have a reverse lookup or publish SPF: http://spf.pobox.com",
+    "Contact your mail administrator IMMEDIATELY!  Your mail server is",
+    "severely misconfigured.  It has no PTR record (dynamic PTR records",
     "that contain your IP don't count), an invalid HELO, and no SPF record."
 	  )
 	  return Milter.REJECT
-        if self.mailfrom != '<>':
-	  self.cbv_needed = q
     if res in ('deny', 'fail'):
-      if hres == 'pass' and q.o in spf_accept_fail:
-	self.cbv_needed = q
-      else:
+      policy = p.getFailPolicy()
+      if hres == 'pass' and policy == 'CBV':
+	if self.mailfrom != '<>':
+	  self.cbv_needed = q
+      elif policy != 'OK':
 	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
 	self.setreply(str(code),'5.7.1',txt)
 	# A proper SPF fail error message would read:
 	# forger.biz [1.2.3.4] is not allowed to send mail with the domain
 	# "forged.org" in the sender address.  Contact <postmaster@forged.org>.
 	return Milter.REJECT
-    if res == 'softfail' and not q.o in spf_accept_softfail:
-      if self.missing_ptr and hres != 'pass':
-        if spf_reject_noptr or q.o in spf_reject_neutral:
-	  self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-	  self.setreply('550','5.7.1',
-	    'SPF softfail: If you get this Delivery Status Notice, your email',
-	    'was probably legitimate.  Your administrator has published SPF',
-	    'records in a testing mode.  The SPF record reported your email as',
-	    'a forgery, which is a mistake if you are reading this.  Please',
-	    'notify your administrator of the problem immediately.'
-	  )
-	  return Milter.REJECT
-      if self.mailfrom != '<>':
-	self.cbv_needed = q
+    if res == 'softfail':
+      policy = p.getSoftfailPolicy()
+      if policy == 'CBV' and hres == 'pass':
+	if self.mailfrom != '<>':
+	  self.cbv_needed = q
+      elif policy != 'OK':
+	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+	self.setreply('550','5.7.1',
+	  'SPF softfail: If you get this Delivery Status Notice, your email',
+	  'was probably legitimate.  Your administrator has published SPF',
+	  'records in a testing mode.  The SPF record reported your email as',
+	  'a forgery, which is a mistake if you are reading this.  Please',
+	  'notify your administrator of the problem immediately.'
+	)
+	return Milter.REJECT
     if res == 'neutral' and q.o in spf_reject_neutral:
-      self.log('REJECT: SPF neutral for',q.s)
-      self.setreply('550','5.7.1',
-	'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o,
-	'The %s domain is one that spammers love to forge.  Due to' % q.o,
-	'the volume of forged mail, we can only accept mail that',
-	'the SPF record for %s explicitly designates as legitimate.' % q.o,
-	'Sending your email through the recommended outgoing SMTP',
-	'servers for %s should accomplish this.' % q.o
-      )
-      return Milter.REJECT
-    if res == 'unknown':
-      self.log('REJECT: SPF %s %i %s' % (res,code,txt))
-      # latest SPF draft recommends 5.5.2 instead of 5.7.1
-      self.setreply(str(code),'5.5.2',txt)
-      return Milter.REJECT
-    if res == 'error':
+      policy = p.getNeutralPolicy()
+      if policy == 'CBV' and hres == 'pass':
+	if self.mailfrom != '<>':
+	  self.cbv_needed = q
+      elif policy != 'OK':
+	self.log('REJECT: SPF neutral for',q.s)
+	self.setreply('550','5.7.1',
+	  'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o,
+	  'The %s domain is one that spammers love to forge.  Due to' % q.o,
+	  'the volume of forged mail, we can only accept mail that',
+	  'the SPF record for %s explicitly designates as legitimate.' % q.o,
+	  'Sending your email through the recommended outgoing SMTP',
+	  'servers for %s should accomplish this.' % q.o
+	)
+	return Milter.REJECT
+    if res in ('unknown','permerror'):
+      policy = p.getPermErrorPolicy()
+      if policy == 'CBV' and hres == 'pass':
+	if self.mailfrom != '<>':
+	  self.cbv_needed = q
+      elif policy != 'OK':
+	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+	# latest SPF draft recommends 5.5.2 instead of 5.7.1
+	self.setreply(str(code),'5.5.2',txt,
+	  'There is a fatal syntax error in the SPF record for %s' % q.o,
+	  'We cannot accept mail from %s until this is corrected.' % q.o
+	)
+	return Milter.REJECT
+    if res in ('error','temperror'):
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
@@ -1043,10 +1146,10 @@ class bmsMilter(Milter.Milter):
     for name,val in self.new_headers:
       self.fp.write("%s: %s\n" % (name,val))	# add new headers to buffer
     self.fp.write("\n")				# terminate headers
-    self.fp.seek(0)
     # log when neither sender nor from domains matches mail from domain
-    if self.mailfrom != '<>':
+    if supply_sender and self.mailfrom != '<>':
       mf_domain = self.canon_from.split('@')[-1]
+      self.fp.seek(0)
       msg = rfc822.Message(self.fp)
       for rn,hf in msg.getaddrlist('from')+msg.getaddrlist('sender'):
 	t = parse_addr(hf)
@@ -1321,8 +1424,10 @@ class bmsMilter(Milter.Milter):
       q = self.cbv_needed
       if q.result in ('softfail','fail','deny'):
 	template_name = 'softfail.txt'
-      elif q.result == 'unknown':
+      elif q.result in ('unknown','permerror'):
 	template_name = 'permerror.txt'
+      elif q.result == 'neutral':
+        template_name = 'neutral.txt'
       else:
 	template_name = 'strike3.txt'
       rc = self.send_dsn(q,msg,template_name)
