@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.27  2005/10/10 20:15:33  customdesigned
+# Configure SPF policy via sendmail access file.
+#
 # Revision 1.26  2005/10/07 03:23:40  customdesigned
 # Banned users option.  Experimental feature to supply Sender when
 # missing and MFROM domain doesn't match From.  Log cipher bits for
@@ -295,8 +298,7 @@ try: import spf
 except: spf = None
 
 ip4re = re.compile(r'^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$')
-#import syslog
-#syslog.openlog('milter')
+import logging
 
 # Thanks to Chris Liechti for config parsing suggestions
 
@@ -347,6 +349,14 @@ access_file = None
 time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
 cbv_cache = {}
+logging.basicConfig(
+	stream=sys.stdout,
+	level=logging.INFO,
+	format='%(asctime)s %(message)s',
+	datefmt='%Y%b%d %H:%M:%S'
+)
+milter_log = logging.getLogger('milter')
+
 try:
   too_old = time.time() - 7*24*60*60	# 7 days
   for ln in open('send_dsn.log'):
@@ -474,7 +484,7 @@ def read_config(list):
   for sa in cp.getlist('wiretap','smart_alias'):
     sm = cp.getlist('wiretap',sa)
     if len(sm) < 2:
-      print 'malformed smart alias:',sa
+      milter_log.warning('malformed smart alias: %s',sa)
       continue
     if len(sm) == 2: sm.append(sa)
     key = (sm[0],sm[1])
@@ -652,9 +662,7 @@ class bmsMilter(Milter.Milter):
      and smart alias redirection."""
 
   def log(self,*msg):
-    print "%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S'),self.id),
-    for i in msg: print i,
-    print
+    milter_log.info('[%d] %s',self.id,' '.join([str(m) for m in msg]))
 
   def __init__(self):
     self.tempname = None
@@ -1313,7 +1321,7 @@ class bmsMilter(Milter.Milter):
 	      modified = True
 	  except Exception,x:
 	    self.log("check_spam:",x)
-	    traceback.print_exc()
+	    milter_log.error("check_spam: %s",x,exc_info=True)
     # screen if no recipients are dspam_users
     if not modified and dspam_screener and not self.internal_connection \
     	and self.dspam:
@@ -1373,7 +1381,7 @@ class bmsMilter(Milter.Milter):
         if not exc_value.strerror:
 	  exc_value.strerror = exc_value.args[0]
 	if exc_value.strerror == 'Lock failed':
-	  self.log("LOCK: BUSY")	# log filename
+	  milter_log.warn("LOCK: BUSY")	# log filename
 	  self.setreply('450','4.2.0',
 		'Too busy discarding spam.  Please try again later.')
 	  return Milter.TEMPFAIL
@@ -1381,7 +1389,7 @@ class bmsMilter(Milter.Milter):
       os.rename(self.tempname,fname)
       self.tempname = None
       if exc_type == email.Errors.BoundaryError:
-	self.log("MALFORMED: %s" % fname)	# log filename
+	milter_log.warn("MALFORMED: %s",fname)	# log filename
         if self.internal_connection:
 	  # accept anyway for now
 	  return Milter.ACCEPT
@@ -1389,12 +1397,12 @@ class bmsMilter(Milter.Milter):
 		'Boundary error in your message, are you a spammer?')
         return Milter.REJECT
       if exc_type == email.Errors.HeaderParseError:
-	self.log("MALFORMED: %s" % fname)	# log filename
+	milter_log.warn("MALFORMED: %s",fname)	# log filename
 	self.setreply('554','5.7.7',
 		'Header parse error in your message, are you a spammer?')
         return Milter.REJECT
+      milter_log.error("FAIL: %s",fname)	# log filename
       # let default exception handler print traceback and return 451 code
-      self.log("FAIL: %s" % fname)	# log filename
       raise
     if rc == Milter.REJECT: return rc;
     if rc == Milter.DISCARD: return rc;
@@ -1499,12 +1507,11 @@ class bmsMilter(Milter.Milter):
     return Milter.CONTINUE
 
   def close(self):
-    sys.stdout.flush()		# make log messages visible
     if self.tempname:
       os.remove(self.tempname)	# remove in case session aborted
     if self.fp:
       self.fp.close()
-    sys.stdout.flush()
+    
     return Milter.CONTINUE
 
   def abort(self):
@@ -1519,10 +1526,10 @@ def main():
   if srs or len(discard_users) > 0 or smart_alias or dspam_userdir:
     flags = flags + Milter.DELRCPT
   Milter.set_flags(flags)
-  print "%s bms milter startup" % time.strftime('%Y%b%d %H:%M:%S')
+  milter_log.info("bms milter startup")
   sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,timeout)
-  print "%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
+  milter_log.info("bms milter shutdown")
 
 if __name__ == "__main__":
   read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
