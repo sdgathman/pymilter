@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.28  2005/10/10 23:50:20  customdesigned
+# Use logging module to make logging threadsafe (avoid splitting log lines)
+#
 # Revision 1.27  2005/10/10 20:15:33  customdesigned
 # Configure SPF policy via sendmail access file.
 #
@@ -870,7 +873,7 @@ class bmsMilter(Milter.Milter):
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.o)
-    if res in ('none','softfail','deny','fail','neutral'):
+    if res not in ('pass','error','temperror'):
       if self.mailfrom != '<>':
 	# check hello name via spf unless spf pass
 	h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
