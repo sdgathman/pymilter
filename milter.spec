@@ -63,7 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
-cp bms.py strike3.txt softfail.txt $RPM_BUILD_ROOT/var/log/milter
+cp bms.py *.txt $RPM_BUILD_ROOT/var/log/milter
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 
 # logfile rotation

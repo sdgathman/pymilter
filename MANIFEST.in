@@ -1,6 +1,7 @@
 include COPYING
 include TODO
 include NEWS
+include HOWTO
 include CREDITS
 include README
 include MANIFEST.in
