@@ -121,10 +121,9 @@ SoftFail:	softfail.txt
 Neutral:	neutral.txt
 PermError:	permerror.txt
 None:		strike3.txt
-Pass:		strike3.txt
 
-The pass template doesn't make any sense - I assumed that CBV would 
-never be used with a Pass result.
+An SPF-Pass is always accepted by the milter.  Domains can be blacklisted 
+via sendmail in the access file or via a RHS DNS blacklist.
 
 	To be continued.
 

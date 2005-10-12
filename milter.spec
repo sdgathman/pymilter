@@ -1,6 +1,6 @@
 %define name milter
-%define version 0.8.2
-%define release 4.RH7
+%define version 0.8.3
+%define release 1.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -31,7 +31,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
-Patch: %{name}-%{version}.patch
+#Patch: %{name}-%{version}.patch
 Copyright: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -52,7 +52,7 @@ modules provide for navigating and modifying MIME parts.
 
 %prep
 %setup
-%patch -p1
+#%patch -p1
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{python} setup.py build
