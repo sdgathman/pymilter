@@ -1,0 +1,237 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<title>Python Milter Mail Policy </title>
+</head><body>
+
+<h1> Python Milter Mail Policy </h1>
+
+<h3> Classify connection </h3>
+
+When the SMTP client connects, the connection IP address is
+saved for later verification, and the connection
+is classified as INTERNAL or EXTERNAL by matching the ip
+address against the <code>internal_connect</code> configuration.
+IP addresses with no PTR, and PTR names that look like
+the kind assigned to dynamic IPs (as determined by a heuristic
+algorithm) are flagged as DYNAMIC.  IPs that match the
+<code>trusted_relay</code> configuration are flagged as TRUSTED.
+<p>
+Examples from the log file (<i>not</i> the SMTP error message returned):
+<pre>
+2005Jul29 13:56:53 [71207] connect from p50863492.dip0.t-ipconnect.de at ('80.134.52.146', 1858) EXTERNAL DYN
+2005Jul29 18:10:15 [74511] connect from foopub at ('1.2.3.4', 46513) EXTERNAL TRUSTED
+2005Jul29 14:41:00 [71805] connect from foobar at ('192.168.0.1', 41205) INTERNAL
+2005Jul29 14:41:15 [71806] connect from cncln.online.ln.cn at ('218.25.240.137', 35992) EXTERNAL
+</pre>
+<p>
+Certain obviously evil PTR names are blocked at this point:
+"localhost" (when IP is not 127.*) and ".".
+<pre>
+2005Jul29 14:49:50 [71918] connect from localhost at ('221.132.0.6', 50507) EXTERNAL
+2005Jul29 14:49:50 [71918] REJECT: PTR is localhost
+</pre>
+
+<h3> HELO Check </h3>
+
+The HELO name provided by the client is saved for later verification
+(for example by SPF).  We could validate the HELO at this point
+by verifying that an A record for the HELO name matches the connect ip.
+However, currently we only block certain obvious problems.  
+HELO names that look like an IP4 address 
+and ones that match the <code>hello_blacklist</code> configuration
+are immediately rejected.  The hello_blacklist typically contains
+the current MTAs own HELO name or email domains.
+Clients that attempt to skip HELO are immediately rejected.
+<pre>
+2005Jul29 18:10:15 [74512] hello from example.com
+2005Jul29 18:10:15 [74512] REJECT: spam from self: example.com
+2005Jul29 18:17:09 [74581] hello from 80.191.244.69
+2005Jul29 18:17:09 [74581] REJECT: numeric hello name: 80.191.244.69
+</pre>
+
+<h3> MAIL FROM Check </h3>
+
+Before calling our milter, sendmail checks a DNS blacklist to 
+block banned sender domains.  We never see a blocked domain.
+<p>
+The MAIL FROM address is saved for possible use by the smart-alias
+feature.  First, the <code>internal_domains</code> is used for
+a simple screening if defined.  If the MAIL FROM for an INTERNAL connection 
+is NOT in <code>internal_domains</code>, then it is rejected (the
+PC is most likely infected and attempting to send out spam).
+If the MAIL FROM for an EXTERNAL connection IS in
+<code>internal_domains</code>, then the message is immediately rejected.
+This is quick and effective for most small company MTAs.  For more
+complex mail networks, it is too simplistic, and should not be defined.
+SPF will handle the complex cases.
+
+<h4> wiretap </h4>
+
+The wiretap feature can screen and/or monitor mail to/from certain
+users.  If the MAIL FROM is being wiretapped, the recipients are
+altered accordingly.
+
+<h4> SPF check </h4>
+
+Finally, the MAIL FROM, connect IP, and HELO name are checked against
+any SPF records published via DNS for the alleged sender (MAIL FROM).
+If there is no SPF record, we check for a local substitute under the
+domain defined in the <code>[spf]delegate</code> configuration.
+Further checks depend on the result.
+
+<table border=1>
+<tr><th>NONE</th><td>
+If there is no SPF record (official or delegated), then we 
+initiate a "three strikes and your out" regime, which looks for
+<b>some</b> form of validated identification.
+<ol>
+<li>We try a "best guess" SPF record of "v=spf1 a/24 mx/24 ptr".  If this
+    passes, good.  
+<li> We try to validate the HELO name. First check for an SPF record.
+   Otherwise, check whether the connect IP matches any A record for
+   the HELO name, or any A record for any MX name for the HELO name,
+   or is at least in the same /24 subnet as any of the above.
+   (In other words, a HELO SPF "best guess" of "v=spf1 a/24 mx/24".)
+   If so, good.  We consider the HELO validated.  If the HELO SPF
+   check fails, we reject the email.
+</ol>
+<pre>
+2005Jul30 19:45:16 [93991] connect from [221.200.41.54] at ('221.200.41.54', 3581) EXTERNAL DYN
+2005Jul30 19:45:18 [93991] hello from adelphia.net
+2005Jul30 19:45:19 [93991] mail from <wendy.stubbsua@link-it.com> ()
+2005Jul30 19:45:19 [93991] REJECT: hello SPF: fail 550 access denied
+</pre>
+<ol>
+<li> If there is a validated PTR name, and it doesn't look
+   like a dynamic name, good.  We consider the connection validated.
+</ol>
+If any of the above can be validated, we continue on.
+If none of the above can be validated, and the <code>[SPF]reject_noptr</code>
+option is true, we reject the message immediately with the explanation
+that we need some form of valid identification before we accept an email.
+If <code>[SPF]reject_noptr</code> is false, we flag the message as
+needing Call Back Validation.  
+The Call Back Valildation sends a DSN to the purported sender informing
+them of the lack of identification.  If the message is legitimate, the
+sender needs to know that their email setup is broken and should be corrected.
+If the message is forged, the sender is informed of the forgery, 
+and their need to publish an SPF record or at least use a valid HELO name.
+If the purported sender does not accept the DSN,
+then the message is rejected.  The CBV status is cached to avoid
+annoying the purported sender with too many DSNs.  Currently, the DSN
+is repeated to the same sender once per month.
+<p>
+In this example, although 3com.com has no SPF record, we assume that 
+any legitimate mail from them will at least have a valid HELO or PTR.
+<pre>
+2005Jul30 23:52:03 [96777] connect from [222.252.233.200] at ('222.252.233.200', 29934) EXTERNAL DYN
+2005Jul30 23:52:03 [96777] hello from 3mail.3com.com
+2005Jul30 23:52:04 [96777] mail from <etec_nic_family@3mail.3com.com> ()
+2005Jul30 23:52:04 [96777] REJECT: no PTR, HELO or SPF
+</pre>
+</td></tr>
+
+<tr><th>PASS</th><td>
+A pass result normally lets the email continue on, but the domain is 
+tracked for reputation (and may be blocked), and may skip content scanning if
+it matches a whitelist.
+<pre>
+2005Jul24 17:44:26 [2104] mail from <gnucash-devel-bounces@gnucash.org> ('SIZE=4410',)
+2005Jul24 17:44:26 [2104] Received-SPF: pass (mail.bmsi.com: domain of gnucash.org
+	designates 204.107.200.65 as permitted sender)
+	client-ip=204.107.200.65; envelope-from=gnucash-devel-bounces@gnucash.org; helo=cvs.gnucash.org;
+</pre>
+</td></tr>
+
+<tr><th>NEUTRAL</th><td>
+A neutral result normally lets the email continue on, but the domain is not
+tracked for reputation or matched against any whitelists. 
+Highly forged domains listed in <code>[SPF]reject_neutral</code> are
+rejected.
+<pre>
+2005Jul24 17:41:37 [2070] connect from cp500627-a.dbsch1.nb.home.nl at ('84.27.225.3', 3465) EXTERNAL
+2005Jul24 17:41:37 [2070] hello from cp500627-a.dbsch1.nb.home.nl
+2005Jul24 17:41:38 [2070] mail from <nwarjejkw@yahoo.com> ()
+2005Jul24 17:41:38 [2070] REJECT: SPF neutral for nwarjejkw@yahoo.com
+</pre>
+</td></tr>
+
+<tr><th>SOFTFAIL</th><td>
+A softfail result normally lets the email continue on, but the domain is not
+tracked for reputation or matched against any whitelists.  Furthermore,
+the message is flagged as needing Call Back Validation,
+and the highly forged domains listed in <code>[SPF]reject_neutral</code> are
+rejected as well.  
+<p>
+At present, we also require a valid HELO or PTR to avoid rejecting 
+a softfail.  But this should probably change to only require a
+successful CBV.
+<p>
+The Call Back Valildation sends a DSN to the purported sender informing
+them of the softfail.  If the message is legitimate, the sender needs
+to know about the softfail so that their email setup can be corrected.
+If the message is forged, the sender is informed of the forgery, confirming
+that SPF is protecting their reputation and encouraging a rapid transition
+to a strict policy.  If the purported sender does not accept the DSN,
+then the message is rejected.  The CBV status is cached to avoid
+annoying the purported sender with too many DSNs.  Currently, the DSN
+is repeated to the same sender once per month.
+<pre>
+2005Jul24 15:41:33 [801] mail from <Aitp@horafeliz.com> ()
+2005Jul24 15:41:33 [801] Received-SPF: softfail (mail.bmsi.com: transitioning domain of horafeliz.com
+	does not designate 221.184.83.185 as permitted sender)
+	client-ip=221.184.83.185; envelope-from=Aitp@horafeliz.com;
+	helo=p8185-ipad30funabasi.chiba.ocn.ne.jp;
+2005Jul24 15:41:33 [801] rcpt to <david@example.com> ()
+2005Jul24 15:41:35 [801] Subject: Microsoft, Adobe, Macromedia, Corel software. Up to 80% discount.
+2005Jul24 15:41:35 [801] X-Mailer: Microsoft Outlook, Build 10.0.2605
+2005Jul24 15:41:35 [801] CBV: Aitp@horafeliz.com
+2005Jul24 15:41:38 [801] REJECT: CBV: 550 <Aitp@horafeliz.com>: User unknown
+</pre>
+</td></tr>
+
+<tr><th>FAIL</th><td>
+The message is rejected with a reference the SPF why page.
+<pre>
+2005Jul30 19:53:27 [94070] connect from [212.70.52.16] at ('212.70.52.16', 3192) EXTERNAL DYN
+2005Jul30 19:53:27 [94070] hello from winzip.com
+2005Jul30 19:53:27 [94070] mail from <dan@winzip.com> ()
+2005Jul30 19:53:27 [94070] REJECT: SPF fail 550 SPF fail:
+	see http://openspf.com/why.html?sender=dan@winzip.com&ip=212.70.52.16
+</pre>
+</td></tr>
+
+<tr><th>PERMERROR</th><td>
+Permanent errors were called "unknown", and are still show that way
+in the log.  The message is rejected.  Previously, we enabled "lax" parsing
+of the SPF record, but rejecting is better because it informs the
+sender about their problem.  The next milter version will 
+look for a local substitute SPF record (as for a missing SPF record)
+before rejecting.  This will inform the sender of their problem, but
+also let the receiver install a temporary workaround.
+<pre>
+2005Jul24 18:05:37 [2312] mail from <b-mihdbcgaacaa-becibijh-000-@msg.euxiphipops.com> () 
+2005Jul24 18:05:37 [2312] REJECT: SPF unknown 550 SPF Permanent Error:
+	include mechanism missing domain: include
+</pre>
+The SPF record for msg.euxiphipops.com looked like this at the time of the
+above error:
+<pre>
+msg.euxiphipops.com	TXT "v=spf1 mx ptr a include"
+</pre>
+</td></tr>
+
+<tr><th>TEMPERROR</th><td>
+Temporary errors result in a 451 "Try again later" response.  The sender
+should retry the message at a later time.
+<pre>
+2005Jul24 07:33:13 [29846] mail from <quickenloans@rate.quicken.com> ('SIZE=73775', 'BODY=8BITMIME')
+2005Jul24 07:33:43 [29846] TEMPFAIL: SPF error 450 SPF Temporary Error: DNS Timeout
+</pre>
+</td></tr>
+
+</table>
+
+</body>
+</html>

@@ -146,7 +146,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README NEWS TODO CREDITS sample.py
+%doc README HOWTO NEWS TODO CREDITS sample.py
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %ifos aix4.1
@@ -174,6 +174,9 @@ rm -rf $RPM_BUILD_ROOT
 - Consider SMTP AUTH connections internal.
 - Send DSN for SPF errors corrected by extended processing.
 - Send DSN before SCREENED mail is quarantined
+- Option to set SPF policy via sendmail access map.
+- Option to supply Sender header from MAIL FROM when missing.
+- Use logging package to keep log lines atomic.
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-4
 - Limit each CNAME chain independently like PTR and MX
 * Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.2-3

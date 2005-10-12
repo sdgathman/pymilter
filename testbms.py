@@ -300,4 +300,5 @@ if __name__ == '__main__':
       fp = milter._body
       sys.stdout.write(fp.getvalue())
   else:
-    unittest.main()
+    #unittest.main()
+    unittest.TextTestRunner().run(suite())

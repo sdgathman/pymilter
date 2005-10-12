@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.29  2005/10/11 22:50:07  customdesigned
+# Always check HELO except for SPF pass, temperror.
+#
 # Revision 1.28  2005/10/10 23:50:20  customdesigned
 # Use logging module to make logging threadsafe (avoid splitting log lines)
 #
@@ -551,9 +554,9 @@ def parse_addr(t):
   >>> parse_addr('user@example.com')
   ['user', 'example.com']
   >>> parse_addr('"user@example.com"')
-  ['"user@example.com"']
+  ['user@example.com']
   >>> parse_addr('"user@bar"@example.com')
-  ['"user@bar"','example.com']
+  ['user@bar', 'example.com']
   >>> parse_addr('foo')
   ['foo']
   """

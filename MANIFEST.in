@@ -24,3 +24,4 @@ include milter.rc7
 include milter.cfg
 include rhsbl.m4
 include *.txt
+include *.html
