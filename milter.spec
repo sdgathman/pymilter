@@ -162,6 +162,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /var/log/milter/bms.py
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
+%config(noreplace) /var/log/milter/neutral.txt
 %config(noreplace) /var/log/milter/quarantine.txt
 %config(noreplace) /var/log/milter/permerror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
