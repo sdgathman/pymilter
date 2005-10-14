@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.30  2005/10/12 16:36:30  customdesigned
+# Release 0.8.3
+#
 # Revision 1.29  2005/10/11 22:50:07  customdesigned
 # Always check HELO except for SPF pass, temperror.
 #
@@ -352,9 +355,8 @@ spf_best_guess = False
 spf_reject_noptr = False
 supply_sender = False
 access_file = None
-time_format = '%Y%b%d %H:%M:%S %Z'
 timeout = 600
-cbv_cache = {}
+
 logging.basicConfig(
 	stream=sys.stdout,
 	level=logging.INFO,
@@ -362,19 +364,6 @@ logging.basicConfig(
 	datefmt='%Y%b%d %H:%M:%S'
 )
 milter_log = logging.getLogger('milter')
-
-try:
-  too_old = time.time() - 7*24*60*60	# 7 days
-  for ln in open('send_dsn.log'):
-    try:
-      rcpt,ts = ln.strip().split(None,1)
-      l = time.strptime(ts,time_format)
-      t = time.mktime(l)
-      if t > too_old:
-	cbv_cache[rcpt] = None
-    except:
-      cbv_cache[ln.strip()] = None
-except IOError: pass
 
 class MilterConfigParser(ConfigParser.ConfigParser):
 
@@ -661,6 +650,47 @@ class SPFPolicy(object):
     if not policy:
       policy = 'OK'
     return policy
+
+class AddrCache(object):
+  time_format = '%Y%b%d %H:%M:%S %Z'
+
+  def load(self,fname,age=7):
+    self.fname = fname
+    cache = {}
+    self.cache = cache
+    try:
+      too_old = time.time() - age*24*60*60	# max age in days
+      for ln in open(self.fname):
+	try:
+	  rcpt,ts = ln.strip().split(None,1)
+	  l = time.strptime(ts,AddrCache.time_format)
+	  t = time.mktime(l)
+	  if t > too_old:
+	    cache[rcpt] = None
+	except:
+	  cache[ln.strip()] = None
+    except IOError: pass
+
+  def has_key(self,sender):
+    return self.cache.has_key(sender)
+
+  def __getitem__(self,sender):
+    return self.cache[sender]
+
+  def __setitem__(self,sender,res):
+    cached = sender in self.cache
+    self.cache[sender] = res
+    if not cached and not res:
+      s = time.strftime(AddrCache.time_format,time.localtime())
+      print >>open(self.fname,'a'),sender,s # log who we sent DSNs to
+
+  def __len__(self):
+    return len(self.cache)
+
+cbv_cache = AddrCache()
+cbv_cache.load('send_dsn.log',age=7)
+auto_whitelist = AddrCache()
+auto_whitelist.load('auto_whitelist.log',age=30)
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -987,6 +1017,9 @@ class bmsMilter(Milter.Milter):
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(res,receiver))
     self.spf = q
+    if self.dspam and not self.internal_connection and res == 'pass':
+      if auto_whitelist.has_key(self.canon_from):
+	self.dspam = False
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
@@ -998,8 +1031,9 @@ class bmsMilter(Milter.Milter):
       self.log('DISCARD: RCPT TO:',to,str)
       return Milter.DISCARD
     self.log("rcpt to",to,str)
-    t = parse_addr(to.lower())
+    t = parse_addr(to)
     if len(t) == 2:
+      t[1] = t[1].lower()
       user,domain = t
       if self.is_bounce and srs and domain in srs_domain:
 	oldaddr = '@'.join(parse_addr(to))
@@ -1027,7 +1061,8 @@ class bmsMilter(Milter.Milter):
 	    self.data_allowed = not srs_reject_spoofed
 
       # non DSN mail to SRS address will bounce due to invalid local part
-      self.recipients.append('@'.join(t))
+      canon_to = '@'.join(t)
+      self.recipients.append(canon_to)
       users = check_user.get(domain)
       if self.discard:
         self.del_recipient(to)
@@ -1043,6 +1078,14 @@ class bmsMilter(Milter.Milter):
         self.hidepath = True
       if not domain in dspam_reject:
         self.reject_spam = False
+      if self.internal_connection:
+	if internal_domains:
+	  for pat in internal_domains:
+	    if fnmatchcase(domain,pat): break
+	  else:
+	    auto_whitelist[canon_to] = None
+	else:
+	  auto_whitelist[canon_to] = None
     self.smart_alias(to)
     #rcpt = self.getsymval("{rcpt_addr}")
     #self.log("rcpt-addr",rcpt);
@@ -1161,7 +1204,7 @@ class bmsMilter(Milter.Milter):
       self.fp.write("%s: %s\n" % (name,val))	# add new headers to buffer
     self.fp.write("\n")				# terminate headers
     # log when neither sender nor from domains matches mail from domain
-    if supply_sender and self.mailfrom != '<>':
+    if supply_sender and self.mailfrom != '<>' and not self.internal_connection:
       mf_domain = self.canon_from.split('@')[-1]
       self.fp.seek(0)
       msg = rfc822.Message(self.fp)
@@ -1315,6 +1358,8 @@ class bmsMilter(Milter.Milter):
 		  	force_result=dspam.DSR_ISSPAM)
 		  self.log("HONEYPOT:",rcpt)
 		return Milter.DISCARD
+	      #if not self.dspam:
+	        # FIXME: tag, but force as ham
 	      txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
 	        # DISCARD if quarrantined for any recipient.  It
@@ -1507,9 +1552,6 @@ class bmsMilter(Milter.Milter):
       self.setreply('550','5.7.1',*desc.splitlines())
       return Milter.REJECT
     cbv_cache[sender] = res
-    if not cached:
-      s = time.strftime(time_format,time.localtime())
-      print >>open('send_dsn.log','a'),sender,s # log who we sent DSNs to
     return Milter.CONTINUE
 
   def close(self):
