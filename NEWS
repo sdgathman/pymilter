@@ -1,5 +1,6 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.4	Auto-whitelist recipients of outgoing email.
 0.8.3   Keep screened honeypot mail, but optionally discard honeypot only mail.
 	spf_accept_fail option for braindead SPF senders 
 	  (treats fail like softfail)

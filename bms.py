@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.31  2005/10/14 01:14:08  customdesigned
+# Auto whitelist feature.
+#
 # Revision 1.30  2005/10/12 16:36:30  customdesigned
 # Release 0.8.3
 #
@@ -666,20 +669,21 @@ class AddrCache(object):
 	  l = time.strptime(ts,AddrCache.time_format)
 	  t = time.mktime(l)
 	  if t > too_old:
-	    cache[rcpt] = None
+	    cache[rcpt.lower()] = None
 	except:
-	  cache[ln.strip()] = None
+	  cache[ln.strip().lower()] = None
     except IOError: pass
 
   def has_key(self,sender):
-    return self.cache.has_key(sender)
+    return self.cache.has_key(sender.lower())
 
   def __getitem__(self,sender):
-    return self.cache[sender]
+    return self.cache[sender.lower()]
 
   def __setitem__(self,sender,res):
-    cached = sender in self.cache
-    self.cache[sender] = res
+    lsender = sender.lower()
+    cached = lsender in self.cache
+    self.cache[lsender] = res
     if not cached and not res:
       s = time.strftime(AddrCache.time_format,time.localtime())
       print >>open(self.fname,'a'),sender,s # log who we sent DSNs to
@@ -1017,9 +1021,9 @@ class bmsMilter(Milter.Milter):
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(res,receiver))
     self.spf = q
-    if self.dspam and not self.internal_connection and res == 'pass':
-      if auto_whitelist.has_key(self.canon_from):
-	self.dspam = False
+    if self.dspam and res == 'pass' and auto_whitelist.has_key(self.canon_from):
+      self.dspam = False
+      self.log("WHITELIST",self.canon_from)
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
@@ -1358,9 +1362,13 @@ class bmsMilter(Milter.Milter):
 		  	force_result=dspam.DSR_ISSPAM)
 		  self.log("HONEYPOT:",rcpt)
 		return Milter.DISCARD
-	      #if not self.dspam:
-	        # FIXME: tag, but force as ham
-	      txt = ds.check_spam(user,txt,self.recipients)
+	      if not self.dspam:
+	        # Sender whitelisted: tag, but force as ham.  
+		# User can change if actually spam.
+	        txt = ds.check_spam(user,txt,self.recipients,
+			force_result=dspam.DSR_ISINNOCENT)
+	      else:
+		txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
 	        # DISCARD if quarrantined for any recipient.  It
 		# will be resent to all recipients if they submit

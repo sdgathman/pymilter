@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.1 Final//EN">
+<html>
+<head>
+<title>Python Milter Log Documentation</title>
+<style>
+DT              { font-weight: bolder; padding-top: 1em }
+</style>
+</head><body>
+
+<h1> Milter Log Documentation </h1>
+
+The milter log has a variety of "tags" in it that indicate what it did.
+
+<dl>
+<dt> DSPAM: honeypot SCREENED
+<dd> message was quarantined to the honeypot quarantine
+
+<dt> REJECT: hello SPF: fail 550 access denied
+<dt> REJECT: hello SPF: softfail 550 domain in transition
+<dt> REJECT: hello SPF: neutral 550 access neither permitted nor denied
+<dd> message was rejected because there was an SPF policy for the
+HELO name, and it did not pass.
+
+<dt> CBV: sender-17-44662668-643@bluepenmagic.com
+<dd> we performed a call back verification
+
+<dt> dspam
+<dd> dspam identifier was added to the message
+
+<dt> REJECT: spam from self: jsconnor.com
+<dd> message was reject because HELO was us (jsconnor.com)
+
+<dt> INNOC: richh
+<dd> message was used to update richh's dspam dictionary
+
+<dt> HONEYPOT: michaelb@jsconnor.com
+<dd> message was sent to a honeypot address (michaelb@jsconnor.com), the 
+message was added to the honeypot dspam dictionary as spam
+
+<dt> REJECT: numeric hello name: 63.217.19.146
+<dd> message was rejected because helo name was invalid (numeric)
+
+<dt> eom
+<dd> message was successfully received
+
+<dt> TEMPFAIL: CBV: 450 No MX servers available
+<dd> we tried to do a call back verification but could not look up 
+MX record, we told the sender to try again later
+
+<dt> CBV: info@emailpizzahut.com (cached)
+<dd> call back verification was needed, we had already done it recently
+
+<dt> abort after 0 body chars
+<dd> sender hung up on us
+
+<dt> REJECT: SPF fail 550 SPF fail: see 
+  http://openspf.com/why.html?sender=m.hendersonxk@163.net&ip=213.47.161.100
+<dd> message was reject because its sender's spf policy said to
+
+<dt> REJECT: Subject: Cialis - No prescription needed!
+<dd> message was rejected because its subject contained a bad expression
+
+<dt> DSPAM: tonyc tonyc@jsconnor.com
+<dd> message was sent to tonyc@jsconnor.com and it was identified as spam 
+and placed in the tonyc dspam quarantine
+
+<dt> REJECT: CBV: 550 calvinalstonis@ix.netcom.com...User unknown
+<dt> REJECT: CBV: 553 sorry, that domain isn't in my list
+<dt> REJECT: CBV: 554 delivery error: dd This user doesn't have an account 
+<dd> message was rejected because call back verification gave us a fatal
+error
+</dl>
+
+Please add more tags to this list if you know of any. Thanks.
+</body>
+</html>

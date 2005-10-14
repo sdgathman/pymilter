@@ -44,7 +44,7 @@ class Milter:
     for i in msg: print i,
     print
 
-  def connect(self,hostname,unused,hostaddr):
+  def connect(self,hostname,family,hostaddr):
     "Called for each connection to sendmail."
     self.log("connect from %s at %s" % (hostname,hostaddr))
     return CONTINUE

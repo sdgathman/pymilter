@@ -1,10 +1,10 @@
+Train honeypot with auto-whitelisted mail as ham.  This should result in
+a totally self training auto screener.  Rescind whitelist for banned 
+extensions, in case sender is infected.
+
 Find rfc2822 policy for MFROM quoting.
 
-Use /etc/mail/access for domain specific SPF policies.
-
-SPF-Fail:	REJECT
-SPF-Softfail:	OK
-SPF-Neutral:	OK
+Support explicit errors for SPF policy in access file:
 SPF-Neutral:aol.com	ERROR:"550 AOL mail must get SPF PASS"
 
 Defer TEMPERROR in SPF evaluation - give precedence to security
@@ -15,9 +15,6 @@ Option to add Received-SPF header, but never reject on SPF.
 
 Create null config that does nothing - except maybe add Received-SPF
 headers.  Many admins would like to turn features on one at a time.
-
-Auto whitelist based on outgoing email - perhaps with magic subject
-or recipient prefix.
 
 Can't output messages with malformed rfc822 attachments.
 
@@ -33,7 +30,8 @@ check spam keywords with character classes, e.g.
 
 Implement RRS - a backdoor for non-SRS forwarders.  User lists non-SRS 
 forwarder accounts, and a util provides a special local alias for the
-user to give to the forwarder.  Alias only works for mail from that
+user to give to the forwarder.  (Or user just adds arbitrary alias
+unique to that forwarder to a database.)  Alias only works for mail from that
 forwarder.  Milter gets forwarder domain from alias and uses it to
 SPF check forwarder.
 

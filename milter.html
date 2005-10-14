@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Aug 28, 2005</h4>
+Last updated Oct 12, 2005</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -47,9 +47,24 @@ efficient and secure.  I recommend upgrading.
 
 <h2> Recent Changes </h2>
 
-Python milter is being moved to 
+Python milter has been moved to 
 <a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
 project</a> for development and release downloads.
+<p>
+Release 0.8.3 uses the standard logging module, and supports configuring
+more detailed SPF policy via the sendmail access map.  SMTP AUTH connections
+are considered INTERNAL.  Preventing forgery between internal domains is
+just a matter of specifying the user-domain map - I'll define something
+for the next version.  We now send DSNs when mail is quarantined (rejecting
+if DSN fails) and for SPF syntax errors (PermError).  There is an
+experimental option to add a Sender header when it is missing and the From
+domain doesn't match the MAIL FROM domain.  Next release, we may start
+renaming and replacing an existing Sender header when neither it nor the
+From domain matches MAIL FROM.  Since bogus MAIL FROMs are rejected
+(to varying degrees depending on the configured SPF policy), and
+both Sender and From and displayed by default in many email clients,
+this provides some phishing protection without rejecting mail based
+on headers.
 <p>
 Release 0.8.2 has changes to <a href="http://openspf.net">SPF</a> to bring it
 in line with the newly official RFC.  It adds 
@@ -245,6 +260,8 @@ content filtering.  SPF checking
 requires <a href="http://pydns.sourceforge.net/">
 pydns</a>.  Configuration documentation is currently included as comments
 in the <a href="milter.cfg">sample config file</a> for the bms.py milter.
+See also the <a href="HOWTO">HOWTO</a> and <a href="logmsgs.html">
+Milter Log Message Tags</a>.
 <p>
 Python milter is under GPL.  The authors can probably be convinced to
 change this to LGPL if needed.
