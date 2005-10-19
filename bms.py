@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.33  2005/10/19 19:37:50  customdesigned
+# Train screener on whitelisted messages.
+#
 # Revision 1.32  2005/10/14 16:17:31  customdesigned
 # Auto whitelist refinements.
 #
@@ -609,7 +612,7 @@ class SPFPolicy(object):
         return None
 
   def getFailPolicy(self):
-    policy = self.getPolicy('SPF-Fail:')
+    policy = self.getPolicy('spf-fail:')
     if not policy:
       if self.domain in spf_accept_fail:
         policy = 'CBV'
@@ -618,7 +621,7 @@ class SPFPolicy(object):
     return policy
 
   def getNonePolicy(self):
-    policy = self.getPolicy('SPF-None:')
+    policy = self.getPolicy('spf-none:')
     if not policy:
       if spf_reject_noptr:
 	policy = 'REJECT'
@@ -627,7 +630,7 @@ class SPFPolicy(object):
     return policy
 
   def getSoftfailPolicy(self):
-    policy = self.getPolicy('SPF-Softfail:')
+    policy = self.getPolicy('spf-softfail:')
     if not policy:
       if self.domain in spf_accept_softfail:
         policy = 'OK'
@@ -638,7 +641,7 @@ class SPFPolicy(object):
     return policy
 
   def getNeutralPolicy(self):
-    policy = self.getPolicy('SPF-Neutral:')
+    policy = self.getPolicy('spf-neutral:')
     if not policy:
       if self.domain in spf_reject_neutral:
         policy = 'REJECT'
@@ -646,13 +649,13 @@ class SPFPolicy(object):
     return policy
 
   def getPermErrorPolicy(self):
-    policy = self.getPolicy('SPF-PermError:')
+    policy = self.getPolicy('spf-permerror:')
     if not policy:
       policy = 'REJECT'
     return policy
 
   def getPassPolicy(self):
-    policy = self.getPolicy('SPF-Pass:')
+    policy = self.getPolicy('spf-pass:')
     if not policy:
       policy = 'OK'
     return policy
