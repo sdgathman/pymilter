@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.32  2005/10/14 16:17:31  customdesigned
+# Auto whitelist refinements.
+#
 # Revision 1.31  2005/10/14 01:14:08  customdesigned
 # Auto whitelist feature.
 #
@@ -812,6 +815,7 @@ class bmsMilter(Milter.Milter):
     self.hidepath = False
     self.discard = False
     self.dspam = True
+    self.whitelist = False
     self.reject_spam = True
     self.data_allowed = True
     self.trust_received = self.trusted_relay
@@ -1021,8 +1025,8 @@ class bmsMilter(Milter.Milter):
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(res,receiver))
     self.spf = q
-    if self.dspam and res == 'pass' and auto_whitelist.has_key(self.canon_from):
-      self.dspam = False
+    if res == 'pass' and auto_whitelist.has_key(self.canon_from):
+      self.whitelist = True
       self.log("WHITELIST",self.canon_from)
     return Milter.CONTINUE
 
@@ -1241,7 +1245,7 @@ class bmsMilter(Milter.Milter):
         dspam.DSF_CHAINED|dspam.DSF_CLASSIFY)
       try:
         ds.process(headers)
-        if ds.probability > 0.93 and self.dspam:
+        if ds.probability > 0.93 and self.dspam and not self.whitelist:
           self.log('REJECT: X-DSpam-HeaderScore: %f' % ds.probability)
 	  self.setreply('550','5.7.1','Your Message looks spammy')
 	  return Milter.REJECT
@@ -1348,6 +1352,9 @@ class bmsMilter(Milter.Milter):
 		self.fp = None
 	        if len(self.recipients) > 1:
 		  self.log("HONEYPOT:",rcpt,'SCREENED')
+		  if self.whitelist:
+		    # don't train when recipients includes honeypot
+		    return False
 		  if self.spf:
 		    # check that sender accepts quarantine DSN
 		    msg = mime.message_from_file(StringIO.StringIO(txt))
@@ -1362,7 +1369,7 @@ class bmsMilter(Milter.Milter):
 		  	force_result=dspam.DSR_ISSPAM)
 		  self.log("HONEYPOT:",rcpt)
 		return Milter.DISCARD
-	      if not self.dspam:
+	      if self.whitelist:
 	        # Sender whitelisted: tag, but force as ham.  
 		# User can change if actually spam.
 	        txt = ds.check_spam(user,txt,self.recipients,
@@ -1392,6 +1399,13 @@ class bmsMilter(Milter.Milter):
       screener = dspam_screener[self.id % len(dspam_screener)]
       if not ds.check_spam(screener,txt,self.recipients,
       	classify=True,quarantine=False):
+	if self.whitelist:
+	  # messages is whitelisted but looked like spam, Train on Error
+	  self.log("TRAIN:",screener,'X-Dspam-Score: %f' % ds.probability)
+	  # user can't correct anyway if really spam, so discard tag
+	  ds.check_spam(screener,txt,self.recipients,
+		  force_result=dspam.DSR_ISINNOCENT)
+	  return False
 	if self.reject_spam:
 	  self.log("DSPAM:",screener,
 	  	'REJECT: X-DSpam-Score: %f' % ds.probability)
