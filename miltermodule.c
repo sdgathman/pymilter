@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.7  2005/10/20 23:04:46  customdesigned
+ * Add optional idx for position of added header.
+ *
  * Revision 1.6  2005/07/15 22:18:17  customdesigned
  * Support callback exception policy
  *
@@ -1149,7 +1152,7 @@ milter_quarantine(PyObject *self, PyObject *args) {
 }
 #endif
 
-#if _FFR_SMFI_PROGRESS
+#ifdef SMFIR_PROGRESS
 static char milter_progress__doc__[] =
 "progress() -> None\n\
 Notify the MTA that we are working on a message so it will reset timeouts.";
@@ -1180,7 +1183,7 @@ static PyMethodDef context_methods[] = {
 #ifdef SMFIF_QUARANTINE
   { "quarantine",  milter_quarantine,  METH_VARARGS, milter_quarantine__doc__},
 #endif
-#if _FFR_SMFI_PROGRESS
+#ifdef SMFIR_PROGRESS
   { "progress",  milter_progress,  METH_VARARGS, milter_progress__doc__},
 #endif
   { NULL, NULL }
