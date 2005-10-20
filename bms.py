@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.34  2005/10/19 21:07:49  customdesigned
+# access.db stores keys in lower case
+#
 # Revision 1.33  2005/10/19 19:37:50  customdesigned
 # Train screener on whitelisted messages.
 #
@@ -349,6 +352,7 @@ dspam_users = {}
 dspam_userdir = None
 dspam_exempt = {}
 dspam_whitelist = {}
+whitelist_senders = {}
 dspam_screener = ()
 dspam_internal = True	# True if internal mail should be dspammed
 dspam_reject = ()
@@ -497,6 +501,8 @@ def read_config(list):
   # dspam section
   global dspam_dict, dspam_users, dspam_userdir, dspam_exempt, dspam_internal
   global dspam_screener,dspam_whitelist,dspam_reject,dspam_sizelimit
+  global whitelist_senders
+  whitelist_senders = cp.getaddrset('dspam','whitelist_senders')
   dspam_dict = cp.getdefault('dspam','dspam_dict')
   dspam_exempt = cp.getaddrset('dspam','dspam_exempt')
   dspam_whitelist = cp.getaddrset('dspam','dspam_whitelist')
@@ -828,6 +834,7 @@ class bmsMilter(Milter.Milter):
     self.new_headers = []
     self.recipients = []
     self.cbv_needed = None
+    self.whitelist_sender = False
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
@@ -872,17 +879,22 @@ class bmsMilter(Milter.Milter):
 	    self.log("REJECT: spam from self",pat)
 	    self.setreply('550','5.7.1','I hate talking to myself.')
 	    return Milter.REJECT
-      elif internal_domains:
-	for pat in internal_domains:
-	  if fnmatchcase(domain,pat): break
-	else:
-	  self.log("REJECT: zombie PC at ",self.connectip," sending MAIL FROM ",
-	  	self.canon_from)
-	  self.setreply('550','5.7.1',
-	  'Your PC is using an unauthorized MAIL FROM.',
-	  'It is either badly misconfigured or controlled by organized crime.'
-	  )
-	  return Milter.REJECT
+      else:
+        if internal_domains:
+	  for pat in internal_domains:
+	    if fnmatchcase(domain,pat): break
+	  else:
+	    self.log("REJECT: zombie PC at ",self.connectip,
+	    	" sending MAIL FROM ",self.canon_from)
+	    self.setreply('550','5.7.1',
+	    'Your PC is using an unauthorized MAIL FROM.',
+	    'It is either badly misconfigured or controlled by organized crime.'
+	    )
+	    return Milter.REJECT
+	wl_users = whitelist_senders.get(domain,())
+	if user in wl_users or '' in wl_users:
+	  self.whitelist_sender = True
+	  
       self.rejectvirus = domain in reject_virus_from
       if user in wiretap_users.get(domain,()):
         self.add_recipient(wiretap_dest)
@@ -1089,7 +1101,7 @@ class bmsMilter(Milter.Milter):
         self.hidepath = True
       if not domain in dspam_reject:
         self.reject_spam = False
-      if self.internal_connection:
+      if self.internal_connection and self.whitelist_sender:
 	if internal_domains:
 	  for pat in internal_domains:
 	    if fnmatchcase(domain,pat): break

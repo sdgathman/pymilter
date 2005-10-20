@@ -169,7 +169,10 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
-* Fri Jul 15 2005 Stuart Gathman <stuart@bmsi.com> 0.8.3-1
+* Fri Oct 20 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-1
+- Fix SPF policy via sendmail access map (case insensitive keys).
+- Auto whitelist senders
+* Thu Oct 12 2005 Stuart Gathman <stuart@bmsi.com> 0.8.3-1
 - Keep screened honeypot mail, but optionally discard honeypot only mail.
 - spf_accept_fail option for braindead SPF senders (treats fail like softfail)
 - Consider SMTP AUTH connections internal.
