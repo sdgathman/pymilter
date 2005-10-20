@@ -1,5 +1,5 @@
 %define name milter
-%define version 0.8.3
+%define version 0.8.4
 %define release 1.RH7
 # what version of RH are we building for?
 %define redhat9 0
@@ -169,10 +169,12 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
-* Fri Oct 20 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-1
+* Thu Oct 20 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-1
 - Fix SPF policy via sendmail access map (case insensitive keys).
-- Auto whitelist senders
-* Thu Oct 12 2005 Stuart Gathman <stuart@bmsi.com> 0.8.3-1
+- Auto whitelist senders, train screener on whitelisted messages
+- Optional idx parameter to addheader to invoke smfi_insheader
+- Activate progress when SMFIR_PROGRESS defined
+* Wed Oct 12 2005 Stuart Gathman <stuart@bmsi.com> 0.8.3-1
 - Keep screened honeypot mail, but optionally discard honeypot only mail.
 - spf_accept_fail option for braindead SPF senders (treats fail like softfail)
 - Consider SMTP AUTH connections internal.

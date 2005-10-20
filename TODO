@@ -1,6 +1,9 @@
-Train honeypot with auto-whitelisted mail as ham.  This should result in
-a totally self training auto screener.  Rescind whitelist for banned 
-extensions, in case sender is infected.
+Send DSN for permerror before processing extended result.  An additional
+DSN may be sent based on extended result.
+
+Rescind whitelist for banned extensions, in case sender is infected.
+
+Train honeypot on error only.
 
 Find rfc2822 policy for MFROM quoting.
 

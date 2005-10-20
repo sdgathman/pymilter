@@ -5,8 +5,11 @@ wrapper (Milter.py) that handles attachments, did lots of testing, packaged
 it with distutils, and generally transformed it from a quick hack to a
 real, usable Python extension.
 
-Other contributors:
+Other contributors (in random order):
 
+Dave MacQuigg 
+  for noticing that smfi_insheader wasn't supported, and creating
+  a template to help first time pymilter users create their own milter.
 Terence Way
   for providing a Python port of SPF
 Scott Kitterman

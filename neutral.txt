@@ -18,7 +18,7 @@ sent via an authorized SMTP server, but may still be legitimate.  Since there
 is no positive confirmation that the message is really from you, we have
 to give it extra scrutiny - including verifying that the sender really
 exists by sending you this DSN.  We will remember this sender and not
-bother you again for while.  You can avoid this message entirely for
+bother you again for a while.  You can avoid this message entirely for
 legitimate mail by using an authorized SMTP server.  Contact your mail
 administrator and ask how to configure your email client to use an
 authorized server.  
