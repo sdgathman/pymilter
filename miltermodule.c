@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.6  2005/07/15 22:18:17  customdesigned
+ * Support callback exception policy
+ *
  * Revision 1.5  2005/06/24 04:20:07  customdesigned
  * Report context allocation error.
  *
@@ -967,28 +970,31 @@ milter_setreply(PyObject *self, PyObject *args) {
 }
 
 static char milter_addheader__doc__[] =
-"addheader(field, value) -> None\n\
+"addheader(field, value, idx=-1) -> None\n\
 Add a header to the message. This header is not passed to other\n\
 filters. It is not checked for standards compliance;\n\
 the mail filter must ensure that no protocols are violated\n\
 as a result of adding this header.\n\
 field - header field name\n\
 value - header field value\n\
+idx - optional position in internal header list to insert new header\n\
 Both are strings.  This function can only be called from the EOM callback.";
 
 static PyObject *
 milter_addheader(PyObject *self, PyObject *args) {
   char *headerf;
   char *headerv;
+  int idx = -1;
   SMFICTX *ctx;
   PyThreadState *t;
 
-  if (!PyArg_ParseTuple(args, "ss:addheader", &headerf, &headerv)) return NULL;
+  if (!PyArg_ParseTuple(args, "ss|i:addheader", &headerf, &headerv, &idx))
+    return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
-  return _thread_return(t,smfi_addheader(ctx, headerf, headerv),
-			 "cannot add header");
+  return _thread_return(t, (idx < 0) ? smfi_addheader(ctx, headerf, headerv) :
+      smfi_insheader(ctx, idx, headerf, headerv), "cannot add header");
 }
 
 static char milter_chgheader__doc__[] =

@@ -106,8 +106,8 @@ class Milter:
     return self.__ctx.setreply(rcode,xcode,msg,*ml)
 
   # Milter methods which can only be called from eom callback.
-  def addheader(self,field,value):
-    return self.__ctx.addheader(field,value)
+  def addheader(self,field,value,idx=-1):
+    return self.__ctx.addheader(field,value,idx)
 
   def chgheader(self,field,idx,value):
     return self.__ctx.chgheader(field,idx,value)
