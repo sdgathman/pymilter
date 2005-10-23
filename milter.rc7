@@ -5,7 +5,7 @@
 # chkconfig: 2345 80 30
 # description: Milter is a process that filters messages sent through sendmail.
 # processname: milter
-# config: /var/log/milter/bms.py
+# config: /etc/mail/pymilter.cfg
 # pidfile: /var/run/milter/milter.pid
 
 python="python2.3"

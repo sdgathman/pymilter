@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.35  2005/10/20 18:47:27  customdesigned
+# Configure auto_whitelist senders.
+#
 # Revision 1.34  2005/10/19 21:07:49  customdesigned
 # access.db stores keys in lower case
 #
@@ -1233,8 +1236,9 @@ class bmsMilter(Milter.Milter):
       msg = rfc822.Message(self.fp)
       for rn,hf in msg.getaddrlist('from')+msg.getaddrlist('sender'):
 	t = parse_addr(hf)
-	if len(t) == 2 and t[1].lower() == mf_domain:
-	  break
+	if len(t) == 2:
+	  hd = t[1].lower()
+	  if hd == mf_domain or mf_domain.endswith('.'+hd): break
       else:
 	for f in msg.getallmatchingheaders('from'):
 	  self.log(f)

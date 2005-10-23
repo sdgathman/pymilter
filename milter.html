@@ -24,7 +24,7 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Oct 12, 2005</h4>
+Last updated Oct 20, 2005</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -50,6 +50,13 @@ efficient and secure.  I recommend upgrading.
 Python milter has been moved to 
 <a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
 project</a> for development and release downloads.
+<p>
+Release 0.8.4 makes configuring SPF policy via access.db actually work.
+The honeypot idea is enhanced by auto-whitelisting recipients of
+email sent from selected domains.  Whitelisted messages are then used
+to train the honeypot.  This makes the honeypot screener entirely self
+training.  The smfi_progress() API is now automatically supported when present.
+An optional idx parameter to milter.addheader() invokes smfi_insheader().
 <p>
 Release 0.8.3 uses the standard logging module, and supports configuring
 more detailed SPF policy via the sendmail access map.  SMTP AUTH connections

@@ -55,7 +55,7 @@ modules provide for navigating and modifying MIME parts.
 #%patch -p1
 
 %build
-env CFLAGS="$RPM_OPT_FLAGS" %{python} setup.py build
+env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" %{python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -169,6 +169,8 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Fri Oct 21 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-2
+- Don't supply sender when MFROM is subdomain of header from/sender.
 * Thu Oct 20 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-1
 - Fix SPF policy via sendmail access map (case insensitive keys).
 - Auto whitelist senders, train screener on whitelisted messages

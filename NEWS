@@ -1,6 +1,10 @@
 Here is a history of user visible changes to Python milter.
 
 0.8.4	Auto-whitelist recipients of outgoing email.
+	Fix SPF policy via sendmail access map (case insensitive keys).
+	Train screener on whitelisted messages
+	Optional idx parameter to addheader to invoke smfi_insheader
+	Activate progress API when SMFIR_PROGRESS defined
 0.8.3   Keep screened honeypot mail, but optionally discard honeypot only mail.
 	spf_accept_fail option for braindead SPF senders 
 	  (treats fail like softfail)
