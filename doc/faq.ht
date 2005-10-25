@@ -22,7 +22,7 @@ shows you how to install libmilter with a separate invocation of make.
 <li> Q. Why is mfapi.h not found when I try to compile Python milter on
 RedHat 7.2?
 <p>  A. RedHat forgot to include the header in the RPM.  See the
-<a href="milter.html#rh72">RedHat 7.2 requirements</a>.
+<a href="requirements.html#rh72">RedHat 7.2 requirements</a>.
 <p>
 
 <h3> Running Python Milter </h3>

@@ -1,0 +1,157 @@
+<h2> Recent Changes </h2>
+
+Python milter has been moved to 
+<a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
+project</a> for development and release downloads.
+
+<h3> New website design </h3>
+
+Hey, I'm no artist, so I just used the
+<a href="http://ht2html.sourceforge.net/"ht2html</a> package
+by <a href="http://barry.wooz.org/">Barry Warsaw</a>.  The mascot
+is by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>,
+or maybe his wife.  I chose Maxwell's daemon because it tirelessly
+and invisibly sorts molecules, just as milters sort mail.
+Cristian has also provided a fun 
+<a href="http://alphard.ethz.ch/hafner/PPS/PPS2002/Maxwell/simulation.htm">
+simulation</a> that lets you try your hand at sorting molecules.
+
+<h3> 0.8.4 </h3>
+
+Release 0.8.4 makes configuring SPF policy via access.db actually work.
+The honeypot idea is enhanced by auto-whitelisting recipients of
+email sent from selected domains.  Whitelisted messages are then used
+to train the honeypot.  This makes the honeypot screener entirely self
+training.  The smfi_progress() API is now automatically supported when present.
+An optional idx parameter to milter.addheader() invokes smfi_insheader().
+
+<h3> 0.8.3 </h3>
+
+Release 0.8.3 uses the standard logging module, and supports configuring
+more detailed SPF policy via the sendmail access map.  SMTP AUTH connections
+are considered INTERNAL.  Preventing forgery between internal domains is
+just a matter of specifying the user-domain map - I'll define something
+for the next version.  We now send DSNs when mail is quarantined (rejecting
+if DSN fails) and for SPF syntax errors (PermError).  There is an
+experimental option to add a Sender header when it is missing and the From
+domain doesn't match the MAIL FROM domain.  Next release, we may start
+renaming and replacing an existing Sender header when neither it nor the
+From domain matches MAIL FROM.  Since bogus MAIL FROMs are rejected
+(to varying degrees depending on the configured SPF policy), and
+both Sender and From and displayed by default in many email clients,
+this provides some phishing protection without rejecting mail based
+on headers.
+
+<h3> 0.8.2 </h3>
+
+Release 0.8.2 has changes to <a href="http://openspf.net">SPF</a> to bring it
+in line with the newly official RFC.  It adds 
+<a href="http://ses.codeshare.ca/">SES</a>
+support (the original SES without body hash) for pysrs-0.30.10, and honeypot
+support for pydspam-1.1.9.  There is a new method in the base milter module.
+milter.set_exception_policy(i) lets you choose a policy of CONTINUE, REJECT, or
+TEMPFAIL (default) for untrapped exceptions encountered in a milter callback.
+
+<h3> 0.8.0 </h3>
+
+Release 0.8.0 is the first <a href="http://sourceforge.net/">Sourceforge</a>
+release.  It supports Python-2.4, and provides an option to accept mail
+that gets an SPF softfail or fails the 3 strikes rule, provided the
+alleged sender accepts a DSN explaining the problem.  Python-2.3 is
+no longer supported by the reworked mime.py module, although API changes
+could be backported.  There are too many incompatible changes to the
+python email package.
+
+<h3> Older Releases </h3>
+
+Release 0.7.2 tightens the authentication screws with a "3 strikes and
+you're out" policy.  A sender must have a valid PTR, HELO, or SPF record
+to send email.  Specific senders can be whitelisted using the
+"delegate" option in the spf configuration section by adding a
+default SPF record for them.  The PTR and HELO are required
+by RFC anyway, so this is not an unreasonable requirement.
+There is now a coherent policy for an SPF softfail result.  A softfail
+is accepted if there is a valid PTR or HELO, or if the domain
+is listed in the "accept_softfail" option of the spf configuration section.
+A neutral result is accepted by default if there is a valid PTR or
+HELO, (and the SPF record was not guessed), unless the domain is listed in the
+"reject_neutral" option.  Common forms of PTR records for dynamic IPs are
+recognized, and do not count as a valid PTR.  This does not prevent anyone
+from sending mail from a dynamic IP - they just need to configure a
+valid HELO name or publish an SPF record.
+<p>
+As SPF adoption continues to rise, forged spam is not getting through.  So
+spammers are publishing their SPF records as predicted.  The 0.7.2 RPM
+now provides the <code>rhsbl</code> sendmail hack so that spammer domains
+can be blacklisted.  With the RPM installed, add a line like the following
+to your <code>sendmail.mc</code>.
+<pre>
+HACK(rhsbl,`blackholes.example.com',"550 Rejected: " $&{RHS} " has been spamming our customers.")dnl
+</pre>
+<p>
+Of course, spammers are now starting to register
+throwaway domains.  The next thing we need is a custom DNS server,
+in Python, that
+can recognize patterns.  For instance, one spammer registers ded304.com,
+ded305.com, ded306.com, etc.  We also need the custom DNS server to
+let SPF classic clients check SES (which will be part of pysrs).  
+The <a href="http://twistedmatrix.com/products/twisted">Twisted Python</a>
+framework provides a custom DNS server - but I
+would like a smaller implementation for our use.
+<p>
+The RPM for release 0.7.0 moves the config file and socket locations to
+/etc/mail and /var/run/milter respectively.  We now parse Microsoft CID records
+- but only hotmail.com uses them.  They seem to have applied for a patent on
+the brilliant idea of examining the mail headers to see who the message is
+from.  We aren't doing that here, so not to worry - but I am not a lawyer, so
+if you are worried, change spf.py around line 626 to return None instead of
+calling CIDParser().  There is a new option to reject mail with no PTR
+and no SPF.
+<p>
+Microsoft is pushing an anti-opensource license for their pending patent
+along with their sender-ID proposal before the IETF.
+It is royalty free - but requires anyone distributing a binary they've
+compiled from source to sign a license agreement.  The Apache Software
+Foundation <a
+href="http://www.apache.org/foundation/docs/sender-id-position.html"> explains
+the problem with sender-ID</a>, and Debian <a
+href="http://www.debian.org/News/2004/20040904">concurs</a>.  Since 
+the <a href="http://download.microsoft.com/download/4/3/9/439b024b-09fd-44ee-8ff0-10e834004c36/senderid_FAQ.PDF">Microsoft license</a> is
+<a href="http://www.circleid.com/article/732_0_1_0_C/">incompatible with free
+software in general</a> and the <a
+href="http://www.imc.org/ietf-mxcomp/mail-archive/msg03678.html">GPL in
+particular</a>, Python milter will not be able to implement sender-ID in its
+current form.  This was, no doubt, Microsoft's intent all along.
+<p>
+Sender-ID attempts to do for RFC2822 headers what SPF does for RFC2821 headers.
+Unlike SPF, it has never been tried, and is encumbered by a stupid patent.  I
+recommend ignoring it and continuing to implement and improve SPF until a
+working and unencumbered proposal for RFC2822 headers surfaces.
+
+<p>
+<a href="http://openspf.com">
+<img src="SPF.gif" align=left alt="SPF logo"></a>
+Release 0.6.6 adds support for <a href="http://openspf.com/">SPF</a>,
+a protocol to prevent forging of the envelope from address.  
+SPF support requires <a href="http://pydns.sourceforge.net/">pydns</a>.
+The included spf.py module is an updated version of the original 1.6
+version at <a href="http://www.wayforward.net/spf/">wayforward.net</a>.
+The updated version tracks the draft RFC and test suite.
+<p>
+The FAQ addresses <a href="faq.html#spf">how to get started with SPF</a>.
+<p>
+Release 0.6.1 adds a full milter based dspam application.
+<p>
+I have selected the <a href="http://www.nuclearelephant.com/projects/dspam/">
+dspam bayes filter project</a> and <a href="dspam.html">
+packaged it for python</a>.
+Release 0.6.0 offers a simple application of dspam I call "header triage",
+which rejects messages with spammy headers.  
+To use header triage, you must have <a href="dspam.html">DSPAM</a> installed,
+and select a dictionary that is well moderated by someone who gets
+lots of spam.  That dictionary can be used to block spam that is 
+obvious from the headers (e.g. X-Mailer and Subject) before it ties
+up any more resources.  I have yet to see any false positives from this
+approach (check the milter log), but if there are, the sender will
+get a REJECT with the message "Your message looks spammy."
+
