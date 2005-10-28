@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.36  2005/10/23 16:01:29  customdesigned
+# Consider MAIL FROM a match for supply_sender when a subdomain of From or Sender
+#
 # Revision 1.35  2005/10/20 18:47:27  customdesigned
 # Configure auto_whitelist senders.
 #
@@ -1374,7 +1377,7 @@ class bmsMilter(Milter.Milter):
 		  if self.whitelist:
 		    # don't train when recipients includes honeypot
 		    return False
-		  if self.spf:
+		  if self.spf and self.mailfrom != '<>'
 		    # check that sender accepts quarantine DSN
 		    msg = mime.message_from_file(StringIO.StringIO(txt))
 		    rc = self.send_dsn(self.spf,msg,'quarantine.txt')
@@ -1432,7 +1435,7 @@ class bmsMilter(Milter.Milter):
 	  self.fp = None
 	  return Milter.REJECT
 	self.log("DSPAM:",screener,"SCREENED")
-	if self.spf:
+	if self.spf and self.mailfrom != '<>':
 	  # check that sender accepts quarantine DSN
 	  self.fp.seek(0)
 	  msg = mime.message_from_file(self.fp)
