@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.37  2005/10/28 09:30:49  customdesigned
+# Do not send quarantine DSN when sender is DSN.
+#
 # Revision 1.36  2005/10/23 16:01:29  customdesigned
 # Consider MAIL FROM a match for supply_sender when a subdomain of From or Sender
 #
@@ -880,11 +883,12 @@ class bmsMilter(Milter.Milter):
     if len(t) == 2:
       user,domain = t
       if not self.internal_connection:
-	for pat in internal_domains:
-	  if fnmatchcase(domain,pat):
-	    self.log("REJECT: spam from self",pat)
-	    self.setreply('550','5.7.1','I hate talking to myself.')
-	    return Milter.REJECT
+        if not self.trusted_relay:
+	  for pat in internal_domains:
+	    if fnmatchcase(domain,pat):
+	      self.log("REJECT: spam from self",pat)
+	      self.setreply('550','5.7.1','I hate talking to myself.')
+	      return Milter.REJECT
       else:
         if internal_domains:
 	  for pat in internal_domains:
@@ -1077,6 +1081,7 @@ class bmsMilter(Milter.Milter):
 	    newaddr = srs.reverse(oldaddr)
 	    # Currently, a sendmail map reverses SRS.  We just log it here.
 	    self.log("srs rcpt:",newaddr)
+	  self.dspam = False	# verified as reply to mail we sent
 	except:
 	  if not (self.internal_connection or self.trusted_relay):
 	    if srsre.match(oldaddr):
@@ -1377,7 +1382,7 @@ class bmsMilter(Milter.Milter):
 		  if self.whitelist:
 		    # don't train when recipients includes honeypot
 		    return False
-		  if self.spf and self.mailfrom != '<>'
+		  if self.spf and self.mailfrom != '<>':
 		    # check that sender accepts quarantine DSN
 		    msg = mime.message_from_file(StringIO.StringIO(txt))
 		    rc = self.send_dsn(self.spf,msg,'quarantine.txt')
