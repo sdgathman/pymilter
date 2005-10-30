@@ -1,3 +1,5 @@
+Title: Requirements
+
 <h2> Requirements </h2>
 
 <menu>
@@ -89,4 +91,3 @@ If you have installed python2, and want
 python-milter to use python2, add <code>python=python2</code> to setup.cfg
 and build with <code>python2 setup.py bdist_rpm</code>.
 You'll need to install the sendmail-devel package to compile milter.
-

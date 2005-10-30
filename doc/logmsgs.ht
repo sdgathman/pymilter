@@ -1,11 +1,7 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.1 Final//EN">
-<html>
-<head>
-<title>Python Milter Log Documentation</title>
+Title: Python Milter Log Documentation
 <style>
 DT              { font-weight: bolder; padding-top: 1em }
 </style>
-</head><body>
 
 <h1> Milter Log Documentation </h1>
 
@@ -72,5 +68,3 @@ error
 </dl>
 
 Please add more tags to this list if you know of any. Thanks.
-</body>
-</html>

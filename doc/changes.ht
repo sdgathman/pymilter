@@ -1,3 +1,5 @@
+Title: Recent Changes
+
 <h2> Recent Changes </h2>
 
 Python milter has been moved to 
@@ -7,7 +9,7 @@ project</a> for development and release downloads.
 <h3> New website design </h3>
 
 Hey, I'm no artist, so I just used the
-<a href="http://ht2html.sourceforge.net/"ht2html</a> package
+<a href="http://ht2html.sourceforge.net/">ht2html</a> package
 by <a href="http://barry.wooz.org/">Barry Warsaw</a>.  The mascot
 is by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>,
 or maybe his wife.  I chose Maxwell's daemon because it tirelessly

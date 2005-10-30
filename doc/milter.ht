@@ -1,3 +1,4 @@
+Title: Python Milters
 
 <P ALIGN="CENTER"><A HREF="http://www.anybrowser.org/campaign/">
 <IMG SRC="http://bmsi.com/art/brain1.gif"
@@ -224,6 +225,10 @@ me if you successfully install milter on a system not mentioned below.
 <td>0.8.4</td><tr>
 <td>RedHat 8.0</td><td>gcc-3.2</td><td>2.2.1</td><td>8.12.6</td>
 <td>0.5.2</td><tr>
+<td>RedHat 9.0</td><td>gcc-3.2.2</td><td>2.4.1</td><td>8.13.1</td>
+<td>0.8.2</td><tr>
+<td>RedHat EL3</td><td>gcc-3.2.3</td><td>2.4.1</td><td>8.13.5</td>
+<td>0.8.4</td><tr>
 <td>Debian Linux</td><td>gcc-2.95.2</td><td>2.1.1</td><td>8.12.0</td>
 <td>0.3.7</td><tr>
 <td>Debian Linux</td><td>gcc-3.2.2</td><td>2.2.2</td><td>8.12.7</td>

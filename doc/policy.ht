@@ -1,8 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<html>
-<head>
-<title>Python Milter Mail Policy </title>
-</head><body>
+Title: Python Milter Mail Policy
 
 <h1> Python Milter Mail Policy </h1>
 
@@ -72,7 +68,9 @@ The wiretap feature can screen and/or monitor mail to/from certain
 users.  If the MAIL FROM is being wiretapped, the recipients are
 altered accordingly.
 
-<h4> SPF check </h4>
+<!--table-stop-->
+
+<h2> SPF check </h2>
 
 Finally, the MAIL FROM, connect IP, and HELO name are checked against
 any SPF records published via DNS for the alleged sender (MAIL FROM).
@@ -232,6 +230,3 @@ should retry the message at a later time.
 </td></tr>
 
 </table>
-
-</body>
-</html>
