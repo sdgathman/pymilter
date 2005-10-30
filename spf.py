@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.14  2005/08/12 17:36:51  customdesigned
+# Trean non-existant include as no match in "lax" mode.
+#
 # Revision 1.13  2005/07/22 16:00:23  customdesigned
 # Limit CNAME chains independently of DNS lookup limit
 #
@@ -284,6 +287,10 @@ def DNSLookup(name,qtype):
     return [((a['name'], a['typename']), a['data']) for a in resp.answers]
   except DNS.DNSError,x:
     raise TempError,'DNS ' + str(x)
+
+def isSPF(txt):
+  "Return True if txt has SPF record signature."
+  return txt.startswith('v=spf1 ') or txt == 'v=spf1'
 
 # 32-bit IPv4 address mask
 MASK = 0xFFFFFFFFL
@@ -590,7 +597,11 @@ class query(object):
 
 		# split string by whitespace, drop the 'v=spf1'
 		#
-		spf = spf.split()[1:]
+		spf = spf.split()
+		#Catch case where SPF record has no spaces
+		if spf[0] != 'v=spf1':   
+		    raise PermError('Invalid SPF record in', self.d)
+		spf = spf[1:]
 
 		# copy of explanations to be modified by exp=
 		exps = self.exps
@@ -815,11 +826,11 @@ class query(object):
 		is found.
 		"""
 		# for performance, check for most common case of TXT first
-		a = [t for t in self.dns_txt(domain) if t.startswith('v=spf1')]
+		a = [t for t in self.dns_txt(domain) if isSPF(t)]
 		if len(a) == 1 and self.strict < 2:
 		    return a[0]   			
 		# check official SPF type first when it becomes more popular
-		b = [t for t in self.dns_99(domain) if t.startswith('v=spf1')]
+		b = [t for t in self.dns_99(domain) if isSPF(t)]
 		if len(b) == 1:
 		    # FIXME: really must fully parse each record
 		    # and compare with appropriate parts case insensitive.
@@ -832,7 +843,7 @@ class query(object):
 		if DELEGATE:	# use local record if neither found
 		    a = [t
 		      for t in self.dns_txt(domain+'._spf.'+DELEGATE)
-			if t.startswith('v=spf1')
+			if isSPF(t)
 		    ]
 		    if len(a) == 1: return a[0]
 		return None
