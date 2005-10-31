@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.38  2005/10/28 19:36:54  customdesigned
+# Don't check internal_domains for trusted_relay.
+#
 # Revision 1.37  2005/10/28 09:30:49  customdesigned
 # Do not send quarantine DSN when sender is DSN.
 #
@@ -352,6 +355,7 @@ scan_html = True
 scan_rfc822 = True
 internal_connect = ()
 trusted_relay = ()
+trusted_forwarder = ()
 internal_domains = ()
 banned_users = ()
 hello_blacklist = ()
@@ -526,6 +530,7 @@ def read_config(list):
   # spf section
   global spf_reject_neutral,spf_best_guess,SRS,spf_reject_noptr
   global spf_accept_softfail,spf_accept_fail,supply_sender,access_file
+  global trusted_forwarder
   if spf:
     spf.DELEGATE = cp.getdefault('spf','delegate')
     spf_reject_neutral = cp.getlist('spf','reject_neutral')
@@ -535,6 +540,7 @@ def read_config(list):
     spf_reject_noptr = cp.getboolean('spf','reject_noptr')
     supply_sender = cp.getboolean('spf','supply_sender')
     access_file = cp.getdefault('spf','access_file')
+    trusted_forwarder = cp.getlist('spf','trusted_forwarder')
   srs_config = cp.getdefault('srs','config')
   if srs_config: cp.read([srs_config])
   srs_secret = cp.getdefault('srs','secret')
@@ -928,11 +934,18 @@ class bmsMilter(Milter.Milter):
 
   def check_spf(self):
     receiver = self.receiver
-    q = spf.query(self.connectip,self.canon_from,self.hello_name,
-    	receiver=receiver,strict=False)
-    q.set_default_explanation(
-      'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
-    res,code,txt = q.check()
+    for tf in trusted_forwarder:
+      q = spf.query(self.connectip,'',tf,receiver=receiver,strict=False)
+      res,code,txt = q.check()
+      if res == 'pass':
+        self.log("TRUSTED_FORWARDER:",tf)
+        break
+    else:
+      q = spf.query(self.connectip,self.canon_from,self.hello_name,
+	  receiver=receiver,strict=False)
+      q.set_default_explanation(
+	'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
+      res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
       self.cbv_needed = q	# report SPF syntax error to sender
