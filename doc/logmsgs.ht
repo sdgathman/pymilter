@@ -5,7 +5,8 @@ DT              { font-weight: bolder; padding-top: 1em }
 
 <h1> Milter Log Documentation </h1>
 
-The milter log has a variety of "tags" in it that indicate what it did.
+The milter log from the bms.py application has a variety of "tags" in it that
+indicate what it did.
 
 <dl>
 <dt> DSPAM: honeypot SCREENED

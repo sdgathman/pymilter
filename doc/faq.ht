@@ -99,13 +99,14 @@ If you are running bms.py, then the block_chinese option in
 
 <li> Q. Why does sendmail coredump with milters on OpenBSD?
 <p>  A. Sendmail has a problem with unix sockets on old versions of OpenBSD.
-Use an internet domain socket instead.  For example, in
+OpenBSD users report that this problem has been fixed, so upgrading
+OpenBSD will fix this.  Otherwise, you can
+use an internet domain socket instead.  For example, in
 <code>sendmail.cf</code> use
 <pre>
 Xpythonfilter, S=inet:1234@localhost
 </pre>
 and change sample.py accordingly.
-<p> OpenBSD users report that this problem has been fixed.
 <p>
 
 <li> Q. How can I change the bounce message for an invalid recipient?
@@ -139,10 +140,15 @@ Xpythonfilter, S=local:/var/log/milter/pythonsock, F=T, T=C:5m;S:20s;R:60s;E:5m
 </pre>
 <li> Q. There is a Python traceback in the log file!  What happened to
 	my email?
-<p>  A. When the milter fails with an untrapped exception, a TEMPFAIL
-result (451) is returned to the sender.  The sender will then retry every
-hour or so for several days.  Hopefully, someone will notice the 
-traceback, and workaround or fix the problem.
+<p>  A. By default, when the milter fails with an untrapped exception, a
+TEMPFAIL result (451) is returned to the sender.  The sender will then retry
+every hour or so for several days.  Hopefully, someone will notice the 
+traceback, and workaround or fix the problem.  Beginning with milter-0.8.2,
+you can call <code>milter.set_exception_policy(milter.CONTINUE)</code>
+to cause an untrapped exception to continue processing with the
+next callback or milter instead.  For
+completeness, you can also set the exception policy to
+<code>milter.REJECT</code>.
 
 <li> Q. I read some notes such as "Check valid domains allowed by internal
 	senders to detect PCs infected with spam trojans." but could not

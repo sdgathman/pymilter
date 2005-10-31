@@ -7,13 +7,13 @@ Title: Requirements
 want to use python 2.0 or better.  The python code uses a number of
 python 2 features.  The email support requires python 2.4.
 <li> Python must be configured with thread support.  This is because
-sendmail's libmilter requires thread support.
+pymilter uses sendmail's libmilter which requires thread support.
 <li> You must compile sendmail with libmilter enabled.  In versions of
 sendmail prior to 8.12 libmilter is marked FFR (For Future Release) and
 is not installed by default.  
 Sendmail 8.12 still does not enable libmilter by default.  You must 
 explicitly select the "MILTER" option when compiling.  
-<li> Python milter has been tested against sendmail-8.11 and sendmail-8.12.
+<li> Python milter has been tested against sendmail-8.11 through sendmail-8.13.
 <li> Python milter must be compiled for the specific version of sendmail
 it will run with.  (Since the result is dynamically loaded, there could 
 conceivably be multiple versions available and selected at startup - but

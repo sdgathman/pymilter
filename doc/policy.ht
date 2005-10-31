@@ -2,6 +2,11 @@ Title: Python Milter Mail Policy
 
 <h1> Python Milter Mail Policy </h1>
 
+These are the policies implemented by the <code>bms.py</code> milter
+application.  The milter and Milter modules do not implement any policies
+by themselves.  Eventually, I'll get the bms.py milter moved to its
+own package.
+
 <h3> Classify connection </h3>
 
 When the SMTP client connects, the connection IP address is
