@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.39  2005/10/31 00:04:58  customdesigned
+# Simple implementation of trusted_forwarder list.  Inefficient for
+# more than 1 or 2 entries.
+#
 # Revision 1.38  2005/10/28 19:36:54  customdesigned
 # Don't check internal_domains for trusted_relay.
 #
@@ -317,6 +321,12 @@ from Milter.dynip import is_dynip as dynip
 from fnmatch import fnmatchcase
 from email.Header import decode_header
 
+# Import gossip if available
+try:
+  import gossip
+  from gossip.server import Gossip
+except: gossip = None
+
 # Import pysrs if available
 try:
   import SRS
@@ -390,6 +400,9 @@ logging.basicConfig(
 	datefmt='%Y%b%d %H:%M:%S'
 )
 milter_log = logging.getLogger('milter')
+
+if gossip:
+  gossip_node = Gossip('gossip4.db',30)
 
 class MilterConfigParser(ConfigParser.ConfigParser):
 
@@ -762,7 +775,8 @@ class bmsMilter(Milter.Milter):
   def connect(self,hostname,unused,hostaddr):
     self.internal_connection = False
     self.trusted_relay = False
-    self.receiver = self.getsymval('j')
+    # sometimes people put extra space in sendmail config, so we strip
+    self.receiver = self.getsymval('j').strip()
     if hostaddr and len(hostaddr) > 0:
       ipaddr = hostaddr[0]
       for pat in internal_connect:
@@ -922,14 +936,25 @@ class bmsMilter(Milter.Milter):
 	self.dspam = False
     else:
       self.rejectvirus = False
+      domain = None
     if not self.hello_name:
       self.log("REJECT: missing HELO")
       self.setreply('550','5.7.1',"It's polite to say HELO first.")
       return Milter.REJECT
+    self.umis = None
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
-      return self.check_spf()
-    self.spf = None
+      rc = self.check_spf()
+      if rc != Milter.CONTINUE or not domain or not gossip: return rc
+      if self.spf.result == 'pass':
+        qual = 'SPF'
+      else:
+        qual = self.connectip
+      self.umis = gossip.umis(domain+qual,self.id+time.time())
+      res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
+      self.add_header(hdr,val,idx=0)
+    else:
+      self.spf = None
     return Milter.CONTINUE
 
   def check_spf(self):
@@ -1359,8 +1384,8 @@ class bmsMilter(Milter.Milter):
     ds.headerchange = self._headerChange
     modified = False
     for rcpt in self.recipients:
-      if dspam_users.has_key(rcpt):
-        user = dspam_users.get(rcpt)
+      if dspam_users.has_key(rcpt.lower()):
+        user = dspam_users.get(rcpt.lower())
 	if user:
 	  try:
 	    self.fp.seek(0)
@@ -1476,6 +1501,8 @@ class bmsMilter(Milter.Milter):
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam
       if not self.fp:
+        if gossip and self.umis:
+	  gossip_node.feedback(self.umis,1)
         return spam_checked
 
       # analyze all mail for dangerous attachments and scripts
@@ -1581,7 +1608,10 @@ class bmsMilter(Milter.Milter):
 	buf = out.read(8192)
 	if len(buf) == 0: break
 	self.replacebody(buf)	# feed modified message to sendmail
-      if spam_checked: self.log("dspam")
+      if spam_checked: 
+	if gossip and self.umis:
+	  gossip_node.feedback(self.umis,0)
+        self.log("dspam")
       return rc
     finally:
       out.close()
