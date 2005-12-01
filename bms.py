@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.40  2005/11/07 21:22:35  customdesigned
+# GOSSiP support, local database only.
+#
 # Revision 1.39  2005/10/31 00:04:58  customdesigned
 # Simple implementation of trusted_forwarder list.  Inefficient for
 # more than 1 or 2 entries.
@@ -969,7 +972,7 @@ class bmsMilter(Milter.Milter):
       q = spf.query(self.connectip,self.canon_from,self.hello_name,
 	  receiver=receiver,strict=False)
       q.set_default_explanation(
-	'SPF fail: see http://openspf.com/why.html?sender=%s&ip=%s' % (q.s,q.i))
+	'SPF fail: see http://openspf.org/why.html?sender=%s&ip=%s' % (q.s,q.i))
       res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
@@ -999,7 +1002,7 @@ class bmsMilter(Milter.Milter):
       if spf_best_guess and res == 'none':
 	#self.log('SPF: no record published, guessing')
 	q.set_default_explanation(
-		'SPF guess: see http://spf.pobox.com/why.html')
+		'SPF guess: see http://openspf.org/why.html')
 	# best_guess should not result in fail
 	if self.missing_ptr:
 	  # ignore dynamic PTR for best guess
@@ -1020,7 +1023,7 @@ class bmsMilter(Milter.Milter):
 	elif policy != 'OK':
 	  self.log('REJECT: no PTR, HELO or SPF')
 	  self.setreply('550','5.7.1',
-    "You must have a reverse lookup or publish SPF: http://spf.pobox.com",
+    "You must have a reverse lookup or publish SPF: http://openspf.org",
     "Contact your mail administrator IMMEDIATELY!  Your mail server is",
     "severely misconfigured.  It has no PTR record (dynamic PTR records",
     "that contain your IP don't count), an invalid HELO, and no SPF record."
@@ -1053,7 +1056,7 @@ class bmsMilter(Milter.Milter):
 	  'notify your administrator of the problem immediately.'
 	)
 	return Milter.REJECT
-    if res == 'neutral' and q.o in spf_reject_neutral:
+    if res == 'neutral':
       policy = p.getNeutralPolicy()
       if policy == 'CBV' and hres == 'pass':
 	if self.mailfrom != '<>':
@@ -1061,7 +1064,7 @@ class bmsMilter(Milter.Milter):
       elif policy != 'OK':
 	self.log('REJECT: SPF neutral for',q.s)
 	self.setreply('550','5.7.1',
-	  'mail from %s must pass SPF: http://spf.pobox.com/why.html' % q.o,
+	  'mail from %s must pass SPF: http://openspf.org/why.html' % q.o,
 	  'The %s domain is one that spammers love to forge.  Due to' % q.o,
 	  'the volume of forged mail, we can only accept mail that',
 	  'the SPF record for %s explicitly designates as legitimate.' % q.o,
@@ -1230,7 +1233,7 @@ class bmsMilter(Milter.Milter):
       self.log('REJECT: bounce with no SRS encoding')
       self.setreply('550','5.7.1',
 	"I did not send you that message. Please consider implementing SPF",
-	"(http://openspf.com) to avoid bouncing mail to spoofed senders.",
+	"(http://openspf.org) to avoid bouncing mail to spoofed senders.",
 	"Thank you."
       )
     return Milter.REJECT
