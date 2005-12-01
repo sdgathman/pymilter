@@ -1,3 +1,10 @@
+Include full info in Received-SPF for neutral.  When making best
+guess, Received-SPF should be none.  Add additional keywords or
+another header.
+
+Require signed MFROM for all incoming bounces when signing all outgoing mail -
+except from trusted relays.
+
 Send DSN for permerror before processing extended result.  An additional
 DSN may be sent based on extended result.
 

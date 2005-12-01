@@ -25,7 +25,8 @@ real, usable Python extension.
   <dd>for providing a Python port of SPF
 <dt>Scott Kitterman
   <dd>for doing lots of testing and debugging of SPF against draft standard,
-  and for putting up a web page that validates SPF records using spf.py
+  and for putting up a <a href="http://www.kitterman.com/spf/validate.html">
+  web page that validates SPF</a> records using spf.py
 <dt>Alexander Kourakos
   <dd>for plugging several memory leaks
 <dt>George Graf at Vienna University of Economics and Business Administration

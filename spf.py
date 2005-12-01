@@ -19,7 +19,7 @@ AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
 SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 For more information about SPF, a tool against email forgery, see
-	http://spf.pobox.com/
+	http://openspf.org/
 
 For news, bugfixes, etc. visit the home page for this implementation at
 	http://www.wayforward.net/spf/
@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.15  2005/10/30 01:08:14  customdesigned
+# Ignore records missing spaces.
+#
 # Revision 1.14  2005/08/12 17:36:51  customdesigned
 # Trean non-existant include as no match in "lax" mode.
 #
@@ -596,9 +599,12 @@ class query(object):
 			return ('none', 250, EXPLANATIONS['none'])
 
 		# split string by whitespace, drop the 'v=spf1'
-		#
 		spf = spf.split()
-		#Catch case where SPF record has no spaces
+		# Catch case where SPF record has no spaces
+		# Can never happen with conforming dns_spf(), however
+		# in the future we might want to give permerror
+		# for common mistakes like IN TXT "v=spf1" "mx" "-all"
+		# in relaxed mode.
 		if spf[0] != 'v=spf1':   
 		    raise PermError('Invalid SPF record in', self.d)
 		spf = spf[1:]

@@ -6,6 +6,11 @@ Python milter has been moved to
 <a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
 project</a> for development and release downloads.
 
+<h3> GOSSiP </h3>
+An alpha release of <a href="pygossip.html">pygossip</a> has been commited to
+CVS, module pygossip. A version of the bms.py milter has been commited to CVS
+which supports calling GOSSiP to track domain reputation in a local database.
+
 <h3> New website design </h3>
 
 Hey, I'm no artist, so I just used the

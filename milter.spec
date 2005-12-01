@@ -1,6 +1,6 @@
 %define name milter
 %define version 0.8.4
-%define release 1.RH7
+%define release 2.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -31,7 +31,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
-#Patch: %{name}-%{version}.patch
+Patch: %{name}-%{version}.patch
 Copyright: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -52,10 +52,15 @@ modules provide for navigating and modifying MIME parts.
 
 %prep
 %setup
-#%patch -p1
+%patch -p0 -b .bms
 
 %build
-env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" %{python} setup.py build
+if %{redhat9}; then
+  LDFLAGS="-g"
+else
+  LDFLAGS="-s"
+fi
+env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -169,8 +174,13 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Mon Oct 31 2005 Stuart Gathman <stuart@bmsi.com> 0.8.5-1
+- Simple trusted_forwarder implementation.
+- Fix access_file neutral policy
 * Fri Oct 21 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-2
 - Don't supply sender when MFROM is subdomain of header from/sender.
+- Don't send quarantine DSN for DSNs
+- Skip dspam for replies/DSNs to signed MFROM
 * Thu Oct 20 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-1
 - Fix SPF policy via sendmail access map (case insensitive keys).
 - Auto whitelist senders, train screener on whitelisted messages

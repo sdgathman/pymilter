@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.41  2005/12/01 18:59:25  customdesigned
+# Fix neutral policy.  pobox.com -> openspf.org
+#
 # Revision 1.40  2005/11/07 21:22:35  customdesigned
 # GOSSiP support, local database only.
 #
@@ -578,7 +581,7 @@ def read_config(list):
       ses = SES.new(secret=srs_secret,expiration=maxage)
       srs_domain = cp.getlist('srs','ses')
     else:
-      srs_domain = []
+      srs_domain = cp.getlist('srs','srs')
     srs_domain.append(cp.getdefault('srs','fwdomain'))
     banned_users = cp.getlist('srs','banned_users')
     #print srs_domain
@@ -947,15 +950,7 @@ class bmsMilter(Milter.Milter):
     self.umis = None
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
-      rc = self.check_spf()
-      if rc != Milter.CONTINUE or not domain or not gossip: return rc
-      if self.spf.result == 'pass':
-        qual = 'SPF'
-      else:
-        qual = self.connectip
-      self.umis = gossip.umis(domain+qual,self.id+time.time())
-      res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
-      self.add_header(hdr,val,idx=0)
+      return self.check_spf()
     else:
       self.spf = None
     return Milter.CONTINUE
@@ -1094,6 +1089,14 @@ class bmsMilter(Milter.Milter):
     if res == 'pass' and auto_whitelist.has_key(self.canon_from):
       self.whitelist = True
       self.log("WHITELIST",self.canon_from)
+    if gossip:
+      if res == 'pass':
+        qual = 'SPF'
+      else:
+        qual = self.connectip
+      self.umis = gossip.umis(q.o+qual,self.id+time.time())
+      res,hdr,val = gossip_node.query(self.umis,q.o,qual,1)
+      self.add_header(hdr,val)
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
