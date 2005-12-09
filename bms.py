@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.42  2005/12/01 22:42:32  customdesigned
+# improve gossip support.
+# Initialize srs_domain from srs.srs config property.  Should probably
+# always block unsigned DSN when signing all.
+#
 # Revision 1.41  2005/12/01 18:59:25  customdesigned
 # Fix neutral policy.  pobox.com -> openspf.org
 #
@@ -408,7 +413,7 @@ logging.basicConfig(
 milter_log = logging.getLogger('milter')
 
 if gossip:
-  gossip_node = Gossip('gossip4.db',30)
+  gossip_node = Gossip('gossip4.db',120)
 
 class MilterConfigParser(ConfigParser.ConfigParser):
 
@@ -740,7 +745,7 @@ class AddrCache(object):
 cbv_cache = AddrCache()
 cbv_cache.load('send_dsn.log',age=7)
 auto_whitelist = AddrCache()
-auto_whitelist.load('auto_whitelist.log',age=30)
+auto_whitelist.load('auto_whitelist.log',age=120)
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -1056,6 +1061,7 @@ class bmsMilter(Milter.Milter):
       if policy == 'CBV' and hres == 'pass':
 	if self.mailfrom != '<>':
 	  self.cbv_needed = q
+	  q.result = res	# select neutral DSN template
       elif policy != 'OK':
 	self.log('REJECT: SPF neutral for',q.s)
 	self.setreply('550','5.7.1',
@@ -1165,6 +1171,7 @@ class bmsMilter(Milter.Milter):
 	else:
 	  auto_whitelist[canon_to] = None
     self.smart_alias(to)
+    # get recipient after virtusertable aliasing
     #rcpt = self.getsymval("{rcpt_addr}")
     #self.log("rcpt-addr",rcpt);
     return Milter.CONTINUE
