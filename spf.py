@@ -47,6 +47,11 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.16  2005/12/01 22:42:32  customdesigned
+# improve gossip support.
+# Initialize srs_domain from srs.srs config property.  Should probably
+# always block unsigned DSN when signing all.
+#
 # Revision 1.15  2005/10/30 01:08:14  customdesigned
 # Ignore records missing spaces.
 #
@@ -938,14 +943,13 @@ class query(object):
 	def get_header(self,res,receiver=None):
 	  if not receiver:
 	    receiver = self.r
-	  if res in ('pass','fail','softfail'):
-	    return '%s (%s: %s) client-ip=%s; envelope-from=%s; helo=%s;' % (
-	  	res,receiver,self.get_header_comment(res),self.i,
+	  if res in ('unknown','permerror'):
+	    txt = ' '.join([res] + self.mech)
+	  else:
+	    txt = res
+	  return '%s (%s: %s) client-ip=%s; envelope-from=%s; helo=%s;' % (
+	  	txt,receiver,self.get_header_comment(res),self.i,
 	        self.l + '@' + self.o, self.h)
-	  if res == 'unknown':
-	    return '%s (%s: %s)' % (' '.join([res] + self.mech),
-	      receiver,self.get_header_comment(res))
-	  return '%s (%s: %s)' % (res,receiver,self.get_header_comment(res))
 
 	def get_header_comment(self,res):
 		"""Return comment for Received-SPF header.
@@ -967,10 +971,10 @@ class query(object):
 		    "%s is neither permitted nor denied by domain of %s" \
 		    	% (self.i,sender)
 		    #"%s does not designate permitted sender hosts" % sender
-		elif res == 'unknown': return \
+		elif res in ('unknown','permerror'): return \
 		    "permanent error in processing domain of %s: %s" \
 		    	% (sender, self.prob)
-		elif res == 'error': return \
+		elif res in ('error','temperror'): return \
 		    "temporary error in processing during lookup of %s" % sender
 		elif res == 'fail': return \
 		    "domain of %s does not designate %s as permitted sender" \
