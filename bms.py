@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.43  2005/12/09 16:54:01  customdesigned
+# Select neutral DSN template for best_guess
+#
 # Revision 1.42  2005/12/01 22:42:32  customdesigned
 # improve gossip support.
 # Initialize srs_domain from srs.srs config property.  Should probably
@@ -779,8 +782,8 @@ class bmsMilter(Milter.Milter):
 
   # addheader can only be called from eom().  This accumulates added headers
   # which can then be applied by alter_headers()
-  def add_header(self,name,val):
-    self.new_headers.append((name,val))
+  def add_header(self,name,val,idx=-1):
+    self.new_headers.append((name,val,idx))
     self.log('%s: %s' % (name,val))
 
   def connect(self,hostname,unused,hostaddr):
@@ -1023,10 +1026,11 @@ class bmsMilter(Milter.Milter):
 	elif policy != 'OK':
 	  self.log('REJECT: no PTR, HELO or SPF')
 	  self.setreply('550','5.7.1',
-    "You must have a reverse lookup or publish SPF: http://openspf.org",
-    "Contact your mail administrator IMMEDIATELY!  Your mail server is",
-    "severely misconfigured.  It has no PTR record (dynamic PTR records",
-    "that contain your IP don't count), an invalid HELO, and no SPF record."
+    "You must have a valid HELO or publish SPF: http://www.openspf.org ",
+    "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
+    "severely misconfigured.  It has no PTR record (dynamic PTR records ",
+    "that contain your IP don't count), an invalid or dynamic HELO, ",
+    "and no SPF record."
 	  )
 	  return Milter.REJECT
     if res in ('deny', 'fail'):
@@ -1090,7 +1094,7 @@ class bmsMilter(Milter.Milter):
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    self.add_header('Received-SPF',q.get_header(res,receiver))
+    self.add_header('Received-SPF',q.get_header(res,receiver),0)
     self.spf = q
     if res == 'pass' and auto_whitelist.has_key(self.canon_from):
       self.whitelist = True
@@ -1285,7 +1289,7 @@ class bmsMilter(Milter.Milter):
     if not self.fp: return Milter.TEMPFAIL	# not seen by envfrom
     if not self.data_allowed:
       return self.forged_bounce()
-    for name,val in self.new_headers:
+    for name,val,idx in self.new_headers:
       self.fp.write("%s: %s\n" % (name,val))	# add new headers to buffer
     self.fp.write("\n")				# terminate headers
     # log when neither sender nor from domains matches mail from domain
@@ -1578,8 +1582,8 @@ class bmsMilter(Milter.Milter):
 	self.addrcpt(self.mailfrom)
     else:
       self.alter_recipients(self.discard_list,self.redirect_list)
-    for name,val in self.new_headers:
-      self.addheader(name,val)
+    for name,val,idx in self.new_headers:
+      self.addheader(name,val,idx)
 
     if self.cbv_needed:
       q = self.cbv_needed
