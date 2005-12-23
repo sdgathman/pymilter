@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.44  2005/12/23 21:47:07  customdesigned
+# Move Received-SPF header to top.
+#
 # Revision 1.43  2005/12/09 16:54:01  customdesigned
 # Select neutral DSN template for best_guess
 #
@@ -1012,7 +1015,6 @@ class bmsMilter(Milter.Milter):
 	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
 	else:
 	  res,code,txt = q.best_guess()
-	receiver += ': guessing'
         if q.perm_error:	# FIXME: should never happen?
           res,code,txt = q.perm_error.ext	# extended result
 	  txt = 'EXT: ' + txt
@@ -1094,7 +1096,9 @@ class bmsMilter(Milter.Milter):
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    self.add_header('Received-SPF',q.get_header(res,receiver),0)
+    self.add_header('Received-SPF',q.get_header(q.result,receiver),0)
+    if res != q.result:
+      self.add_header('X-Guessed-SPF',res,0)
     self.spf = q
     if res == 'pass' and auto_whitelist.has_key(self.canon_from):
       self.whitelist = True
