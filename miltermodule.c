@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.8  2005/10/20 23:23:36  customdesigned
+ * Include smfi_progress is SMFIR_PROGRESS defined
+ *
  * Revision 1.7  2005/10/20 23:04:46  customdesigned
  * Add optional idx for position of added header.
  *
@@ -996,8 +999,16 @@ milter_addheader(PyObject *self, PyObject *args) {
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
+#ifdef SMFIR_INSHEADER
   return _thread_return(t, (idx < 0) ? smfi_addheader(ctx, headerf, headerv) :
       smfi_insheader(ctx, idx, headerf, headerv), "cannot add header");
+#else
+  if (idx < 0)
+    return _thread_return(t, smfi_addheader(ctx, headerf, headerv),
+	"cannot add header");
+  PyErr_SetString(MilterError, "insheader not supported");
+  return NULL;
+#endif
 }
 
 static char milter_chgheader__doc__[] =
