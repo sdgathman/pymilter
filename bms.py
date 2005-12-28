@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.45  2005/12/23 22:34:46  customdesigned
+# Put guessed result in separate header.
+#
 # Revision 1.44  2005/12/23 21:47:07  customdesigned
 # Move Received-SPF header to top.
 #
@@ -714,43 +717,64 @@ class SPFPolicy(object):
 class AddrCache(object):
   time_format = '%Y%b%d %H:%M:%S %Z'
 
-  def load(self,fname,age=7):
+  def __init__(self,renew=7):
+    self.age = renew
+
+  def load(self,fname,age=0):
+    if not age:
+      age = self.age
     self.fname = fname
     cache = {}
     self.cache = cache
+    now = time.time()
     try:
-      too_old = time.time() - age*24*60*60	# max age in days
+      too_old = now - age*24*60*60	# max age in days
       for ln in open(self.fname):
 	try:
 	  rcpt,ts = ln.strip().split(None,1)
 	  l = time.strptime(ts,AddrCache.time_format)
 	  t = time.mktime(l)
 	  if t > too_old:
-	    cache[rcpt.lower()] = None
+	    cache[rcpt.lower()] = (t,None)
 	except:
-	  cache[ln.strip().lower()] = None
+	  cache[ln.strip().lower()] = (now,None)
     except IOError: pass
 
   def has_key(self,sender):
-    return self.cache.has_key(sender.lower())
+    try:
+      ts,res = self.cache[sender.lower()]
+      too_old = time.time() - self.age*24*60*60	# max age in days
+      if ts > too_old:
+        return True
+      del self.cache[sender.lower()]
+    except KeyError:
+      pass
+    return False
 
   def __getitem__(self,sender):
-    return self.cache[sender.lower()]
+    ts,res = self.cache[sender.lower()]
+    too_old = time.time() - self.age*24*60*60	# max age in days
+    if ts > too_old:
+      return res
+    del self.cache[sender.lower()]
+    raise KeyError, sender
 
   def __setitem__(self,sender,res):
     lsender = sender.lower()
-    cached = lsender in self.cache
-    self.cache[lsender] = res
-    if not cached and not res:
-      s = time.strftime(AddrCache.time_format,time.localtime())
-      print >>open(self.fname,'a'),sender,s # log who we sent DSNs to
+    now = time.time()
+    cached = self.has_key(sender)
+    if not cached:
+      self.cache[lsender] = (now,res)
+      if not res:
+	s = time.strftime(AddrCache.time_format,time.localtime(now))
+	print >>open(self.fname,'a'),sender,s # log refreshed senders
 
   def __len__(self):
     return len(self.cache)
 
-cbv_cache = AddrCache()
+cbv_cache = AddrCache(renew=7)
 cbv_cache.load('send_dsn.log',age=7)
-auto_whitelist = AddrCache()
+auto_whitelist = AddrCache(renew=30)
 auto_whitelist.load('auto_whitelist.log',age=120)
 
 class bmsMilter(Milter.Milter):
@@ -1587,7 +1611,10 @@ class bmsMilter(Milter.Milter):
     else:
       self.alter_recipients(self.discard_list,self.redirect_list)
     for name,val,idx in self.new_headers:
-      self.addheader(name,val,idx)
+      try:
+	self.addheader(name,val,idx)
+      except:
+	self.addheader(name,val)	# older sendmail can't insheader
 
     if self.cbv_needed:
       q = self.cbv_needed
