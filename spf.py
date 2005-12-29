@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.17  2005/12/23 21:44:15  customdesigned
+# Always include keyword data in Received-SPF header.
+#
 # Revision 1.16  2005/12/01 22:42:32  customdesigned
 # improve gossip support.
 # Initialize srs_domain from srs.srs config property.  Should probably
@@ -885,7 +888,9 @@ class query(object):
 
 	def dns_a(self, domainname):
 		"""Get a list of IP addresses for a domainname."""
-		return self.dns(domainname, 'A')
+		if domainname:
+		  return self.dns(domainname, 'A')
+		return []
 
 	def dns_aaaa(self, domainname):
 		"""Get a list of IPv6 addresses for a domainname."""
