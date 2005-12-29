@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.46  2005/12/28 20:17:29  customdesigned
+# Expire and renew AddrCache entries
+#
 # Revision 1.45  2005/12/23 22:34:46  customdesigned
 # Put guessed result in separate header.
 #
@@ -1194,14 +1197,6 @@ class bmsMilter(Milter.Milter):
         self.hidepath = True
       if not domain in dspam_reject:
         self.reject_spam = False
-      if self.internal_connection and self.whitelist_sender:
-	if internal_domains:
-	  for pat in internal_domains:
-	    if fnmatchcase(domain,pat): break
-	  else:
-	    auto_whitelist[canon_to] = None
-	else:
-	  auto_whitelist[canon_to] = None
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
     #rcpt = self.getsymval("{rcpt_addr}")
@@ -1296,6 +1291,11 @@ class bmsMilter(Milter.Milter):
 	  return Milter.REJECT
       rc = self.check_header(name,val)
       if rc != Milter.CONTINUE: return rc
+    elif self.whitelist_sender and lname == 'subject':
+	# check for AutoReplys
+        if val.lower().find('autoreply:') >= 0:
+	  self.whitelist_sender = False
+
     # log selected headers
     if log_headers or lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
@@ -1610,6 +1610,20 @@ class bmsMilter(Milter.Milter):
 	self.addrcpt(self.mailfrom)
     else:
       self.alter_recipients(self.discard_list,self.redirect_list)
+      # auto whitelist original recipients
+      if not defanged and self.whitelist_sender:
+	for canon_to in self.recipients:
+	  user,domain = canon_to.split('@')
+	  if internal_domains:
+	    for pat in internal_domains:
+	      if fnmatchcase(domain,pat): break
+	    else:
+	      auto_whitelist[canon_to] = None
+	      self.log('Auto-Whitelist:',canon_to)
+	  else:
+	    auto_whitelist[canon_to] = None
+	    self.log('Auto-Whitelist:',canon_to)
+
     for name,val,idx in self.new_headers:
       try:
 	self.addheader(name,val,idx)
