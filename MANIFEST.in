@@ -10,6 +10,7 @@ include testmime.py
 include testbms.py
 include testdspam.py
 include rejects.py
+include report.py
 include bms.py
 include spf.py
 include cid2spf.py
