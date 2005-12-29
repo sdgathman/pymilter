@@ -1,5 +1,5 @@
 %define name milter
-%define version 0.8.4
+%define version 0.8.5
 %define release 2.RH7
 # what version of RH are we building for?
 %define redhat9 0
@@ -174,9 +174,16 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
-* Mon Oct 31 2005 Stuart Gathman <stuart@bmsi.com> 0.8.5-1
+* Thu Dec 29 2005 Stuart Gathman <stuart@bmsi.com> 0.8.5-1
 - Simple trusted_forwarder implementation.
 - Fix access_file neutral policy
+- Move Received-SPF header to beginning of headers
+- Supply keyword info for all results in Received-SPF header.
+- Move guessed SPF result to separate header
+- Activate smfi_insheader only when SMFIR_INSHEADER defined
+- Handle NULL MX in spf.py
+- in-process GOSSiP server support (to be extended later)
+- Expire CBV cache and renew auto-whitelist entries
 * Fri Oct 21 2005 Stuart Gathman <stuart@bmsi.com> 0.8.4-2
 - Don't supply sender when MFROM is subdomain of header from/sender.
 - Don't send quarantine DSN for DSNs

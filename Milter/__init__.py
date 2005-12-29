@@ -16,7 +16,7 @@ from milter import ACCEPT,CONTINUE,REJECT,DISCARD,TEMPFAIL,	\
 try: from milter import QUARANTINE
 except: pass
 
-__version__ = '0.8.4'
+__version__ = '0.8.5'
 
 _seq_lock = thread.allocate_lock()
 _seq = 0
