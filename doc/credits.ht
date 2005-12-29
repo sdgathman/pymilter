@@ -18,6 +18,9 @@ real, usable Python extension.
   <dd>for the pymilter mascot image of 
   <a href="http://maxwelld.netfirms.com/">
   Maxwell's daemon</a>
+<dt>Stephen Figgins
+  <dd>for reporting problems building with sendmail-8.12, and when
+  building milter.so for the first time.
 <dt>Dave MacQuigg 
   <dd>for noticing that smfi_insheader wasn't supported, and creating
   a template to help first time pymilter users create their own milter.

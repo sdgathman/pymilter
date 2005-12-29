@@ -13,6 +13,12 @@ sendmail prior to 8.12 libmilter is marked FFR (For Future Release) and
 is not installed by default.  
 Sendmail 8.12 still does not enable libmilter by default.  You must 
 explicitly select the "MILTER" option when compiling.  
+<li> When compiling Python milter against sendmail versions earlier than
+8.13, you must set MAX_ML_REPLY to 1 in setup.py.  There is no way to tell from
+the libmilter includes that smfi_setmlreply is not supported.
+<li> You probably want to use sendmail-8.13, since that supports multi-line
+SMTP error descriptions and SOCKETMAP.  You want SOCKETMAP for use with
+pysrs.
 <li> Python milter has been tested against sendmail-8.11 through sendmail-8.13.
 <li> Python milter must be compiled for the specific version of sendmail
 it will run with.  (Since the result is dynamically loaded, there could 

@@ -6,6 +6,15 @@ Python milter has been moved to
 <a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
 project</a> for development and release downloads.
 
+<h3> 0.8.5 </h3>
+
+Release 0.8.5 fixes some build bugs reported by Stephen Figgins.  It
+fixes many small things, like not auto-whitelisting recipients of
+outgoing mail when the subject contains "autoreply:".  There is a 
+simple trusted forwarder implementation.  If you have more than
+2 or so forwarders, we will need a way to "compile" SPF records into an
+IP set and TTL for it to be efficient (like libspf2 does).
+
 <h3> GOSSiP </h3>
 An alpha release of <a href="pygossip.html">pygossip</a> has been commited to
 CVS, module pygossip. A version of the bms.py milter has been commited to CVS
