@@ -1,6 +1,6 @@
 %define name milter
 %define version 0.8.5
-%define release 2.RH7
+%define release 1.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -31,7 +31,7 @@ Name: %{name}
 Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
-Patch: %{name}-%{version}.patch
+#Patch: %{name}-%{version}.patch
 Copyright: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
@@ -39,11 +39,11 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, sendmail >= 8.12.10
+Requires: %{python} >= 2.4, sendmail >= 8.13
 %ifos Linux
 Requires: chkconfig
 %endif
-BuildRequires: %{python}-devel , sendmail-devel >= 8.12.10
+BuildRequires: %{python}-devel , sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
@@ -52,7 +52,7 @@ modules provide for navigating and modifying MIME parts.
 
 %prep
 %setup
-%patch -p0 -b .bms
+#%patch -p0 -b .bms
 
 %build
 if %{redhat9}; then

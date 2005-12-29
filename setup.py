@@ -32,6 +32,7 @@ querying SPF records.
 	ext_modules=[
 	  Extension("milter", ["miltermodule.c"],
 	    libraries=libs,
+	    # set MAX_ML_REPLY to 1 for sendmail < 8.13
 	    define_macros = [ ('MAX_ML_REPLY',32) ]
 	  ),
 	],
