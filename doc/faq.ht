@@ -20,6 +20,21 @@ RedHat 7.2?
 <p>  A. RedHat forgot to include the header in the RPM.  See the
 <a href="requirements.html#rh72">RedHat 7.2 requirements</a>.
 <p>
+<li> Q. Python milter compiles ok, but I get an error like this when
+	I try to import the milter module:
+<pre>
+ImportError: /usr/lib/python2.4/site-packages/milter.so: undefined symbol: smfi_setmlreply
+</pre>
+<p>  A. Your libmilter.a is from sendmail-8.12 or earlier.  You need
+	sendmail-8.13 or later to support setmlreply.  You can disable
+	setmlreply by changing setup.py.  Change:
+<pre>
+            define_macros = [ ('MAX_ML_REPLY',32) ]
+</pre>
+in setup.py to
+<pre>
+            define_macros = [ ('MAX_ML_REPLY',1) ]
+</pre>
 
 <h3> Running Python Milter </h3>
 
