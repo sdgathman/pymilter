@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.47  2005/12/29 04:49:10  customdesigned
+# Do not auto-whitelist autoreplys
+#
 # Revision 1.46  2005/12/28 20:17:29  customdesigned
 # Expire and renew AddrCache entries
 #
@@ -779,6 +782,10 @@ cbv_cache = AddrCache(renew=7)
 cbv_cache.load('send_dsn.log',age=7)
 auto_whitelist = AddrCache(renew=30)
 auto_whitelist.load('auto_whitelist.log',age=120)
+try:
+  blacklist = set(open('blacklist.log').read().split())
+except:
+  blacklist = {}
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -898,6 +905,7 @@ class bmsMilter(Milter.Milter):
     self.discard = False
     self.dspam = True
     self.whitelist = False
+    self.blacklist = False
     self.reject_spam = True
     self.data_allowed = True
     self.trust_received = self.trusted_relay
@@ -1130,6 +1138,9 @@ class bmsMilter(Milter.Milter):
     if res == 'pass' and auto_whitelist.has_key(self.canon_from):
       self.whitelist = True
       self.log("WHITELIST",self.canon_from)
+    elif cbv_cache.has_key(q.s) and cbv_cache[q.s] or q.o in blacklist:
+      self.blacklist = True
+      self.log("BLACKLIST",self.canon_from)
     if gossip:
       if res == 'pass':
         qual = 'SPF'
@@ -1282,7 +1293,7 @@ class bmsMilter(Milter.Milter):
     lname = name.lower()
     # decode near ascii text to unobfuscate
     val = parse_header(hval)
-    if not self.internal_connection:
+    if not self.internal_connection and not (self.blacklist or self.whitelist):
       # even if we wanted the Taiwanese spam, we can't read Chinese
       if block_chinese and lname == 'subject':
 	if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
@@ -1484,6 +1495,9 @@ class bmsMilter(Milter.Milter):
 		# User can change if actually spam.
 	        txt = ds.check_spam(user,txt,self.recipients,
 			force_result=dspam.DSR_ISINNOCENT)
+	      elif self.blacklist:
+	        txt = ds.check_spam(user,txt,self.recipients,
+			force_result=dspam.DSR_ISSPAM)
 	      else:
 		txt = ds.check_spam(user,txt,self.recipients)
 	      if not txt:
@@ -1536,7 +1550,39 @@ class bmsMilter(Milter.Milter):
 	  self.fp = None
 	  return Milter.DISCARD
 	# Message no longer looks spammy, deliver normally. We lied in the DSN.
+      elif self.blacklist:
+        # message is blacklisted but looked like ham, Train on Error
+	self.log("TRAINSPAM:",screener,'X-Dspam-Score: %f' % ds.probability)
+	ds.check_spam(screener,txt,self.recipients,quarantine=False,
+		force_result=dspam.DSR_ISSPAM)
+	self.fp = None
+	return Milter.DISCARD
+      elif self.whitelist and ds.totals[1] < 500:
+	self.log("TRAIN:",screener,'X-Dspam-Score: %f' % ds.probability)
+	# user can't correct anyway if really spam, so discard tag
+	ds.check_spam(screener,txt,self.recipients,
+		force_result=dspam.DSR_ISINNOCENT)
+	return False
     return modified
+
+  # train late in eom(), after failed CBV
+  # FIXME: need to undo if registered as ham with a dspam_user
+  def train_spam(self):
+    "Train screener with current message as spam"
+    if not dspam_userdir: return
+    if not dspam_screener: return
+    ds = Dspam.DSpamDirectory(dspam_userdir)
+    ds.log = self.log
+    self.fp.seek(0)
+    txt = self.fp.read()
+    if len(txt) > dspam_sizelimit:
+      self.log("Large message:",len(txt))
+      return
+    screener = dspam_screener[self.id % len(dspam_screener)]
+    # since message will be rejected, we do not quarantine
+    ds.check_spam(screener,txt,self.recipients,force_result=dspam.DSR_ISSPAM,
+    	quarantine=False)
+    self.log("TRAINSPAM:",screener,'X-Dspam-Score: %f' % ds.probability)
 
   def eom(self):
     if not self.fp:
@@ -1642,13 +1688,10 @@ class bmsMilter(Milter.Milter):
 	template_name = 'strike3.txt'
       rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
-      if rc != Milter.CONTINUE: return rc
-
-    if not defanged and not spam_checked:
-      os.remove(self.tempname)
-      self.tempname = None	# prevent re-removal
-      self.log("eom")
-      return rc			# no modified attachments
+      if rc != Milter.CONTINUE:
+	if rc == Milter.REJECT:
+          self.train_spam()
+        return rc
 
     # Body modified, copy modified message to a temp file 
     if defanged:

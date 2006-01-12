@@ -1,3 +1,9 @@
+Use send_dsn.log for blacklist also.  AddrCache needs localpart
+wildcard (e.g. empty localpart).
+
+Quarantined mail is missing headers modified/added by milter after
+checking dspam.
+
 Require signed MFROM for all incoming bounces when signing all outgoing mail -
 except from trusted relays.
 
