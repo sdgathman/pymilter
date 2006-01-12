@@ -30,8 +30,8 @@ HELO name, and it did not pass.
 <dt> INNOC: richh
 <dd> message was used to update richh's dspam dictionary
 
-<dt> HONEYPOT: michaelb@jsconnor.com
-<dd> message was sent to a honeypot address (michaelb@jsconnor.com), the 
+<dt> HONEYPOT: pooh@bwicorp.com
+<dd> message was sent to a honeypot address (pooh@bwicorp.com), the 
 message was added to the honeypot dspam dictionary as spam
 
 <dt> REJECT: numeric hello name: 63.217.19.146
@@ -57,8 +57,17 @@ MX record, we told the sender to try again later
 <dt> REJECT: Subject: Cialis - No prescription needed!
 <dd> message was rejected because its subject contained a bad expression
 
-<dt> DSPAM: tonyc tonyc@jsconnor.com
-<dd> message was sent to tonyc@jsconnor.com and it was identified as spam 
+<dt> REJECT: zombie PC at  192.168.3.37  sending MAIL FROM  seajdr@amritind.com
+<dd> message was rejected because the connect ip was internal, but the
+sender was not.  This is usually because a Windows PC is infected with
+malware.
+
+<dt> X-Guessed-SPF: pass
+<dd> When the SPF result is NONE, we guess a result based on the generic
+SPF policy "v=spf1 a/24 mx/24 ptr".
+
+<dt> DSPAM: tonyc tonyc@example.com
+<dd> message was sent to tonyc@example.com and it was identified as spam 
 and placed in the tonyc dspam quarantine
 
 <dt> REJECT: CBV: 550 calvinalstonis@ix.netcom.com...User unknown
@@ -66,6 +75,17 @@ and placed in the tonyc dspam quarantine
 <dt> REJECT: CBV: 554 delivery error: dd This user doesn't have an account 
 <dd> message was rejected because call back verification gave us a fatal
 error
+<dt> Auto-Whitelist: user@example.com
+<dd> recipient has been added to auto_whitelist.log because the message
+was sent from an internal IP and the recipient is not internal.
+<dt> WHITELIST user@example.com
+<dd> message is whitelisted because sender appears in auto_whitelist.log
+<dt> BLACKLIST user@example.com
+<dd> message is blacklisted because sender appears in blacklist.log or
+     failed a CBV test.
+<dt> TRAINSPAM: honeypot X-Dspam-Score: 0.002278
+<dd> message was used to train screener dictionary as spam
+<dt> TRAIN: honeypot X-Dspam-Score: 0.980203
+<dd> message was used to train screener dictionary as ham
 </dl>
-
-Please add more tags to this list if you know of any. Thanks.
+<br>
