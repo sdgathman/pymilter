@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.48  2006/01/12 20:31:24  customdesigned
+# Accelerate training via whitelist and blacklist.
+#
 # Revision 1.47  2005/12/29 04:49:10  customdesigned
 # Do not auto-whitelist autoreplys
 #
@@ -1017,7 +1020,7 @@ class bmsMilter(Milter.Milter):
       res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
-      self.cbv_needed = q	# report SPF syntax error to sender
+      self.cbv_needed = (q,res)	# report SPF syntax error to sender
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.o)
@@ -1058,8 +1061,7 @@ class bmsMilter(Milter.Milter):
 	policy = p.getNonePolicy()
 	if policy == 'CBV':
 	  if self.mailfrom != '<>':
-	    q.result = ores
-	    self.cbv_needed = q	# accept, but inform sender via DSN
+	    self.cbv_needed = (q,ores)	# accept, but inform sender via DSN
 	elif policy != 'OK':
 	  self.log('REJECT: no PTR, HELO or SPF')
 	  self.setreply('550','5.7.1',
@@ -1074,7 +1076,7 @@ class bmsMilter(Milter.Milter):
       policy = p.getFailPolicy()
       if hres == 'pass' and policy == 'CBV':
 	if self.mailfrom != '<>':
-	  self.cbv_needed = q
+	  self.cbv_needed = (q,res)
       elif policy != 'OK':
 	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
 	self.setreply(str(code),'5.7.1',txt)
@@ -1086,7 +1088,7 @@ class bmsMilter(Milter.Milter):
       policy = p.getSoftfailPolicy()
       if policy == 'CBV' and hres == 'pass':
 	if self.mailfrom != '<>':
-	  self.cbv_needed = q
+	  self.cbv_needed = (q,res)
       elif policy != 'OK':
 	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
 	self.setreply('550','5.7.1',
@@ -1101,8 +1103,8 @@ class bmsMilter(Milter.Milter):
       policy = p.getNeutralPolicy()
       if policy == 'CBV' and hres == 'pass':
 	if self.mailfrom != '<>':
-	  self.cbv_needed = q
-	  q.result = res	# select neutral DSN template
+	  self.cbv_needed = (q,res)
+	  # FIXME: this makes Received-SPF show wrong result
       elif policy != 'OK':
 	self.log('REJECT: SPF neutral for',q.s)
 	self.setreply('550','5.7.1',
@@ -1118,7 +1120,7 @@ class bmsMilter(Milter.Milter):
       policy = p.getPermErrorPolicy()
       if policy == 'CBV' and hres == 'pass':
 	if self.mailfrom != '<>':
-	  self.cbv_needed = q
+	  self.cbv_needed = (q,res)
       elif policy != 'OK':
 	self.log('REJECT: SPF %s %i %s' % (res,code,txt))
 	# latest SPF draft recommends 5.5.2 instead of 5.7.1
@@ -1557,7 +1559,7 @@ class bmsMilter(Milter.Milter):
 		force_result=dspam.DSR_ISSPAM)
 	self.fp = None
 	return Milter.DISCARD
-      elif self.whitelist and ds.totals[1] < 500:
+      elif self.whitelist and ds.totals[1] < 1000:
 	self.log("TRAIN:",screener,'X-Dspam-Score: %f' % ds.probability)
 	# user can't correct anyway if really spam, so discard tag
 	ds.check_spam(screener,txt,self.recipients,
@@ -1677,21 +1679,28 @@ class bmsMilter(Milter.Milter):
 	self.addheader(name,val)	# older sendmail can't insheader
 
     if self.cbv_needed:
-      q = self.cbv_needed
-      if q.result in ('softfail','fail','deny'):
+      q,res = self.cbv_needed
+      if res in ('softfail','fail','deny'):
 	template_name = 'softfail.txt'
-      elif q.result in ('unknown','permerror'):
+      elif res in ('unknown','permerror'):
 	template_name = 'permerror.txt'
-      elif q.result == 'neutral':
+      elif res == 'neutral':
         template_name = 'neutral.txt'
       else:
 	template_name = 'strike3.txt'
       rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
+      if rc == Milter.REJECT:
+	self.train_spam()
+	return Milter.DISCARD
       if rc != Milter.CONTINUE:
-	if rc == Milter.REJECT:
-          self.train_spam()
         return rc
+
+    if not defanged and not spam_checked:
+      os.remove(self.tempname)
+      self.tempname = None	# prevent re-removal
+      self.log("eom")
+      return rc			# no modified attachments
 
     # Body modified, copy modified message to a temp file 
     if defanged:
