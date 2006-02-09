@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.49  2006/01/30 23:14:48  customdesigned
+# put back eom condition
+#
 # Revision 1.48  2006/01/12 20:31:24  customdesigned
 # Accelerate training via whitelist and blacklist.
 #
@@ -149,184 +152,6 @@
 # Revision 1.2  2005/06/02 01:00:36  customdesigned
 # Support configurable templates for DSNs.
 #
-#
-# Revision 1.134  2005/05/25 15:36:43  stuart
-# Use dynip module.
-# Support smart aliasing of wiretap destination.
-# Always send DSN for SOFTFAIL.
-# Close forged bounce loophole when there are no headers.
-#
-# Revision 1.133  2005/03/16 21:58:04  stuart
-# Auto DSN feature.
-#
-# Revision 1.132  2005/02/12 02:11:10  stuart
-# Pass unit tests with python2.4.
-#
-# Revision 1.131  2005/02/11 18:34:13  stuart
-# Handle garbage after quote in boundary.
-#
-# Revision 1.130  2005/02/10 01:10:58  stuart
-# Fixed MimeMessage.ismodified()
-#
-# Revision 1.129  2005/02/10 00:56:48  stuart
-# Runs with python2.4.  Defang not working correctly - more work needed.
-#
-# Revision 1.128  2005/02/09 17:53:34  stuart
-# Optionally run dspam on internal mail.
-#
-# Revision 1.127  2004/12/03 14:26:21  stuart
-# Mark DYN PTR, REJECT softfail, log Received-SPF from trusted MTA.
-#
-# Revision 1.126  2004/11/24 14:39:38  stuart
-# Also accept softfail if valid PTR or HELO.
-#
-# Revision 1.125  2004/11/19 16:40:14  stuart
-# Block softfail except for listed domains.
-#
-# Revision 1.124  2004/11/19 06:18:04  stuart
-# block softfail for configured domains only
-#
-# Revision 1.123  2004/11/18 20:36:49  stuart
-# Recognize more dynamic hosts.  Ignore dynamic PTR for best_guess.
-#
-# Revision 1.122  2004/11/18 17:16:10  stuart
-# Recognize more dynamic ips.
-#
-# Revision 1.121  2004/11/09 22:37:48  stuart
-# Don't accept helo names which are dynamic IP addresses.
-#
-# Revision 1.120  2004/11/09 20:33:50  stuart
-# Recognize more dynamic PTR variations.
-#
-# Revision 1.118  2004/08/30 21:19:50  stuart
-# Try best guess for HELO, expand setreply for common errors
-#
-# Revision 1.117  2004/08/23 02:27:53  stuart
-# Allow multi rcpt CBV.  Add some multiline replies.
-#
-# Revision 1.116  2004/08/20 22:27:52  stuart
-# Generate TEMPFAIL for SPF softfail.
-#
-# Revision 1.115  2004/08/19 20:55:49  stuart
-# Always show reversed SRS path.
-# Check if encodings are an ASCII superset.  Some messages were encoded as
-# BIG5 and getting rejected even though chars were all in ascii subset.
-#
-# Revision 1.114  2004/07/27 00:40:12  stuart
-# Make reject on no PTR optional.
-#
-# Revision 1.113  2004/07/23 23:11:14  stuart
-# Log known malformed messages differently than general processing exceptions.
-#
-# Revision 1.112  2004/07/21 19:18:33  stuart
-# Punt on UnicodeDecodeError when decoding headers.
-# Accept a pass with default SPF for missing reverse IP.
-#
-# Revision 1.111  2004/07/18 13:13:31  stuart
-# Reject invalid SRS only for SRS domain (which is the only one we
-# know the key for).
-# Reject senders that have neither reverse IP nor SPF.
-#
-# Revision 1.110  2004/06/12 03:13:18  stuart
-# Block bounces only for SRS domain.  Also treat mail from
-# postmaster or mailer-daemon as DSN for SRS/SES checking purposes.
-#
-# Revision 1.109  2004/05/01 02:56:55  stuart
-# Let multiple screeners share work.
-#
-# Revision 1.108  2004/04/29 20:36:23  stuart
-# Require HELO name
-#
-# Revision 1.107  2004/04/24 22:55:29  stuart
-# Move some files to make the RPM more standard.
-#
-# Revision 1.106  2004/04/21 18:29:08  stuart
-# Validate hello name with SPF.
-#
-# Revision 1.105  2004/04/20 15:16:00  stuart
-# Release 0.6.9
-#
-# Revision 1.104  2004/04/19 21:56:26  stuart
-# Support SPF best_guess and get_header
-#
-# Revision 1.103  2004/04/10 02:31:01  stuart
-# Fix timeout config
-#
-# Revision 1.102  2004/04/08 20:25:11  stuart
-# Make libmilter timeout a config option
-#
-# Revision 1.101  2004/04/08 19:18:16  stuart
-# Preserve case of local part in sender
-#
-# Revision 1.100  2004/04/08 18:41:15  stuart
-# Reject numeric hello names
-#
-# Revision 1.99  2004/04/06 19:46:39  stuart
-# Reject invalid SRS immediately for benefit of CallBack Verifiers.
-#
-# Revision 1.98  2004/04/06 15:28:20  stuart
-# Release 0.6.8-2
-#
-# Revision 1.97  2004/04/06 13:07:43  stuart
-# Pass original header name to check_header
-#
-# Revision 1.96  2004/04/06 03:27:03  stuart
-# bugs from Redhat 9 testing
-#
-# Revision 1.95  2004/04/05 22:37:08  stuart
-# Include Received-SPF headers in dspam.
-#
-# Revision 1.94  2004/04/05 22:16:50  stuart
-# Separate check_header method taking decoded header.
-# Reject multiple recipients for a bounce.
-#
-# Revision 1.93  2004/04/01 20:57:45  stuart
-# Report only SRS like addresses as spoofed.
-# Return TEMPFAIL on SPF error.
-#
-# Revision 1.92  2004/03/25 17:45:53  stuart
-# Make spf_reject_neutral global in bms.py
-#
-# Revision 1.91  2004/03/25 03:38:02  stuart
-# Reject neutral SPF result for selected domains.
-#
-# Revision 1.90  2004/03/25 03:27:33  stuart
-# Support delegation of SPF records.
-#
-# Revision 1.89  2004/03/23 22:02:49  stuart
-# Header decoding bug.
-#
-# Revision 1.88  2004/03/23 05:08:45  stuart
-# Decode headers, indirect srs config.
-#
-# Revision 1.87  2004/03/18 02:21:16  stuart
-# SRS checking
-#
-# Revision 1.86  2004/03/11 05:00:37  stuart
-# Don't wipe out fail messages from SPF records.
-# Hello blacklist
-#
-# Revision 1.85  2004/03/10 01:49:22  stuart
-# Enhanced SPF support.
-#
-# Revision 1.84  2004/03/09 17:04:49  stuart
-# Received-SPF header.
-#
-# Revision 1.83  2004/03/08 20:23:26  stuart
-# SPF support
-#
-# Revision 1.82  2004/03/01 18:56:50  stuart
-# Support progress reporting.
-#
-# Revision 1.81  2004/03/01 18:36:09  stuart
-# Trusted relay.
-#
-# Revision 1.80  2004/01/12 21:10:58  stuart
-# Support wildcard user for smart_alias
-#
-# Revision 1.79  2003/12/04 23:46:06  stuart
-# Release 0.6.4
-#
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
@@ -343,6 +168,7 @@ import traceback
 import ConfigParser
 import time
 import re
+import gc
 import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
@@ -723,6 +549,21 @@ class SPFPolicy(object):
       policy = 'OK'
     return policy
 
+def iniplist(ipaddr,iplist):
+  """Return whether ip is in cidr list
+  >>> iniplist('66.179.26.146',['66.179.26.128/26'])
+  True
+  """
+  for pat in iplist:
+    p = pat.split('/',1)
+    if ip4re.match(p[0]):
+      n = int(p[1])
+      if spf.cidr(p[0],n) == spf.cidr(ipaddr,n):
+        return True
+    elif fnmatchcase(ipaddr,pat):
+      return True
+  return False
+
 class AddrCache(object):
   time_format = '%Y%b%d %H:%M:%S %Z'
 
@@ -837,10 +678,8 @@ class bmsMilter(Milter.Milter):
 	if fnmatchcase(ipaddr,pat):
 	  self.internal_connection = True
 	  break
-      for pat in trusted_relay:
-	if fnmatchcase(ipaddr,pat):
-	  self.trusted_relay = True
-	  break
+      if iniplist(ipaddr,trusted_relay):
+        self.trusted_relay = True
     else: ipaddr = ''
     self.connectip = ipaddr
     self.missing_ptr = dynip(hostname,self.connectip)
@@ -872,6 +711,11 @@ class bmsMilter(Milter.Milter):
     if not self.internal_connection and hostname in hello_blacklist:
       self.log("REJECT: spam from self:",hostname)
       self.setreply('550','5.7.1','I hate talking to myself.')
+      return Milter.REJECT
+    if hostname == 'GC':
+      n = gc.collect()
+      self.log("gc:",n,' unreachable objects')
+      self.setreply('550','5.7.1','%d unreachable objects'%n)
       return Milter.REJECT
     return Milter.CONTINUE
 
@@ -1198,7 +1042,7 @@ class bmsMilter(Milter.Milter):
       users = check_user.get(domain)
       if self.discard:
         self.del_recipient(to)
-      if users and not user in users:
+      if users and not user.lower() in users:
         self.log('REJECT: RCPT TO:',to)
 	return Milter.REJECT
       if user in block_forward.get(domain,()):
