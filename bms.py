@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.51  2006/02/12 01:13:58  customdesigned
+# Don't check rcpt user list when signed MFROM.
+#
 # Revision 1.50  2006/02/09 20:39:43  customdesigned
 # Use CIDR notation for trusted_relay iplist
 #
@@ -677,10 +680,8 @@ class bmsMilter(Milter.Milter):
     self.receiver = self.getsymval('j').strip()
     if hostaddr and len(hostaddr) > 0:
       ipaddr = hostaddr[0]
-      for pat in internal_connect:
-	if fnmatchcase(ipaddr,pat):
-	  self.internal_connection = True
-	  break
+      if iniplist(ipaddr,internal_connect):
+	self.internal_connection = True
       if iniplist(ipaddr,trusted_relay):
         self.trusted_relay = True
     else: ipaddr = ''
