@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.50  2006/02/09 20:39:43  customdesigned
+# Use CIDR notation for trusted_relay iplist
+#
 # Revision 1.49  2006/01/30 23:14:48  customdesigned
 # put back eom condition
 #
@@ -710,7 +713,8 @@ class bmsMilter(Milter.Milter):
       return Milter.REJECT
     if not self.internal_connection and hostname in hello_blacklist:
       self.log("REJECT: spam from self:",hostname)
-      self.setreply('550','5.7.1','I hate talking to myself.')
+      self.setreply('550','5.7.1',
+	'Your mail server lies.  Its name is *not* %s.' % hostname)
       return Milter.REJECT
     if hostname == 'GC':
       n = gc.collect()
@@ -1007,6 +1011,7 @@ class bmsMilter(Milter.Milter):
       return Milter.DISCARD
     self.log("rcpt to",to,str)
     t = parse_addr(to)
+    newaddr = False
     if len(t) == 2:
       t[1] = t[1].lower()
       user,domain = t
@@ -1018,7 +1023,8 @@ class bmsMilter(Milter.Milter):
 	  else:
 	    newaddr = oldaddr,
 	  if len(newaddr) > 1:
-	    self.log("ses rcpt:",newaddr[0])
+            newaddr = newaddr[0]
+	    self.log("ses rcpt:",newaddr)
 	  else:
 	    newaddr = srs.reverse(oldaddr)
 	    # Currently, a sendmail map reverses SRS.  We just log it here.
@@ -1039,10 +1045,12 @@ class bmsMilter(Milter.Milter):
       # non DSN mail to SRS address will bounce due to invalid local part
       canon_to = '@'.join(t)
       self.recipients.append(canon_to)
+      # FIXME: use newaddr to check rcpt
       users = check_user.get(domain)
       if self.discard:
         self.del_recipient(to)
-      if users and not user.lower() in users:
+      # don't check userlist if signed MFROM for now
+      if users and not newaddr and not user.lower() in users:
         self.log('REJECT: RCPT TO:',to)
 	return Milter.REJECT
       if user in block_forward.get(domain,()):
