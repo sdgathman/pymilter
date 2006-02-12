@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.52  2006/02/12 02:12:08  customdesigned
+# Use CIDR notation for internal connect list.
+#
 # Revision 1.51  2006/02/12 01:13:58  customdesigned
 # Don't check rcpt user list when signed MFROM.
 #
@@ -173,6 +176,8 @@ import tempfile
 import traceback
 import ConfigParser
 import time
+import socket
+import struct
 import re
 import gc
 import anydbm
@@ -201,7 +206,7 @@ except: SES = None
 try: import spf
 except: spf = None
 
-ip4re = re.compile(r'^[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*\.[1-9][0-9]*$')
+ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 import logging
 
 # Thanks to Chris Liechti for config parsing suggestions
@@ -555,16 +560,34 @@ class SPFPolicy(object):
       policy = 'OK'
     return policy
 
+# from spf.py
+def addr2bin(str):
+  "Convert a string IPv4 address into an unsigned integer."
+  return struct.unpack("!L", socket.inet_aton(str))[0]
+
+MASK = 0xFFFFFFFFL
+
+def cidr(i,n):
+  return ~(MASK >> n) & MASK & i
+
 def iniplist(ipaddr,iplist):
   """Return whether ip is in cidr list
-  >>> iniplist('66.179.26.146',['66.179.26.128/26'])
+  >>> iniplist('66.179.26.146',['127.0.0.1','66.179.26.128/26'])
+  True
+  >>> iniplist('127.0.0.1',['127.0.0.1','66.179.26.128/26'])
+  True
+  >>> iniplist('192.168.0.45',['192.168.0.*'])
   True
   """
+  ipnum = addr2bin(ipaddr)
   for pat in iplist:
     p = pat.split('/',1)
     if ip4re.match(p[0]):
-      n = int(p[1])
-      if spf.cidr(p[0],n) == spf.cidr(ipaddr,n):
+      if len(p) > 1:
+	n = int(p[1])
+      else:
+        n = 32
+      if cidr(addr2bin(p[0]),n) == cidr(ipnum,n):
         return True
     elif fnmatchcase(ipaddr,pat):
       return True
