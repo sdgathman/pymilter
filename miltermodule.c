@@ -34,6 +34,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.9  2005/12/23 21:46:36  customdesigned
+ * Compile on sendmail-8.12 (ifdef SMFIR_INSHEADER)
+ *
  * Revision 1.8  2005/10/20 23:23:36  customdesigned
  * Include smfi_progress is SMFIR_PROGRESS defined
  *
@@ -286,29 +289,12 @@ _find_context(PyObject *c) {
   if (c->ob_type == &milter_ContextType) {
     milter_ContextObject *self = (milter_ContextObject *)c;
     ctx = self->ctx;
-    if (smfi_getpriv(ctx) != self)
+    if (ctx != NULL && smfi_getpriv(ctx) != self)
       ctx = NULL;
   }
   if (ctx == NULL)
     PyErr_SetString(MilterError, "bad context");
   return ctx;
-}
-
-/* Release the Python Context for a SMFICTX.  */
-static void
-_clear_context(SMFICTX *ctx) {
-  milter_ContextObject *self = smfi_getpriv(ctx);
-  if (self) {
-    PyThreadState *t = self->t;
-    PyEval_AcquireThread(t);
-    self->t = 0;
-    self->ctx = 0;
-    smfi_setpriv(ctx,0);
-    Py_DECREF(self);
-    PyThreadState_Clear(t);
-    PyEval_ReleaseThread(t);
-    PyThreadState_Delete(t);
-  }
 }
 
 static void
@@ -544,13 +530,19 @@ milter_set_exception_policy(PyObject *self, PyObject *args) {
   return NULL;
 }
 
+static void
+_release_thread(PyThreadState *t) {
+  if (t != NULL)
+    PyEval_ReleaseThread(t);
+}
+
 /** Report and clear any python exception before returning to libmilter. 
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
   if (PyErr_Occurred()) {
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */
-    PyEval_ReleaseThread(self->t);
+    _release_thread(self->t);
     switch (exception_policy) {
       case SMFIS_REJECT:
 	smfi_setreply(self->ctx, "554", "5.3.0", "Filter failure");
@@ -561,7 +553,7 @@ static int _report_exception(milter_ContextObject *self) {
     }
     return SMFIS_CONTINUE;
   }
-  PyEval_ReleaseThread(self->t);
+  _release_thread(self->t);
   return SMFIS_CONTINUE;
 }
 
@@ -580,7 +572,7 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
   retval = PyInt_AsLong(result);
   Py_DECREF(result);
   if (PyErr_Occurred()) return _report_exception(self);
-  PyEval_ReleaseThread(self->t);
+  _release_thread(self->t);
   return retval;
 }
 
@@ -777,17 +769,23 @@ milter_wrap_close(SMFICTX *ctx) {
   PyObject *cb = close_callback;
   milter_ContextObject *self = smfi_getpriv(ctx);
   int r = SMFIS_CONTINUE;
-  if (self != NULL && cb != NULL && self->ctx == ctx) {
-    PyObject *arglist;
-    PyEval_AcquireThread(self->t);
-    arglist = Py_BuildValue("(O)", self);
-    r = _generic_wrapper(self, cb, arglist);
+  if (self != NULL) {
+    PyThreadState *t = self->t;
+    PyEval_AcquireThread(t);
+    self->t = 0;
+    if (cb != NULL && self->ctx == ctx) {
+      PyObject *arglist = Py_BuildValue("(O)", self);
+      /* Call python close callback, but do not ReleaseThread, because
+       * self->t is NULL */
+      r = _generic_wrapper(self, cb, arglist);
+    }
+    self->ctx = 0;
+    smfi_setpriv(ctx,0);
+    Py_DECREF(self);
+    PyThreadState_Clear(t);
+    PyEval_ReleaseThread(t);
+    PyThreadState_Delete(t);
   }
-  /* FIXME: It is inefficient to have released the interp lock only to
-     acquire it again in _clear_context.  We can tell _generic_return and
-     friends not to release the lock by, for instance, setting self->t to NULL.
-     However, first we make it work. */
-  _clear_context(ctx);
   return r;
 }
 
