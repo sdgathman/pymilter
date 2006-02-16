@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.53  2006/02/12 04:15:01  customdesigned
+# Remove spf dependency for iniplist
+#
 # Revision 1.52  2006/02/12 02:12:08  customdesigned
 # Use CIDR notation for internal connect list.
 #
@@ -492,8 +495,9 @@ def parse_header(val):
 
 class SPFPolicy(object):
   "Get SPF policy by result, defaulting to classic policy from pymilter.cfg"
-  def __init__(self,domain):
-    self.domain = domain.lower()
+  def __init__(self,sender):
+    self.sender = sender
+    self.domain = sender.split('@')[-1].lower()
     if access_file:
       try: acf = anydbm.open(access_file,'r')
       except: acf = None
@@ -504,12 +508,15 @@ class SPFPolicy(object):
     acf = self.acf
     if not acf: return None
     try:
-      return acf[pfx + self.domain]
+      return acf[pfx + self.sender]
     except KeyError:
       try:
-	return acf[pfx]
+	return acf[pfx + self.domain]
       except KeyError:
-        return None
+	try:
+	  return acf[pfx]
+	except KeyError:
+	  return None
 
   def getFailPolicy(self):
     policy = self.getPolicy('spf-fail:')
@@ -895,7 +902,7 @@ class bmsMilter(Milter.Milter):
       self.cbv_needed = (q,res)	# report SPF syntax error to sender
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
-    p = SPFPolicy(q.o)
+    p = SPFPolicy(q.s)
     if res not in ('pass','error','temperror'):
       if self.mailfrom != '<>':
 	# check hello name via spf unless spf pass

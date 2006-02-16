@@ -1,3 +1,21 @@
+Allow verified hostnames for trusted_relay.  E.g. HELO name that
+passes SPF.
+
+Table of sendmail macros for documentation.
+
+When do we get two hello calls?  STARTTLS is one reason.
+
+Option: accept mail from auto-whitelisted senders even with spf-fail,
+but do not update dspam.  This can be done for individual senders or domains 
+using the access file.
+
+pysrs: SRS doesn't get applied to proper recipients when there are
+multiple recipients.  This requires debugging cf scripts - yuk.
+
+auto_whitelist false_positives from quarantine - perhaps only when
+user selects special button (use special header to communicate
+that from dspamcgi.py to milter.)
+
 Use send_dsn.log for blacklist also.  AddrCache needs localpart
 wildcard (e.g. empty localpart).
 
