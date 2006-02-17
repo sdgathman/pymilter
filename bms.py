@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.54  2006/02/16 02:16:36  customdesigned
+# User specific SPF receiver policy.
+#
 # Revision 1.53  2006/02/12 04:15:01  customdesigned
 # Remove spf dependency for iniplist
 #
@@ -442,12 +445,12 @@ def read_config(list):
         maxage=maxage,hashlength=hashlength,separator=separator)
     if SES:
       ses = SES.new(secret=srs_secret,expiration=maxage)
-      srs_domain = cp.getlist('srs','ses')
+      srs_domain = set(cp.getlist('srs','ses'))
     else:
-      srs_domain = cp.getlist('srs','srs')
-    srs_domain.append(cp.getdefault('srs','fwdomain'))
+      srs_domain = set(cp.getlist('srs','srs'))
+    srs_domain.update(cp.getlist('srs','sign'))
+    srs_domain.add(cp.getdefault('srs','fwdomain'))
     banned_users = cp.getlist('srs','banned_users')
-    #print srs_domain
 
 def parse_addr(t):
   """Split email into user,domain.
@@ -1016,9 +1019,13 @@ class bmsMilter(Milter.Milter):
     if res != q.result:
       self.add_header('X-Guessed-SPF',res,0)
     self.spf = q
-    if res == 'pass' and auto_whitelist.has_key(self.canon_from):
-      self.whitelist = True
-      self.log("WHITELIST",self.canon_from)
+    if auto_whitelist.has_key(self.canon_from):
+      if res == 'pass':
+	self.whitelist = True
+	self.log("WHITELIST",self.canon_from)
+      else:
+        self.dspam = False
+	self.log("PROBATION",self.canon_from)
     elif cbv_cache.has_key(q.s) and cbv_cache[q.s] or q.o in blacklist:
       self.blacklist = True
       self.log("BLACKLIST",self.canon_from)
@@ -1071,6 +1078,8 @@ class bmsMilter(Milter.Milter):
 	      self.log("REJECT: ses spoofed:",oldaddr)
 	      self.setreply('550','5.7.1','Invalid SES signature')
 	      return Milter.REJECT
+	    if srs_reject_spoofed:	# FIXME: srs_reject_immed?
+	      return self.forged_bounce()
 	    self.data_allowed = not srs_reject_spoofed
 
       # non DSN mail to SRS address will bounce due to invalid local part
@@ -1157,7 +1166,7 @@ class bmsMilter(Milter.Milter):
     if self.mailfrom != '<>':
       self.log("REJECT: bogus DSN")
       self.setreply('550','5.7.1',
-	"I do not accept mail from postmaster, mailer-daemon, or clamav.",
+	"I do not accept normal mail from %s." % self.mailfrom.split('@')[0],
 	"All such mail has turned out to be Delivery Status Notifications",
 	"which failed to be marked as such.  Please send a real DSN if",
 	"you need to.  Use another MAIL FROM if you need to send me mail."
@@ -1189,8 +1198,11 @@ class bmsMilter(Milter.Milter):
       if rc != Milter.CONTINUE: return rc
     elif self.whitelist_sender and lname == 'subject':
 	# check for AutoReplys
-        if val.lower().find('autoreply:') >= 0:
+	vl = val.lower()
+	if vl.startswith('read:')	\
+	or vl.find('autoreply:') >= 0 or vl.startswith('return receipt'):
 	  self.whitelist_sender = False
+	  self.log('AUTOREPLY: not whitelisted')
 
     # log selected headers
     if log_headers or lname in ('subject','x-mailer'):
