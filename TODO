@@ -1,3 +1,6 @@
+Added Message-ID header to DSN with SRS signed sender.  When seen on incoming
+rfc ignorant failure message, blacklist sender.
+
 Allow verified hostnames for trusted_relay.  E.g. HELO name that
 passes SPF.
 

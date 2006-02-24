@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.55  2006/02/17 05:04:29  customdesigned
+# Use SRS sign domain list.
+# Accept but do not use for training whitelisted senders without SPF pass.
+# Immediate rejection of unsigned bounces.
+#
 # Revision 1.54  2006/02/16 02:16:36  customdesigned
 # User specific SPF receiver policy.
 #
@@ -753,6 +758,8 @@ class bmsMilter(Milter.Milter):
     if hostname == 'GC':
       n = gc.collect()
       self.log("gc:",n,' unreachable objects')
+      self.log("auto-whitelist:",len(auto_whitelist),' entries')
+      self.log("cbv_cache:",len(cbv_cache),' entries')
       self.setreply('550','5.7.1','%d unreachable objects'%n)
       return Milter.REJECT
     return Milter.CONTINUE
@@ -935,9 +942,6 @@ class bmsMilter(Milter.Milter):
 	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
 	else:
 	  res,code,txt = q.best_guess()
-        if q.perm_error:	# FIXME: should never happen?
-          res,code,txt = q.perm_error.ext	# extended result
-	  txt = 'EXT: ' + txt
       if self.missing_ptr and ores == 'none' and res != 'pass' \
       		and hres != 'pass':
 	policy = p.getNonePolicy()
@@ -1638,6 +1642,9 @@ class bmsMilter(Milter.Milter):
 	template = file(template_name).read()
       except IOError: template = None
       m = dsn.create_msg(q,self.recipients,msg,template)
+      if srs:
+	msgid = srs.forward(sender,self.receiver)
+	m.add_header('Message-Id','<%s>'%msgid)
       m = m.as_string()
       print >>open('last_dsn','w'),m
       res = dsn.send_dsn(sender,self.receiver,m)

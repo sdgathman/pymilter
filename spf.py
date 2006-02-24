@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.18  2005/12/29 19:15:35  customdesigned
+# Handle NULL MX
+#
 # Revision 1.17  2005/12/23 21:44:15  customdesigned
 # Always include keyword data in Received-SPF header.
 #
@@ -507,6 +510,8 @@ class query(object):
 		except TempError,x:
 			return ('error', 450, 'SPF Temporary Error: ' + str(x))
 		except PermError,x:
+		    if not self.perm_error:
+		      self.perm_error = x
 		    self.prob = x.msg
 		    if x.mech:
 		      self.mech.append(x.mech)
@@ -577,7 +582,7 @@ class query(object):
 		  arg = self.expand(arg)
 		  if not (0 < arg.find('.') < len(arg) - 1):
 		    raise PermError('Invalid domain found (use FQDN)',
-			  arg)
+			  m+':'+arg)
 		  if m == 'include':
 		    if arg == self.d:
 		      if mech != 'include':
