@@ -174,6 +174,19 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Thu Feb 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-1
+- Delay reject of unsigned RCPT for postmaster and abuse only
+- Fix dsn reporting of hard permerror
+- Resolve FIXME for wrap_close in miltermodule.c
+- Add Message-ID to DSNs
+- Use signed Message-ID in delayed reject to blacklist senders
+- Auto-train via blacklist and auto-whitelist
+- Don't check userlist for signed MFROM
+- Accept but skip DSPAM and training for whitelisted senders without SPF PASS
+- Report GC stats 
+- Support CIDR matching for IP lists
+- Support pysrs sign feature
+- Support localpart specific SPF policy in access file
 * Thu Dec 29 2005 Stuart Gathman <stuart@bmsi.com> 0.8.5-1
 - Simple trusted_forwarder implementation.
 - Fix access_file neutral policy

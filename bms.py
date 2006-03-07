@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.56  2006/02/24 02:12:54  customdesigned
+# Properly report hard PermError (lax mode fails also) by always setting
+# perm_error attribute with PermError exception.  Improve reporting of
+# invalid domain PermError.
+#
 # Revision 1.55  2006/02/17 05:04:29  customdesigned
 # Use SRS sign domain list.
 # Accept but do not use for training whitelisted senders without SPF pass.
@@ -184,7 +189,6 @@ import mime
 import email.Errors
 import Milter
 import tempfile
-import traceback
 import ConfigParser
 import time
 import socket
@@ -800,6 +804,7 @@ class bmsMilter(Milter.Milter):
     self.blacklist = False
     self.reject_spam = True
     self.data_allowed = True
+    self.delayed_failure = None
     self.trust_received = self.trusted_relay
     self.trust_spf = self.trusted_relay
     self.redirect_list = []
@@ -1082,7 +1087,9 @@ class bmsMilter(Milter.Milter):
 	      self.log("REJECT: ses spoofed:",oldaddr)
 	      self.setreply('550','5.7.1','Invalid SES signature')
 	      return Milter.REJECT
-	    if srs_reject_spoofed:	# FIXME: srs_reject_immed?
+	    # reject for certain recipients are delayed until after DATA
+	    if srs_reject_spoofed \
+		and not user.lower() in ('postmaster','abuse'):
 	      return self.forged_bounce()
 	    self.data_allowed = not srs_reject_spoofed
 
@@ -1125,6 +1132,13 @@ class bmsMilter(Milter.Milter):
 	  self.setreply('550','5.7.1','That subject is not allowed')
 	  return Milter.REJECT
 
+      # even if we wanted the Taiwanese spam, we can't read Chinese
+      if block_chinese:
+	if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
+	  self.log('REJECT: %s: %s' % (name,val))
+	  self.setreply('550','5.7.1',"We don't understand chinese")
+	  return Milter.REJECT
+
       # check for spam that claims to be legal
       lval = val.lower().strip()
       for adv in ("adv:","adv.","adv ","[adv]","(adv)","advt:","advert:"):
@@ -1151,6 +1165,15 @@ class bmsMilter(Milter.Milter):
 	  self.log('REJECT: %s: %s' % (name,val))
 	  self.setreply('550','5.7.1','I find unedited forwards annoying')
 	  return Milter.REJECT
+
+      # check for delayed bounce of CBV
+      if self.is_bounce and srs:
+	for w in ("delivery failure", "failure notice",
+	  "returned mail", "undeliverable"):
+	  if lval.startswith(w):
+	    self.delayed_failure = val.strip()
+	    # if confirmed by finding our signed Message-ID, 
+	    # original sender (encoded in Message-ID) is blacklisted
 
     # check for invalid message id
     if lname == 'message-id' and len(val) < 4:
@@ -1192,12 +1215,6 @@ class bmsMilter(Milter.Milter):
     # decode near ascii text to unobfuscate
     val = parse_header(hval)
     if not self.internal_connection and not (self.blacklist or self.whitelist):
-      # even if we wanted the Taiwanese spam, we can't read Chinese
-      if block_chinese and lname == 'subject':
-	if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
-	  self.log('REJECT: %s: %s' % (name,val))
-	  self.setreply('550','5.7.1',"We don't understand chinese")
-	  return Milter.REJECT
       rc = self.check_header(name,val)
       if rc != Milter.CONTINUE: return rc
     elif self.whitelist_sender and lname == 'subject':
@@ -1490,6 +1507,27 @@ class bmsMilter(Milter.Milter):
       return Milter.ACCEPT	# no message collected - so no eom processing
 
     try:
+      # check for delayed bounce
+      if self.delayed_failure:
+        self.fp.seek(0)
+	for ln in self.fp:
+	  if ln.lower().startswith('message-id:'):
+	    name,val = ln.split(None,1)
+	    if val.startswith('<SRS'):
+	      try:
+		sender = srs.reverse(val[1:-1])
+		cbv_cache[sender] = 500,self.delayed_failure,time.time()
+		try:
+		  # save message for debugging
+		  fname = tempfile.mktemp(".dsn")
+		  os.rename(self.tempname,fname)
+		except:
+		  fname = self.tempname
+		self.tempname = None
+		self.log('BLACKLIST:',sender,fname)
+		return Milter.DISCARD
+	      except: continue
+
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam
       if not self.fp:

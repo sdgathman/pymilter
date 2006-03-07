@@ -1,5 +1,6 @@
 Here is a history of user visible changes to Python milter.
 
+0.8.6	
 0.8.5	Simple trusted_forwarder implementation.
 	Fix access_file neutral policy
 	Move Received-SPF header to beginning of headers

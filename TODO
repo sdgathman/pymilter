@@ -1,3 +1,6 @@
+Allow unsigned DSNs from selected domains (that don't accept signed MFROM,
+e.g. verizon.net).
+
 Added Message-ID header to DSN with SRS signed sender.  When seen on incoming
 rfc ignorant failure message, blacklist sender.
 
