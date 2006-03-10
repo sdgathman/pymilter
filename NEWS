@@ -1,6 +1,17 @@
 Here is a history of user visible changes to Python milter.
 
-0.8.6	
+0.8.6	Delay reject of unsigned RCPT for postmaster and abuse only
+	Fix dsn reporting of hard permerror
+	Resolve FIXME for wrap_close in miltermodule.c
+	Add Message-ID to DSNs
+	Use signed Message-ID in delayed reject to blacklist senders
+	Auto-train via blacklist and auto-whitelist
+	Don't check userlist for signed MFROM
+	Accept but skip DSPAM training for whitelisted senders without SPF PASS
+	Report GC stats 
+	Support CIDR matching for IP lists
+	Support pysrs sign feature
+	Support localpart specific SPF policy in access file
 0.8.5	Simple trusted_forwarder implementation.
 	Fix access_file neutral policy
 	Move Received-SPF header to beginning of headers

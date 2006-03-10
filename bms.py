@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.57  2006/03/07 20:50:54  customdesigned
+# Use signed Message-ID in delayed reject to blacklist senders
+#
 # Revision 1.56  2006/02/24 02:12:54  customdesigned
 # Properly report hard PermError (lax mode fails also) by always setting
 # perm_error attribute with PermError exception.  Improve reporting of
@@ -222,6 +225,14 @@ try: import spf
 except: spf = None
 
 ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
+subjpats = (
+ r'^failure notice',
+ r'^returned mail',
+ r'^undeliverable',
+ r'^delivery\b.*\bfailure',
+ r'^delivery problem',
+)
+refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
 import logging
 
 # Thanks to Chris Liechti for config parsing suggestions
@@ -1168,12 +1179,10 @@ class bmsMilter(Milter.Milter):
 
       # check for delayed bounce of CBV
       if self.is_bounce and srs:
-	for w in ("delivery failure", "failure notice",
-	  "returned mail", "undeliverable"):
-	  if lval.startswith(w):
-	    self.delayed_failure = val.strip()
-	    # if confirmed by finding our signed Message-ID, 
-	    # original sender (encoded in Message-ID) is blacklisted
+        if refaildsn.match(lval):
+	  self.delayed_failure = val.strip()
+	  # if confirmed by finding our signed Message-ID, 
+	  # original sender (encoded in Message-ID) is blacklisted
 
     # check for invalid message id
     if lname == 'message-id' and len(val) < 4:

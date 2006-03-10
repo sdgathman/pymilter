@@ -1,3 +1,6 @@
+Make all dictionaries work like honeypot.  Do not train as ham unless
+whitelisted.  Train on blacklisted messages, or spam feedback.
+
 Allow unsigned DSNs from selected domains (that don't accept signed MFROM,
 e.g. verizon.net).
 
