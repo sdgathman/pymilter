@@ -1,3 +1,10 @@
+For selected domains, check users via CBV before accepting mail.  Cache
+results.
+
+Allow blacklisted emails as well as domains in blacklist.log.  Use same
+data structure as autowhitelist.log.  Add emails blacklisted via CBV
+so that they are remembered across milter restarts.
+
 Make all dictionaries work like honeypot.  Do not train as ham unless
 whitelisted.  Train on blacklisted messages, or spam feedback.
 

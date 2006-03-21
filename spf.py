@@ -47,6 +47,11 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.19  2006/02/24 02:12:54  customdesigned
+# Properly report hard PermError (lax mode fails also) by always setting
+# perm_error attribute with PermError exception.  Improve reporting of
+# invalid domain PermError.
+#
 # Revision 1.18  2005/12/29 19:15:35  customdesigned
 # Handle NULL MX
 #
@@ -539,6 +544,17 @@ class query(object):
 		finally:
 			self.d = tmp
 
+	def note_error(self,*msg):
+	    if self.strict:
+	      raise PermError(*msg)
+	    # if lax mode, note error and continue
+	    if not self.perm_error:
+	      try:
+		raise PermError(*msg)
+	      except PermError, x:
+		self.perm_error = x
+	    return self.perm_error
+
 	def validate_mechanism(self,mech):
 		"""Parse and validate a mechanism.
 	Returns mech,m,arg,cidrlength,result
@@ -570,13 +586,8 @@ class query(object):
 			# default pass
 			result = 'pass'
 		if m in COMMON_MISTAKES:
-		  try:
-		    raise PermError('Unknown mechanism found',mech)
-		  except PermError, x:
-		    if self.strict: raise
-		    m = COMMON_MISTAKES[m]
-		    if not self.perm_error:
-		      self.perm_error = x
+		  self.note_error('Unknown mechanism found',mech)
+		  m = COMMON_MISTAKES[m]
 		  
 		if m in ('a', 'mx', 'ptr', 'exists', 'include'):
 		  arg = self.expand(arg)
@@ -591,15 +602,12 @@ class query(object):
 		  return mech,m,arg,cidrlength,result
 		if m in ALL_MECHANISMS:
 		  return mech,m,arg,cidrlength,result
-		try:
-		  if m[1:] in ALL_MECHANISMS:
-		    raise PermError(
-		      'Unknown qualifier, IETF draft para 4.6.1, found in',
-		      mech)
-		  raise PermError('Unknown mechanism found',mech)
-		except PermError, x:
-		  if self.strict: raise
-		  return mech,m,arg,cidrlength,x
+		if m[1:] in ALL_MECHANISMS:
+		  x = self.note_error(
+		    'Unknown qualifier, IETF draft para 4.6.1, found in', mech)
+		else:
+		  x = self.note_error('Unknown mechanism found',mech)
+		return mech,m,arg,cidrlength,x
 
 	def check0(self, spf,recursion):
 		"""Test this query information against SPF text.
@@ -728,14 +736,10 @@ class query(object):
 
 	def check_lookups(self):
 	    self.lookups = self.lookups + 1
+	    if self.lookups > MAX_LOOKUP*4:
+	      raise PermError('More than %d DNS lookups'%MAX_LOOKUP*4)
 	    if self.lookups > MAX_LOOKUP:
-	      try:
-		if self.strict or not self.perm_error:
-		  raise PermError('Too many DNS lookups')
-	      except PermError,x:
-		if self.strict or self.lookups > MAX_LOOKUP*4:
-		  raise x
-		self.perm_error = x
+	      self.note_error('Too many DNS lookups')
 
 	def get_explanation(self, spec):
 		"""Expand an explanation."""
@@ -875,7 +879,14 @@ class query(object):
 	def dns_99(self, domainname):
 		"Get a list of type SPF=99 records for a domain name."
 		if domainname:
-		  return [''.join(a) for a in self.dns(domainname, 'SPF')]
+		  try:
+		    return [''.join(a) for a in self.dns(domainname, 'SPF')]
+		  except TempError,x:
+		    if self.strict: raise x
+		    self.note_error(
+		      'DNS responds, but times out on type99 (SPF) query: %s'%
+		      domainname
+		    )
 		return []
 
 	def dns_mx(self, domainname):
