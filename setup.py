@@ -3,6 +3,8 @@ import sys
 from distutils.core import setup, Extension
 
 # FIXME: on some versions of sendmail, smutil is renamed to sm
+# on slackware and debian, leave it out entirely.  It depends
+# on how libmilter was built by the sendmail package.
 libs = ["milter", "smutil"]
 
 # patch distutils if it can't cope with the "classifiers" or
@@ -13,7 +15,7 @@ if sys.version < '2.2.3':
   DistributionMetadata.download_url = None
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
-setup(name = "milter", version = '0.8.5',
+setup(name = "milter", version = '0.8.6',
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to
