@@ -52,14 +52,14 @@ modules provide for navigating and modifying MIME parts.
 
 %prep
 %setup
-#%patch -p0 -b .bms
+#patch -p0 -b .bms
 
 %build
-if %{redhat9}; then
+%if %{redhat9}
   LDFLAGS="-g"
-else
+%else
   LDFLAGS="-s"
-fi
+%endif
 env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 
 %install
