@@ -1,5 +1,18 @@
-For selected domains, check users via CBV before accepting mail.  Cache
-results.
+Auto_whitelist is checked in check_spf(), but check_spf() is not called for
+trusted_relay.  Hence, mail relayed via trusted relay is not whitelisted.
+Should also check auto_whitelist for trusted relay - but need to extract
+relay SPF result from Received-SPF or X-Guessed-SPF header field.
+
+FIXME: DSN for Permerror shows 'None' for error.
+
+Another metaDSN format:
+Subject: Delivery Report
+...
+Original-Envelope-ID: SRS0...@...
+
+For selected domains, check rcpts via CBV before accepting mail.  Cache
+results.  This will kick out dictonary attacks against a mail domain
+behind a gateway sooner.
 
 Allow blacklisted emails as well as domains in blacklist.log.  Use same
 data structure as autowhitelist.log.  Add emails blacklisted via CBV

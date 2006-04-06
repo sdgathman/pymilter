@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.58  2006/03/10 20:52:49  customdesigned
+# Use re to recognize failure DSNs.
+#
 # Revision 1.57  2006/03/07 20:50:54  customdesigned
 # Use signed Message-ID in delayed reject to blacklist senders
 #
@@ -228,9 +231,10 @@ ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 subjpats = (
  r'^failure notice',
  r'^returned mail',
- r'^undeliverable',
+ r'^undeliver',
  r'^delivery\b.*\bfailure',
  r'^delivery problem',
+ r'\buser unknown\b',
 )
 refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
 import logging
@@ -904,10 +908,32 @@ class bmsMilter(Milter.Milter):
     self.umis = None
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
-      return self.check_spf()
+      rc = self.check_spf()
     else:
       self.spf = None
-    return Milter.CONTINUE
+      rc = Milter.CONTINUE
+    # Check whitelist and blacklist
+    res = self.spf and self.spf.guess
+    if auto_whitelist.has_key(self.canon_from):
+      if res == 'pass':
+	self.whitelist = True
+	self.log("WHITELIST",self.canon_from)
+      else:
+        self.dspam = False
+	self.log("PROBATION",self.canon_from)
+    elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
+    	or domain in blacklist:
+      self.blacklist = True
+      self.log("BLACKLIST",self.canon_from)
+    if gossip:
+      if self.spf and self.spf.result == 'pass':
+        qual = 'SPF'
+      else:
+        qual = self.connectip
+      self.umis = gossip.umis(domain+qual,self.id+time.time())
+      res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
+      self.add_header(hdr,val)
+    return rc
 
   def check_spf(self):
     receiver = self.receiver
@@ -1036,27 +1062,10 @@ class bmsMilter(Milter.Milter):
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(q.result,receiver),0)
+    q.guess = res
     if res != q.result:
       self.add_header('X-Guessed-SPF',res,0)
     self.spf = q
-    if auto_whitelist.has_key(self.canon_from):
-      if res == 'pass':
-	self.whitelist = True
-	self.log("WHITELIST",self.canon_from)
-      else:
-        self.dspam = False
-	self.log("PROBATION",self.canon_from)
-    elif cbv_cache.has_key(q.s) and cbv_cache[q.s] or q.o in blacklist:
-      self.blacklist = True
-      self.log("BLACKLIST",self.canon_from)
-    if gossip:
-      if res == 'pass':
-        qual = 'SPF'
-      else:
-        qual = self.connectip
-      self.umis = gossip.umis(q.o+qual,self.id+time.time())
-      res,hdr,val = gossip_node.query(self.umis,q.o,qual,1)
-      self.add_header(hdr,val)
     return Milter.CONTINUE
 
   # hide_path causes a copy of the message to be saved - until we
@@ -1522,9 +1531,10 @@ class bmsMilter(Milter.Milter):
 	for ln in self.fp:
 	  if ln.lower().startswith('message-id:'):
 	    name,val = ln.split(None,1)
-	    if val.startswith('<SRS'):
+	    pos = val.find('<SRS')
+	    if pos >= 0:
 	      try:
-		sender = srs.reverse(val[1:-1])
+		sender = srs.reverse(val[pos+1:-1])
 		cbv_cache[sender] = 500,self.delayed_failure,time.time()
 		try:
 		  # save message for debugging
@@ -1692,6 +1702,7 @@ class bmsMilter(Milter.Milter):
       if srs:
 	msgid = srs.forward(sender,self.receiver)
 	m.add_header('Message-Id','<%s>'%msgid)
+	#m.add_header('Sender','"Python Milter" <%s>'%msgid)
       m = m.as_string()
       print >>open('last_dsn','w'),m
       res = dsn.send_dsn(sender,self.receiver,m)
