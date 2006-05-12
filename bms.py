@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.59  2006/04/06 18:14:17  customdesigned
+# Check whitelist/blacklist even when not checking SPF (e.g. trusted relay).
+#
 # Revision 1.58  2006/03/10 20:52:49  customdesigned
 # Use re to recognize failure DSNs.
 #
@@ -235,6 +238,7 @@ subjpats = (
  r'^delivery\b.*\bfailure',
  r'^delivery problem',
  r'\buser unknown\b',
+ r'^failed'
 )
 refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
 import logging
@@ -660,17 +664,33 @@ class AddrCache(object):
       if ts > too_old:
         return True
       del self.cache[sender.lower()]
+      try:
+	user,host = sender.split('@',1)
+	return self.has_key(host)
+      except ValueError:
+        pass
     except KeyError:
-      pass
+      try:
+	user,host = sender.split('@',1)
+	return self.has_key(host)
+      except ValueError:
+        pass
     return False
 
   def __getitem__(self,sender):
-    ts,res = self.cache[sender.lower()]
-    too_old = time.time() - self.age*24*60*60	# max age in days
-    if ts > too_old:
-      return res
-    del self.cache[sender.lower()]
-    raise KeyError, sender
+    try:
+      ts,res = self.cache[sender.lower()]
+      too_old = time.time() - self.age*24*60*60	# max age in days
+      if ts > too_old:
+	return res
+      del self.cache[sender.lower()]
+      raise KeyError, sender
+    except KeyError,x:
+      try:
+	user,host = sender.split('@',1)
+	return self.__getitem__(host)
+      except ValueError:
+        raise x
 
   def __setitem__(self,sender,res):
     lsender = sender.lower()
@@ -906,16 +926,17 @@ class bmsMilter(Milter.Milter):
       self.setreply('550','5.7.1',"It's polite to say HELO first.")
       return Milter.REJECT
     self.umis = None
+    self.spf = None
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       rc = self.check_spf()
     else:
-      self.spf = None
       rc = Milter.CONTINUE
-    # Check whitelist and blacklist
+    # FIXME: parse Received-SPF from trusted_relay for SPF result
     res = self.spf and self.spf.guess
+    # Check whitelist and blacklist
     if auto_whitelist.has_key(self.canon_from):
-      if res == 'pass':
+      if res == 'pass' or self.trusted_relay:
 	self.whitelist = True
 	self.log("WHITELIST",self.canon_from)
       else:
