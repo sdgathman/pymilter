@@ -47,6 +47,10 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.20  2006/03/21 18:48:51  customdesigned
+# Import note_error from pyspf.  Handle timeout on type99 lookup
+# specially (sender actually has no SPF record and a braindead DNS server).
+#
 # Revision 1.19  2006/02/24 02:12:54  customdesigned
 # Properly report hard PermError (lax mode fails also) by always setting
 # perm_error attribute with PermError exception.  Improve reporting of
@@ -325,6 +329,9 @@ RE_ARGS = re.compile(r'([0-9]*)(r?)([^0-9a-zA-Z]*)')
 
 RE_CIDR = re.compile(r'/([1-9]|1[0-9]*|2[0-9]*|3[0-2]*)$')
 
+RE_IP4 = re.compile(r'\.'.join(
+        [r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)+'$')
+
 # Local parts and senders have their delimiters replaced with '.' during
 # macro expansion
 #
@@ -476,10 +483,14 @@ class query(object):
 
 	>>> q.strict = False
 	>>> q.check(spf='v=spf1 ip4:192.0.0.0/8 -all moo')
+	('unknown', 550, 'SPF Permanent Error: Unknown mechanism found: moo')
+	>>> q.perm_error.ext
 	('pass', 250, 'sender SPF verified')
 
 	>>> q.check(spf='v=spf1 ip4:192.1.0.0/16 moo -all')
 	('unknown', 550, 'SPF Permanent Error: Unknown mechanism found: moo')
+	>>> str(q.perm_error.ext)
+	'None'
 
 	>>> q.check(spf='v=spf1 ip4:192.1.0.0/16 ~all')
 	('softfail', 250, 'domain in transition')
@@ -588,18 +599,34 @@ class query(object):
 		if m in COMMON_MISTAKES:
 		  self.note_error('Unknown mechanism found',mech)
 		  m = COMMON_MISTAKES[m]
+
+		if m == 'a' and RE_IP4.match(arg):
+		  x = self.note_error(
+		    'Use the ip4 mechanism for ip4 addresses',mech)
+		  m = 'ip4'
 		  
 		if m in ('a', 'mx', 'ptr', 'exists', 'include'):
 		  arg = self.expand(arg)
-		  if not (0 < arg.find('.') < len(arg) - 1):
+		  # FQDN must contain at least one '.'
+		  pos = arg.rfind('.')
+		  if not (0 < pos < len(arg) - 1):
 		    raise PermError('Invalid domain found (use FQDN)',
-			  m+':'+arg)
+			  arg)
+		  #Test for all numeric TLD as recommended by RFC 3696
+		  #Note this TLD test may pass non-existant TLDs.  3696
+		  #recommends using DNS lookups to test beyond this
+		  #initial test.
+                  if arg[pos+1:].isdigit(): 	 
+                    raise PermError('Top Level Domain may not be all numbers',
+			  arg) 	 
 		  if m == 'include':
 		    if arg == self.d:
 		      if mech != 'include':
 			raise PermError('include has trivial recursion',mech)
 		      raise PermError('include mechanism missing domain',mech)
 		  return mech,m,arg,cidrlength,result
+		if m == 'ip4' and not RE_IP4.match(arg):
+		  raise PermError('Invalid IP4 address',mech)
 		if m in ALL_MECHANISMS:
 		  return mech,m,arg,cidrlength,result
 		if m[1:] in ALL_MECHANISMS:
@@ -673,15 +700,10 @@ class query(object):
 		      if res == 'pass':
 			break
 		      if res == 'none':
-			try:
-			  if self.strict or not self.perm_error:
-			    raise PermError(
-			      'No valid SPF record for included domain: %s'%arg,
-			      mech)
-			except PermError,x:
-			  if self.strict:
-			    raise x
-			  self.perm_error = x
+		        self.note_error(
+			  'No valid SPF record for included domain: %s'%arg,
+			  mech)
+			res = 'neutral'
 		      continue
 		    elif m == 'all':
 			    break
