@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.60  2006/05/12 16:14:48  customdesigned
+# Don't require SPF pass for white/black listing mail from trusted relay.
+# Support localpart wildcard for white and black lists.
+#
 # Revision 1.59  2006/04/06 18:14:17  customdesigned
 # Check whitelist/blacklist even when not checking SPF (e.g. trusted relay).
 #
@@ -231,6 +235,10 @@ try: import spf
 except: spf = None
 
 ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
+
+# Sometimes, MTAs reply to our DSN.  We recognize this type of reply/DSN
+# and check for the original recipient SRS encoded in Message-ID.
+# If found, we blacklist that recipient.
 subjpats = (
  r'^failure notice',
  r'^returned mail',
@@ -238,7 +246,9 @@ subjpats = (
  r'^delivery\b.*\bfailure',
  r'^delivery problem',
  r'\buser unknown\b',
- r'^failed'
+ r'^failed',
+ r'^echec de distribution',
+ r'^fallo en la entrega'
 )
 refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
 import logging
@@ -946,7 +956,7 @@ class bmsMilter(Milter.Milter):
     	or domain in blacklist:
       self.blacklist = True
       self.log("BLACKLIST",self.canon_from)
-    if gossip:
+    if gossip and domain and rc == Milter.CONTINUE:
       if self.spf and self.spf.result == 'pass':
         qual = 'SPF'
       else:
