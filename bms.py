@@ -1672,8 +1672,10 @@ class bmsMilter(Milter.Milter):
 
     if self.cbv_needed:
       q,res = self.cbv_needed
-      if res in ('softfail','fail','deny'):
+      if res == 'softfail':
 	template_name = 'softfail'
+      elif res in ('fail','deny'):
+	template_name = 'fail'
       elif res in ('unknown','permerror'):
 	template_name = 'permerror'
       elif res == 'neutral':
