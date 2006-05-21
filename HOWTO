@@ -116,7 +116,7 @@ The CBV policy requires a valid HELO name.  If the EHLO name is
 RFC2822 compliant, then a DSN is sent to the alleged sender.  The 
 template for the DSN is selected according to the SPF result:
 
-Fail:		softfail.txt
+Fail:		fail.txt
 SoftFail:	softfail.txt
 Neutral:	neutral.txt
 PermError:	permerror.txt
