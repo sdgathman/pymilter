@@ -175,6 +175,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Thu Feb 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-1
+- Support fail template
+- Create GOSSiP record only when connection will procede to DATA.
+- More SPF lax heuristics
+- Don't require SPF pass for white/black listing mail from trusted relay.
+- Support localpart wildcard for white and black lists.
+- Use signed Message-ID in delayed reject of DSNs to blacklist senders
 - Delay reject of unsigned RCPT for postmaster and abuse only
 - Fix dsn reporting of hard permerror
 - Resolve FIXME for wrap_close in miltermodule.c

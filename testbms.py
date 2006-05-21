@@ -238,7 +238,7 @@ class BMSMilterTestCase(unittest.TestCase):
     milter = TestMilter()
     milter.connect('testSmartAlias')
     # test smart alias feature
-    key = ('foo@bar.com','baz@bat.com')
+    key = ('foo@example.com','baz@bat.com')
     bms.smart_alias[key] = ['ham@eggs.com']
     rc = milter.feedMsg('test8',key[0],key[1])
     self.assertEqual(rc,Milter.ACCEPT)
