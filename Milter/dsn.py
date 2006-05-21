@@ -12,6 +12,9 @@ from email.Message import Message
 import Milter
 
 nospf_msg = """Subject: Critical mail server configuration error
+To: %(sender)s
+From: postmaster@%(receiver)s
+Auto-Submitted: auto-generated (configuration error)
 
 This is an automatically generated Delivery Status Notification.
 
@@ -80,6 +83,9 @@ postmaster@%(receiver)s
 """
 
 softfail_msg = """Subject: SPF softfail (POSSIBLE FORGERY)
+To: %(sender)s
+From: postmaster@%(receiver)s
+Auto-Submitted: auto-generated (configuration error)
 
 This is an automatically generated Delivery Status Notification.
 
