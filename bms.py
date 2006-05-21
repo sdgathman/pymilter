@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.61  2006/05/17 21:28:07  customdesigned
+# Create GOSSiP record only when connection will procede to DATA.
+#
 # Revision 1.60  2006/05/12 16:14:48  customdesigned
 # Don't require SPF pass for white/black listing mail from trusted relay.
 # Support localpart wildcard for white and black lists.
@@ -248,7 +251,8 @@ subjpats = (
  r'\buser unknown\b',
  r'^failed',
  r'^echec de distribution',
- r'^fallo en la entrega'
+ r'^fallo en la entrega',
+ r'\bfehlgeschlagen\b'
 )
 refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
 import logging
@@ -1155,6 +1159,7 @@ class bmsMilter(Milter.Milter):
       if users and not newaddr and not user.lower() in users:
         self.log('REJECT: RCPT TO:',to)
 	return Milter.REJECT
+      # FIXME: should dspam_exempt be case insensitive?
       if user in block_forward.get(domain,()):
         self.forward = False
       exempt_users = dspam_exempt.get(domain,())
@@ -1446,7 +1451,7 @@ class bmsMilter(Milter.Milter):
 		  if self.spf and self.mailfrom != '<>':
 		    # check that sender accepts quarantine DSN
 		    msg = mime.message_from_file(StringIO.StringIO(txt))
-		    rc = self.send_dsn(self.spf,msg,'quarantine.txt')
+		    rc = self.send_dsn(self.spf,msg,'quarantine')
 		    del msg
 		    if rc != Milter.CONTINUE:
 		      return rc	
@@ -1508,7 +1513,7 @@ class bmsMilter(Milter.Milter):
 	  # check that sender accepts quarantine DSN
 	  self.fp.seek(0)
 	  msg = mime.message_from_file(self.fp)
-	  rc = self.send_dsn(self.spf,msg,'quarantine.txt')
+	  rc = self.send_dsn(self.spf,msg,'quarantine')
 	  if rc != Milter.CONTINUE:
 	    self.fp = None
 	    return rc
@@ -1668,13 +1673,13 @@ class bmsMilter(Milter.Milter):
     if self.cbv_needed:
       q,res = self.cbv_needed
       if res in ('softfail','fail','deny'):
-	template_name = 'softfail.txt'
+	template_name = 'softfail'
       elif res in ('unknown','permerror'):
-	template_name = 'permerror.txt'
+	template_name = 'permerror'
       elif res == 'neutral':
-        template_name = 'neutral.txt'
+        template_name = 'neutral'
       else:
-	template_name = 'strike3.txt'
+	template_name = 'strike3'
       rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
       if rc == Milter.REJECT:
@@ -1727,7 +1732,7 @@ class bmsMilter(Milter.Milter):
     else:
       self.log('CBV:',sender)
       try:
-	template = file(template_name).read()
+	template = file(template_name+'.txt').read()
       except IOError: template = None
       m = dsn.create_msg(q,self.recipients,msg,template)
       if srs:
@@ -1735,7 +1740,7 @@ class bmsMilter(Milter.Milter):
 	m.add_header('Message-Id','<%s>'%msgid)
 	#m.add_header('Sender','"Python Milter" <%s>'%msgid)
       m = m.as_string()
-      print >>open('last_dsn','w'),m
+      print >>open(template_name+'.last_dsn','w'),m
       res = dsn.send_dsn(sender,self.receiver,m)
     if res:
       desc = "CBV: %d %s" % res[:2]

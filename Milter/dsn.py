@@ -166,9 +166,6 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
 
   msg = Message()
 
-  msg.add_header('To',sender)
-  msg.add_header('From','postmaster@%s'%receiver)
-  msg.add_header('Auto-Submitted','auto-generated (configuration error)')
   msg.add_header('X-Mailer','PyMilter-'+Milter.__version__)
   msg.set_type('text/plain')
 

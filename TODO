@@ -1,9 +1,13 @@
-Auto_whitelist is checked in check_spf(), but check_spf() is not called for
-trusted_relay.  Hence, mail relayed via trusted relay is not whitelisted.
-Should also check auto_whitelist for trusted relay - but need to extract
-relay SPF result from Received-SPF or X-Guessed-SPF header field.
+Received-SPF header field should show identity that was checked.
 
-FIXME: DSN for Permerror shows 'None' for error.
+Check SPF for outgoing mail (including local policy for internal addresses).
+This could also solve the second part of the mail from relay problem below.
+
+Whitelisted sender from trusted relay get PROBATION.  Need to extracted
+SPF result from headers - and in the case of mail internal to relay
+(e.g. bmsi.com), supply 'pass' result.  
+
+FIXME: DSN for Permerror shows 'None' for error under some condition.
 
 Another metaDSN format:
 Subject: Delivery Report

@@ -1,4 +1,7 @@
+To: %(sender)s
+From: postmaster@%(receiver)s
 Subject: DELIVERY STATUS (POSSIBLE SPAM)
+Auto-Submitted: auto-generated (content analysis)
 
 This is an automatically generated Delivery Status Notification.
 

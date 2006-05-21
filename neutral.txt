@@ -1,4 +1,7 @@
+To: %(sender)s
+From: postmaster@%(receiver)s
 Subject: SPF %(result)s (POSSIBLE FORGERY)
+Auto-Submitted: auto-generated (sender verification)
 
 This is an automatically generated Delivery Status Notification.
 

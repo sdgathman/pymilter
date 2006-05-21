@@ -1,4 +1,7 @@
+To: %(sender)s
+From: postmaster@%(receiver)s
 Subject: Critical SPF configuration error
+Auto-Submitted: auto-generated (configuration error)
 
 This is an automatically generated Delivery Status Notification.
 
