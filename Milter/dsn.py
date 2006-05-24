@@ -4,102 +4,13 @@
 
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
+# $Log$
 
 import smtplib
 import spf
 import socket
 from email.Message import Message
 import Milter
-
-nospf_msg = """Subject: Critical mail server configuration error
-To: %(sender)s
-From: postmaster@%(receiver)s
-Auto-Submitted: auto-generated (configuration error)
-
-This is an automatically generated Delivery Status Notification.
-
-THIS IS A WARNING MESSAGE ONLY.
-
-YOU DO *NOT* NEED TO RESEND YOUR MESSAGE.
-
-Delivery to the following recipients has been delayed.
-
-	%(rcpt)s
-
-Subject: %(subject)s 
-
-Someone at IP address %(connectip)s sent an email claiming
-to be from %(sender)s.  
-
-If that wasn't you, then your domain, %(sender_domain)s,
-was forged - i.e. used without your knowlege or authorization by
-someone attempting to steal your mail identity.  This is a very
-serious problem, and you need to provide authentication for your
-SMTP (email) servers to prevent criminals from forging your
-domain.  The simplest step is usually to publish an SPF record
-with your Sender Policy.  
-
-For more information, see: http://spfhelp.net
-
-I hate to annoy you with a DSN (Delivery Status
-Notification) from a possibly forged email, but since you
-have not published a sender policy, there is no other way
-of bringing this to your attention.
-
-If it *was* you that sent the email, then your email domain
-or configuration is in error.  If you don't know anything
-about mail servers, then pass this on to your SMTP (mail)
-server administrator.  We have accepted the email anyway, in
-case it is important, but we couldn't find anything about
-the mail submitter at %(connectip)s to distinguish it from a
-zombie (compromised/infected computer - usually a Windows
-PC).  There was no PTR record for its IP address (PTR names
-that contain the IP address don't count).  RFC2821 requires
-that your hello name be a FQN (Fully Qualified domain Name,
-i.e. at least one dot) that resolves to the IP address of
-the mail sender.  In addition, just like for PTR, we don't
-accept a helo name that contains the IP, since this doesn't
-help to identify you.  The hello name you used,
-%(heloname)s, was invalid.
-
-Furthermore, there was no SPF record for the sending domain
-%(sender_domain)s.  We even tried to find its IP in any A or
-MX records for your domain, but that failed also.  We really
-should reject mail from anonymous mail clients, but in case
-it is important, we are accepting it anyway.
-
-We are sending you this message to alert you to the fact that
-
-Either - Someone is forging your domain.
-Or - You have problems with your email configuration.
-Or - Possibly both.
-
-If you need further assistance, please do not hesitate to
-contact me again.
-
-Kind regards,
-
-postmaster@%(receiver)s
-"""
-
-softfail_msg = """Subject: SPF softfail (POSSIBLE FORGERY)
-To: %(sender)s
-From: postmaster@%(receiver)s
-Auto-Submitted: auto-generated (configuration error)
-
-This is an automatically generated Delivery Status Notification.
-
-THIS IS A WARNING MESSAGE ONLY.
-
-YOU DO *NOT* NEED TO RESEND YOUR MESSAGE.
-
-Delivery to the following recipients has been delayed.
-
-       %(rcpt)s
-
-Subject: %(subject)s
-Received-SPF: %(spf_result)s
-"""
 
 def send_dsn(mailfrom,receiver,msg=None):
   """Send DSN.  If msg is None, do callback verification.
@@ -185,14 +96,30 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
     name,val = ln.split(':',1)
     msg.add_header(name,(val % locals()).strip())
   msg.set_payload(body % locals())
+  # add headers if missing from old template
+  if 'to' not in msg:
+    msg.add_header('To',sender)
+  if 'from' not in msg:
+    msg.add_header('From','postmaster@%s'%receiver)
+  if 'auto-submitted' not in msg:
+    msg.add_header('Auto-Submitted','auto-generated')
 
   return msg
 
 if __name__ == '__main__':
   q = spf.query('192.168.9.50',
-  'SRS0=pmeHL=RH=bmsi.com=stuart@bmsi.com',
-  'bmsred.bmsi.com',receiver='mail.bmsi.com')
-  msg = create_msg(q,['charlie@jsconnor.com'],None,None)
+  'SRS0=pmeHL=RH==stuart@example.com',
+  'red.example.com',receiver='mail.example.com')
+  q.result = 'softfail'
+  q.perm_error = None
+  msg = create_msg(q,['charlie@example.com'],None,
+"""From: postmaster@%(receiver)s
+To: %(sender)s
+Subject: Test
+
+Test DSN template
+"""
+  )
   print msg.as_string()
   # print send_dsn(f,msg.as_string())
-  print send_dsn(q.s,'mail.bmsi.com',msg.as_string())
+  # print send_dsn(q.s,'mail.example.com',msg.as_string())
