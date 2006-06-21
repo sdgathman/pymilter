@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.64  2006/06/21 21:12:04  customdesigned
+# More delayed reject token headers.
+# Don't require HELO pass for CBV.
+#
 # Revision 1.63  2006/05/21 03:41:44  customdesigned
 # Fail dsn
 #
@@ -1569,27 +1573,33 @@ class bmsMilter(Milter.Milter):
       # check for delayed bounce
       if self.delayed_failure:
         self.fp.seek(0)
+	lastln = None
 	for ln in self.fp:
-	  # FIXME: handle multi-line header field
+	  if lastln:
+	    if ln[0].isspace() and ln[0] != '\n':
+	      lastln += ln
+	      continue
+	    name,val = lastln.rstrip().split(None,1)
+	    pos = val.find('<SRS')
+	    if pos >= 0:
+	      try:
+		sender = srs.reverse(val[pos+1:-1])
+		cbv_cache[sender] = 500,self.delayed_failure,time.time()
+		try:
+		  # save message for debugging
+		  fname = tempfile.mktemp(".dsn")
+		  os.rename(self.tempname,fname)
+		except:
+		  fname = self.tempname
+		self.tempname = None
+		self.log('BLACKLIST:',sender,fname)
+		return Milter.DISCARD
+	      except: continue
 	  lnl = ln.lower()
 	  for k in ('message-id','x-mailer','sender'):
 	    if lnl.startswith(k):
-	      name,val = ln.split(None,1)
-	      pos = val.find('<SRS')
-	      if pos >= 0:
-		try:
-		  sender = srs.reverse(val[pos+1:-1])
-		  cbv_cache[sender] = 500,self.delayed_failure,time.time()
-		  try:
-		    # save message for debugging
-		    fname = tempfile.mktemp(".dsn")
-		    os.rename(self.tempname,fname)
-		  except:
-		    fname = self.tempname
-		  self.tempname = None
-		  self.log('BLACKLIST:',sender,fname)
-		  return Milter.DISCARD
-		except: continue
+	      lastln = ln
+	      break
 
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam
