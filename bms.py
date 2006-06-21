@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.63  2006/05/21 03:41:44  customdesigned
+# Fail dsn
+#
 # Revision 1.61  2006/05/17 21:28:07  customdesigned
 # Create GOSSiP record only when connection will procede to DATA.
 #
@@ -1007,7 +1010,8 @@ class bmsMilter(Milter.Milter):
 	if hres == 'none' and spf_best_guess \
 	  and not dynip(self.hello_name,self.connectip):
 	  hres,hcode,htxt = h.best_guess()
-      else: hres = res
+      else:
+        hres,hcode,htxt = res,code,txt
       ores = res
       if spf_best_guess and res == 'none':
 	#self.log('SPF: no record published, guessing')
@@ -1021,6 +1025,7 @@ class bmsMilter(Milter.Milter):
 	  res,code,txt = q.best_guess()
       if self.missing_ptr and ores == 'none' and res != 'pass' \
       		and hres != 'pass':
+	# this bad boy has no credentials whatsoever
 	policy = p.getNonePolicy()
 	if policy == 'CBV':
 	  if self.mailfrom != '<>':
@@ -1037,7 +1042,7 @@ class bmsMilter(Milter.Milter):
 	  return Milter.REJECT
     if res in ('deny', 'fail'):
       policy = p.getFailPolicy()
-      if hres == 'pass' and policy == 'CBV':
+      if policy == 'CBV':
 	if self.mailfrom != '<>':
 	  self.cbv_needed = (q,res)
       elif policy != 'OK':
@@ -1049,7 +1054,7 @@ class bmsMilter(Milter.Milter):
 	return Milter.REJECT
     if res == 'softfail':
       policy = p.getSoftfailPolicy()
-      if policy == 'CBV' and hres == 'pass':
+      if policy == 'CBV':
 	if self.mailfrom != '<>':
 	  self.cbv_needed = (q,res)
       elif policy != 'OK':
@@ -1064,7 +1069,7 @@ class bmsMilter(Milter.Milter):
 	return Milter.REJECT
     if res == 'neutral':
       policy = p.getNeutralPolicy()
-      if policy == 'CBV' and hres == 'pass':
+      if policy == 'CBV':
 	if self.mailfrom != '<>':
 	  self.cbv_needed = (q,res)
 	  # FIXME: this makes Received-SPF show wrong result
@@ -1081,7 +1086,7 @@ class bmsMilter(Milter.Milter):
 	return Milter.REJECT
     if res in ('unknown','permerror'):
       policy = p.getPermErrorPolicy()
-      if policy == 'CBV' and hres == 'pass':
+      if policy == 'CBV':
 	if self.mailfrom != '<>':
 	  self.cbv_needed = (q,res)
       elif policy != 'OK':
@@ -1565,23 +1570,26 @@ class bmsMilter(Milter.Milter):
       if self.delayed_failure:
         self.fp.seek(0)
 	for ln in self.fp:
-	  if ln.lower().startswith('message-id:'):
-	    name,val = ln.split(None,1)
-	    pos = val.find('<SRS')
-	    if pos >= 0:
-	      try:
-		sender = srs.reverse(val[pos+1:-1])
-		cbv_cache[sender] = 500,self.delayed_failure,time.time()
+	  # FIXME: handle multi-line header field
+	  lnl = ln.lower()
+	  for k in ('message-id','x-mailer','sender'):
+	    if lnl.startswith(k):
+	      name,val = ln.split(None,1)
+	      pos = val.find('<SRS')
+	      if pos >= 0:
 		try:
-		  # save message for debugging
-		  fname = tempfile.mktemp(".dsn")
-		  os.rename(self.tempname,fname)
-		except:
-		  fname = self.tempname
-		self.tempname = None
-		self.log('BLACKLIST:',sender,fname)
-		return Milter.DISCARD
-	      except: continue
+		  sender = srs.reverse(val[pos+1:-1])
+		  cbv_cache[sender] = 500,self.delayed_failure,time.time()
+		  try:
+		    # save message for debugging
+		    fname = tempfile.mktemp(".dsn")
+		    os.rename(self.tempname,fname)
+		  except:
+		    fname = self.tempname
+		  self.tempname = None
+		  self.log('BLACKLIST:',sender,fname)
+		  return Milter.DISCARD
+		except: continue
 
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam
@@ -1738,9 +1746,16 @@ class bmsMilter(Milter.Milter):
       except IOError: template = None
       m = dsn.create_msg(q,self.recipients,msg,template)
       if srs:
+        # Add SRS coded sender to various headers.  When (incorrectly)
+	# replying to our DSN, any of these which are preserved
+	# allow us to track the source.
 	msgid = srs.forward(sender,self.receiver)
 	m.add_header('Message-Id','<%s>'%msgid)
-	#m.add_header('Sender','"Python Milter" <%s>'%msgid)
+	if 'x-mailer' in m:
+	  m.replace_header('x-mailer','"%s" <%s>' % (m['x-mailer'],msgid))
+	else:
+	  m.add_header('X-Mailer','"Python Milter" <%s>'%msgid)
+	m.add_header('Sender','"Python Milter" <%s>'%msgid)
       m = m.as_string()
       print >>open(template_name+'.last_dsn','w'),m
       res = dsn.send_dsn(sender,self.receiver,m)
