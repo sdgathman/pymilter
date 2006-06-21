@@ -47,6 +47,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.21  2006/05/12 16:15:20  customdesigned
+# a:1.2.3.4 -> ip4:1.2.3.4 'lax' heuristic.
+#
 # Revision 1.20  2006/03/21 18:48:51  customdesigned
 # Import note_error from pyspf.  Handle timeout on type99 lookup
 # specially (sender actually has no SPF record and a braindead DNS server).
@@ -442,6 +445,7 @@ class query(object):
     		self.lookups = 0
 		# strict can be False, True, or 2 for harsh
 		self.strict = strict
+		self.perm_error = None
 
 	def set_default_explanation(self,exp):
 		exps = self.exps
