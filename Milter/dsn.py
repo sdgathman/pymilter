@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.10  2006/05/24 20:56:35  customdesigned
+# Remove default templates.  Scrub test.
+#
 
 import smtplib
 import spf
@@ -91,7 +94,7 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
       template = softfail_msg
     else:
       template = nospf_msg
-  hdrs,body = template.split('\n',1)
+  hdrs,body = template.split('\n\n',1)
   for ln in hdrs.splitlines():
     name,val = ln.split(':',1)
     msg.add_header(name,(val % locals()).strip())
@@ -103,7 +106,6 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
     msg.add_header('From','postmaster@%s'%receiver)
   if 'auto-submitted' not in msg:
     msg.add_header('Auto-Submitted','auto-generated')
-
   return msg
 
 if __name__ == '__main__':
