@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.11  2006/06/21 21:07:11  customdesigned
+# Include header fields in DSN template.
+#
 # Revision 1.10  2006/05/24 20:56:35  customdesigned
 # Remove default templates.  Scrub test.
 #
@@ -14,8 +17,9 @@ import spf
 import socket
 from email.Message import Message
 import Milter
+import time
 
-def send_dsn(mailfrom,receiver,msg=None):
+def send_dsn(mailfrom,receiver,msg=None,timeout=600):
   """Send DSN.  If msg is None, do callback verification.
      Mailfrom is original sender we are sending DSN or CBV to.
      Receiver is the MTA sending the DSN.
@@ -28,6 +32,7 @@ def send_dsn(mailfrom,receiver,msg=None):
   else:
     mxlist.sort()
   smtp = smtplib.SMTP()
+  toolate = time.time() + timeout
   for prior,host in mxlist:
     try:
       smtp.connect(host)
@@ -65,7 +70,11 @@ def send_dsn(mailfrom,receiver,msg=None):
       pass		# any other error, try next MX
     except socket.error:
       pass		# MX didn't accept connections, try next one
+    except socket.timeout:
+      pass		# MX too slow, try next one
     smtp.close()
+    if time.time() > toolate:
+      return (450,'No MX response within %f minutes'%(timeout/60.0))
   return (450,'No MX servers available')	# temp error
 
 def create_msg(q,rcptlist,origmsg=None,template=None):
