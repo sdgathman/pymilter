@@ -1,3 +1,22 @@
+Reports PROBATION even when rejecting message (works, but confusing in log).
+
+Bug in Auto-whitelist.  Recent Auto-whitelist doesn't override expired entry.
+
+Delayed_failure detection needs to handle multi-line header fields.  Also,
+delayed_failure should be recognized when addressed to postmaster@helodomain
+Idea: load headers into message object, and use header array.
+
+Need to use wildcards in blacklist.log: *.madcowsrecord.net
+Need to exclude emails like !*-admin@example.com in whitelist_sender.
+
+SPF permerror diagnostics should include corrected mechanism.
+
+Delay SPF check until RCPT TO.  Cache result to avoid repeating
+for multiple RCPT.  This avoids overhead for invalid RCPT, and
+allows for per RCPT local policy.
+
+Add auto-blacklisted senders to blacklist.log with timestamp.
+
 Received-SPF header field should show identity that was checked.
 
 Check SPF for outgoing mail (including local policy for internal addresses).

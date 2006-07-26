@@ -1,6 +1,6 @@
 %define name milter
 %define version 0.8.6
-%define release 1.RH7
+%define release 2.RH7
 # what version of RH are we building for?
 %define redhat9 0
 %define redhat7 1
@@ -91,6 +91,8 @@ cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 #!/bin/sh
 
 find /var/log/milter/save -mtime +7 | xargs $R rm
+# work around memory leak
+/etc/init.d/milter restart
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
@@ -174,13 +176,13 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
-* Thu Feb 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-1
-- Support fail template
+* Tue May 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-2
+- Support fail template, headers in templates
 - Create GOSSiP record only when connection will procede to DATA.
 - More SPF lax heuristics
 - Don't require SPF pass for white/black listing mail from trusted relay.
 - Support localpart wildcard for white and black lists.
-- Use signed Message-ID in delayed reject of DSNs to blacklist senders
+* Thu Feb 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-1
 - Delay reject of unsigned RCPT for postmaster and abuse only
 - Fix dsn reporting of hard permerror
 - Resolve FIXME for wrap_close in miltermodule.c

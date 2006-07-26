@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.65  2006/06/21 22:22:00  customdesigned
+# Handle multi-line headers in delayed dsns.
+#
 # Revision 1.64  2006/06/21 21:12:04  customdesigned
 # More delayed reject token headers.
 # Don't require HELO pass for CBV.
@@ -1233,7 +1236,7 @@ class bmsMilter(Milter.Milter):
 
       # check for delayed bounce of CBV
       if self.is_bounce and srs:
-        if refaildsn.match(lval):
+        if refaildsn.search(lval):
 	  self.delayed_failure = val.strip()
 	  # if confirmed by finding our signed Message-ID, 
 	  # original sender (encoded in Message-ID) is blacklisted
@@ -1768,7 +1771,7 @@ class bmsMilter(Milter.Milter):
 	m.add_header('Sender','"Python Milter" <%s>'%msgid)
       m = m.as_string()
       print >>open(template_name+'.last_dsn','w'),m
-      res = dsn.send_dsn(sender,self.receiver,m)
+      res = dsn.send_dsn(sender,self.receiver,m,timeout=timeout)
     if res:
       desc = "CBV: %d %s" % res[:2]
       if 400 <= res[0] < 500:
@@ -1803,6 +1806,7 @@ def main():
   if srs or len(discard_users) > 0 or smart_alias or dspam_userdir:
     flags = flags + Milter.DELRCPT
   Milter.set_flags(flags)
+  socket.setdefaulttimeout(60)
   milter_log.info("bms milter startup")
   sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,timeout)
