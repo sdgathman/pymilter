@@ -2,7 +2,8 @@
 """SPF (Sender Policy Framework) implementation.
 
 Copyright (c) 2003, Terence Way
-Portions Copyright (c) 2004,2005 Stuart Gathman <stuart@bmsi.com>
+Portions Copyright (c) 2004,2005,2006 Stuart Gathman <stuart@bmsi.com>
+Portions Copyright (c) 2005,2006 Scott Kitterman <scott@kitterman.com>
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -19,7 +20,7 @@ AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
 SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 For more information about SPF, a tool against email forgery, see
-	http://openspf.org/
+	http://www.openspf.org/
 
 For news, bugfixes, etc. visit the home page for this implementation at
 	http://www.wayforward.net/spf/
@@ -47,6 +48,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.22  2006/06/21 21:13:07  customdesigned
+# initialize perm_error
+#
 # Revision 1.21  2006/05/12 16:15:20  customdesigned
 # a:1.2.3.4 -> ip4:1.2.3.4 'lax' heuristic.
 #
@@ -273,7 +277,7 @@ For news, bugfixes, etc. visit the home page for this implementation at
 
 __author__ = "Terence Way"
 __email__ = "terry@wayforward.net"
-__version__ = "1.6: December 18, 2003"
+__version__ = "1.7: July 26, 2006"
 MODULE = 'spf'
 
 USAGE = """To check an incoming mail request:
@@ -311,6 +315,8 @@ def DNSLookup(name,qtype):
     #resp.show()
     # key k: ('wayforward.net', 'A'), value v
     return [((a['name'], a['typename']), a['data']) for a in resp.answers]
+  except IOError,x:
+    raise TempError,'DNS ' + str(x)
   except DNS.DNSError,x:
     raise TempError,'DNS ' + str(x)
 
@@ -322,7 +328,7 @@ def isSPF(txt):
 MASK = 0xFFFFFFFFL
 
 # Regular expression to look for modifiers
-RE_MODIFIER = re.compile(r'^([a-zA-Z]+)=')
+RE_MODIFIER = re.compile(r'^([a-zA-Z0-9_\-\.]+)=')
 
 # Regular expression to find macro expansions
 RE_CHAR = re.compile(r'%(%|_|-|(\{[a-zA-Z][0-9]*r?[^\}]*\}))')
@@ -330,7 +336,7 @@ RE_CHAR = re.compile(r'%(%|_|-|(\{[a-zA-Z][0-9]*r?[^\}]*\}))')
 # Regular expression to break up a macro expansion
 RE_ARGS = re.compile(r'([0-9]*)(r?)([^0-9a-zA-Z]*)')
 
-RE_CIDR = re.compile(r'/([1-9]|1[0-9]*|2[0-9]*|3[0-2]*)$')
+RE_CIDR = re.compile(r'/([1-9]|1[0-9]|2[0-9]|3[0-2])$')
 
 RE_IP4 = re.compile(r'\.'.join(
         [r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)+'$')
@@ -370,9 +376,9 @@ except NameError:
 DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 
 # maximum DNS lookups allowed
-MAX_LOOKUP = 10 #draft-schlitt-spf-classic-02 Para 10.1
-MAX_MX = 10 #draft-schlitt-spf-classic-02 Para 10.1
-MAX_PTR = 10 #draft-schlitt-spf-classic-02 Para 10.1
+MAX_LOOKUP = 10 #RFC 4408 Para 10.1
+MAX_MX = 10 #RFC 4408 Para 10.1
+MAX_PTR = 10 #RFC 4408 Para 10.1
 MAX_CNAME = 10 # analogous interpretation to MAX_PTR
 MAX_RECURSION = 20
 ALL_MECHANISMS = ('a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all')
@@ -480,7 +486,7 @@ class query(object):
 	('unknown', 550, 'SPF Permanent Error: Unknown mechanism found: moo')
 
 	>>> q.check(spf='v=spf1 =a ?all moo')
-	('unknown', 550, 'SPF Permanent Error: Unknown qualifier, IETF draft para 4.6.1, found in: =a')
+	('unknown', 550, 'SPF Permanent Error: Unknown qualifier, RFC 4408 para 4.6.1, found in: =a')
 
 	>>> q.check(spf='v=spf1 ip4:192.0.0.0/8 ~all')
 	('pass', 250, 'sender SPF verified')
@@ -575,6 +581,11 @@ class query(object):
 	Returns mech,m,arg,cidrlength,result
 
 	Examples:
+	>>> q = query(s='strong-bad@email.example.com.',
+	...           h='mx.example.org', i='192.0.2.3')
+	>>> q.validate_mechanism('A')
+	('A', 'a', 'email.example.com', 32, 'pass')
+
 	>>> q = query(s='strong-bad@email.example.com',
 	...           h='mx.example.org', i='192.0.2.3')
 	>>> q.validate_mechanism('A')
@@ -583,8 +594,24 @@ class query(object):
 	>>> q.validate_mechanism('?mx:%{d}/27')
 	('?mx:%{d}/27', 'mx', 'email.example.com', 27, 'neutral')
 
-	>>> q.validate_mechanism('-mx::%%%_/.Clara.de/27')
-	('-mx::%%%_/.Clara.de/27', 'mx', ':% /.Clara.de', 27, 'fail')
+	>>> try: q.validate_mechanism('ip4:1.2.3.4/247')
+	... except PermError,x: print x
+	Invalid IP4 address: ip4:1.2.3.4/247
+
+	>>> try: q.validate_mechanism('a:example.com:8080')
+	... except PermError,x: print x
+	Too many :. Not allowed in domain name.: a:example.com:8080
+	
+	>>> try: q.validate_mechanism('ip4:1.2.3.444/24')
+	... except PermError,x: print x
+	Invalid IP4 address: ip4:1.2.3.444/24
+	
+	>>> try: q.validate_mechanism('-all:3030')
+	... except PermError,x: print x
+	Invalid all mechanism format - only qualifier allowed with all: -all:3030
+
+	>>> q.validate_mechanism('-mx:%%%_/.Clara.de/27')
+	('-mx:%%%_/.Clara.de/27', 'mx', '% /.Clara.de', 27, 'fail')
 
 	>>> q.validate_mechanism('~exists:%{i}.%{s1}.100/86400.rate.%{d}')
 	('~exists:%{i}.%{s1}.100/86400.rate.%{d}', 'exists', '192.0.2.3.com.100/86400.rate.email.example.com', 32, 'softfail')
@@ -608,7 +635,9 @@ class query(object):
 		  x = self.note_error(
 		    'Use the ip4 mechanism for ip4 addresses',mech)
 		  m = 'ip4'
-		  
+		# Check for : within the arguement
+		if arg.count(':') > 0:
+		  raise PermError('Too many :. Not allowed in domain name.',mech)
 		if m in ('a', 'mx', 'ptr', 'exists', 'include'):
 		  arg = self.expand(arg)
 		  # FQDN must contain at least one '.'
@@ -631,11 +660,18 @@ class query(object):
 		  return mech,m,arg,cidrlength,result
 		if m == 'ip4' and not RE_IP4.match(arg):
 		  raise PermError('Invalid IP4 address',mech)
+		#validate 'all' mechanism per RFC 4408 ABNF
+		if m == 'all' and \
+		    (arg != self.d  or mech.count(':') or mech.count('/')):
+ 		  print '|'+ arg + '|', mech, self.d,
+		  self.note_error(
+	      'Invalid all mechanism format - only qualifier allowed with all'
+		    ,mech)
 		if m in ALL_MECHANISMS:
 		  return mech,m,arg,cidrlength,result
 		if m[1:] in ALL_MECHANISMS:
 		  x = self.note_error(
-		    'Unknown qualifier, IETF draft para 4.6.1, found in', mech)
+		    'Unknown qualifier, RFC 4408 para 4.6.1, found in', mech)
 		else:
 		  x = self.note_error('Unknown mechanism found',mech)
 		return mech,m,arg,cidrlength,x
@@ -770,11 +806,12 @@ class query(object):
 	def get_explanation(self, spec):
 		"""Expand an explanation."""
 		if spec:
-		  return self.expand(''.join(self.dns_txt(self.expand(spec))))
+		  txt = ''.join(self.dns_txt(self.expand(spec)))
+		  return self.expand(txt,stripdot=False)
 		else:
 		  return 'explanation : Required option is missing'
 
-	def expand(self, str):
+	def expand(self, str, stripdot=True): # macros='slodipvh'
 		"""Do SPF RFC macro expansion.
 
 		Examples:
@@ -842,6 +879,9 @@ class query(object):
 		>>> q.expand('%{p2}.trusted-domains.example.net')
 		'example.org.trusted-domains.example.net'
 
+		>>> q.expand('%{p2}.trusted-domains.example.net.')
+		'example.org.trusted-domains.example.net'
+
 		"""
 		end = 0
 		result = ''
@@ -867,7 +907,10 @@ class query(object):
 					        JOINERS.get(letter))
 
 			end = i.end()
-		return result + str[end:]
+		result += str[end:]
+		if stripdot and result.endswith('.'):
+		  return result[:-1]
+		return result
 
 	def dns_spf(self, domain):
 		"""Get the SPF record recorded in DNS for a specific domain
@@ -919,7 +962,7 @@ class query(object):
 		"""Get a list of IP addresses for all MX exchanges for a
 		domain name.
 		"""
-# draft-schlitt-spf-classic-02 section 5.4 "mx"
+# RFC 4408 section 5.4 "mx"
 # To prevent DoS attacks, more than 10 MX names MUST NOT be looked up
 		if self.strict:
 		  max = MAX_MX
@@ -1072,8 +1115,8 @@ def parse_mechanism(str, d):
 	>>> parse_mechanism('-exists:%{i}.%{s1}.100/86400.rate.%{d}','foo.com')
 	('-exists', '%{i}.%{s1}.100/86400.rate.%{d}', 32)
 
-	>>> parse_mechanism('mx::%%%_/.Claranet.de/27','foo.com')
-	('mx', ':%%%_/.Claranet.de', 27)
+	>>> parse_mechanism('mx:%%%_/.Claranet.de/27','foo.com')
+	('mx', '%%%_/.Claranet.de', 27)
 
 	>>> parse_mechanism('mx:%{d}/27','foo.com')
 	('mx', '%{d}', 27)
