@@ -48,6 +48,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.23  2006/07/28 01:21:02  customdesigned
+# More fixes from pyspf
+#
 # Revision 1.22  2006/06/21 21:13:07  customdesigned
 # initialize perm_error
 #
@@ -663,7 +666,7 @@ class query(object):
 		#validate 'all' mechanism per RFC 4408 ABNF
 		if m == 'all' and \
 		    (arg != self.d  or mech.count(':') or mech.count('/')):
- 		  print '|'+ arg + '|', mech, self.d,
+# 		  print '|'+ arg + '|', mech, self.d,
 		  self.note_error(
 	      'Invalid all mechanism format - only qualifier allowed with all'
 		    ,mech)
