@@ -48,6 +48,9 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Terrence is not responding to email.
 #
 # $Log$
+# Revision 1.24  2006/07/28 01:21:33  customdesigned
+# Remove debug print
+#
 # Revision 1.23  2006/07/28 01:21:02  customdesigned
 # More fixes from pyspf
 #
@@ -922,6 +925,8 @@ class query(object):
 		"""
 		# for performance, check for most common case of TXT first
 		a = [t for t in self.dns_txt(domain) if isSPF(t)]
+		if len(a) > 1:
+                    raise PermError('Two or more type TXT spf records found.')
 		if len(a) == 1 and self.strict < 2:
 		    return a[0]   			
 		# check official SPF type first when it becomes more popular
