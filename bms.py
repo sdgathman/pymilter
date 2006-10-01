@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.66  2006/07/26 16:42:26  customdesigned
+# Support CBV timeout
+#
 # Revision 1.65  2006/06/21 22:22:00  customdesigned
 # Handle multi-line headers in delayed dsns.
 #
@@ -215,7 +218,7 @@ import mime
 import email.Errors
 import Milter
 import tempfile
-import ConfigParser
+from ConfigParser import ConfigParser
 import time
 import socket
 import struct
@@ -254,6 +257,7 @@ ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 # If found, we blacklist that recipient.
 subjpats = (
  r'^failure notice',
+ r'^subjectbounce',
  r'^returned mail',
  r'^undeliver',
  r'^delivery\b.*\bfailure',
@@ -281,6 +285,7 @@ block_forward = {}
 hide_path = ()
 log_headers = False
 block_chinese = False
+case_sensitive_localpart = False
 spam_words = ()
 porn_words = ()
 banned_exts = mime.extlist.split(',')
@@ -328,8 +333,15 @@ milter_log = logging.getLogger('milter')
 if gossip:
   gossip_node = Gossip('gossip4.db',120)
 
-class MilterConfigParser(ConfigParser.ConfigParser):
+class MilterConfigParser(ConfigParser):
 
+  def __init__(self,defaults):
+    ConfigParser.__init__(self)
+    self.defaults = defaults
+
+  def get(self,sect,opt):
+    return ConfigParser.get(self,sect,opt,vars=self.defaults)
+    
   def getlist(self,sect,opt):
     if self.has_option(sect,opt):
       return [q.strip() for q in self.get(sect,opt).split(',')]
@@ -343,11 +355,11 @@ class MilterConfigParser(ConfigParser.ConfigParser):
     for q in s.split(','):
       q = q.strip()
       if q.startswith('file:'):
-        domain = q[5:]
+        domain = q[5:].lower()
 	d[domain] = d.setdefault(domain,[]) + open(domain,'r').read().split()
       else:
 	user,domain = q.split('@')
-	d.setdefault(domain,[]).append(user)
+	d.setdefault(domain.lower(),[]).append(user)
     return d
   
   def getaddrdict(self,sect,opt):
@@ -390,7 +402,8 @@ def read_config(list):
     'reject_noptr': 'no',
     'supply_sender': 'no',
     'best_guess': 'no',
-    'dspam_internal': 'yes'
+    'dspam_internal': 'yes',
+    'case_sensitive_localpart': 'no'
   })
   cp.read(list)
 
@@ -398,6 +411,7 @@ def read_config(list):
   tempfile.tempdir = cp.get('milter','tempdir')
   global socketname, timeout, check_user, log_headers
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
+  global case_sensitive_localpart
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
   check_user = cp.getaddrset('milter','check_user')
@@ -406,6 +420,7 @@ def read_config(list):
   internal_domains = cp.getlist('milter','internal_domains')
   trusted_relay = cp.getlist('milter','trusted_relay')
   hello_blacklist = cp.getlist('milter','hello_blacklist')
+  case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
 
   # defang section
   global scan_rfc822, scan_html, block_chinese, scan_zip, block_forward
@@ -439,13 +454,19 @@ def read_config(list):
   if wiretap_dest: wiretap_dest = '<%s>' % wiretap_dest
 
   global smart_alias
-  for sa in cp.getlist('wiretap','smart_alias'):
-    sm = cp.getlist('wiretap',sa)
+  for sa,v in [
+      (k,cp.get('wiretap',k)) for k in cp.getlist('wiretap','smart_alias')
+    ] + (cp.has_section('smart_alias') and cp.items('smart_alias',True) or []):
+    print sa,v
+    sm = [q.strip() for q in v.split(',')]
     if len(sm) < 2:
       milter_log.warning('malformed smart alias: %s',sa)
       continue
     if len(sm) == 2: sm.append(sa)
-    key = (sm[0],sm[1])
+    if case_sensitive_localpart:
+      key = (sm[0],sm[1])
+    else:
+      key = (sm[0].lower(),sm[1].lower())
     smart_alias[key] = sm[2:]
 
   # dspam section
@@ -829,12 +850,18 @@ class bmsMilter(Milter.Milter):
 
   def smart_alias(self,to):
     if smart_alias:
-      t = parse_addr(to.lower())
+      if case_sensitive_localpart:
+	t = parse_addr(to)
+      else:
+	t = parse_addr(to.lower())
       if len(t) == 2:
 	ct = '@'.join(t)
       else:
 	ct = t[0]
-      cf = self.canon_from
+      if case_sensitive_localpart:
+	cf = self.canon_from
+      else:
+	cf = self.canon_from.lower()
       cf0 = cf.split('@',1)
       if len(cf0) == 2:
 	cf0 = '@' + cf0[1]
@@ -1582,10 +1609,10 @@ class bmsMilter(Milter.Milter):
 	    if ln[0].isspace() and ln[0] != '\n':
 	      lastln += ln
 	      continue
-	    name,val = lastln.rstrip().split(None,1)
-	    pos = val.find('<SRS')
-	    if pos >= 0:
-	      try:
+	    try:
+	      name,val = lastln.rstrip().split(None,1)
+	      pos = val.find('<SRS')
+	      if pos >= 0:
 		sender = srs.reverse(val[pos+1:-1])
 		cbv_cache[sender] = 500,self.delayed_failure,time.time()
 		try:
@@ -1597,7 +1624,7 @@ class bmsMilter(Milter.Milter):
 		self.tempname = None
 		self.log('BLACKLIST:',sender,fname)
 		return Milter.DISCARD
-	      except: continue
+	    except: continue
 	  lnl = ln.lower()
 	  for k in ('message-id','x-mailer','sender'):
 	    if lnl.startswith(k):

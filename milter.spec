@@ -177,6 +177,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Tue May 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-2
+- Support CBV timeout
 - Support fail template, headers in templates
 - Create GOSSiP record only when connection will procede to DATA.
 - More SPF lax heuristics

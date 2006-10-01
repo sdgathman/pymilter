@@ -1,6 +1,11 @@
 Here is a history of user visible changes to Python milter.
-
-0.8.6	Delay reject of unsigned RCPT for postmaster and abuse only
+0.8.6	Support CBV timeout
+	Support fail template, headers in templates
+	Create GOSSiP record only when connection will procede to DATA.
+	More SPF lax heuristics
+	Don't require SPF pass for white/black listing mail from trusted relay.
+	Support localpart wildcard for white and black lists.
+	Delay reject of unsigned RCPT for postmaster and abuse only
 	Fix dsn reporting of hard permerror
 	Resolve FIXME for wrap_close in miltermodule.c
 	Add Message-ID to DSNs
