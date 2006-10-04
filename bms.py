@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.67  2006/10/01 01:44:06  customdesigned
+# case_sensitive_localpart option, more delayed bounce heuristics,
+# optional smart_alias section.
+#
 # Revision 1.66  2006/07/26 16:42:26  customdesigned
 # Support CBV timeout
 #
@@ -339,8 +343,14 @@ class MilterConfigParser(ConfigParser):
     ConfigParser.__init__(self)
     self.defaults = defaults
 
+  # The defaults provided by ConfigParser show up in all sections,
+  # which screws up iterating over all options in a section.
+  # Worse, passing "defaults" with vars= overrides the config file!
+  # So we roll our own defaults.
   def get(self,sect,opt):
-    return ConfigParser.get(self,sect,opt,vars=self.defaults)
+    if not self.has_option(sect,opt) and opt in self.defaults:
+      return self.defaults[opt]
+    return ConfigParser.get(self,sect,opt)
     
   def getlist(self,sect,opt):
     if self.has_option(sect,opt):
