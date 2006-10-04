@@ -1,3 +1,6 @@
+When training with spam, REJECT after data so that mistakenly blacklisted
+senders at least get an error.
+
 Reporting explanation for failure should show source of sender
 provided explanation.
 
