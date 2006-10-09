@@ -47,6 +47,21 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Development taken over by Stuart Gathman <stuart@bmsi.com>.
 #
 # $Log$
+# Revision 1.105  2006/10/07 22:06:28  kitterma
+# Pass strict status to DNSLookup - will be needed for TCP failover.
+#
+# Revision 1.104  2006/10/07 21:59:37  customdesigned
+# long/empty label tests and fix.
+#
+# Revision 1.103  2006/10/07 18:16:20  customdesigned
+# Add tests for and fix RE_TOPLAB.
+#
+# Revision 1.102  2006/10/05 13:57:15  customdesigned
+# Remove isSPF and make missing space after version tag a warning.
+#
+# Revision 1.101  2006/10/05 13:39:11  customdesigned
+# SPF version tag is case insensitive.
+#
 # Revision 1.100  2006/10/04 02:14:04  customdesigned
 # Remove incomplete saving of result.  Was messing up bmsmilter.  Would
 # be useful if done consistently - and disabled when passing spf= to check().
@@ -187,11 +202,11 @@ if not hasattr(DNS.Type, 'SPF'):
     DNS.Type.typemap[99] = 'SPF'
     DNS.Lib.RRunpacker.getSPFdata = DNS.Lib.RRunpacker.getTXTdata
 
-def DNSLookup(name, qtype):
+def DNSLookup(name, qtype, strict=True):
     try:
         req = DNS.DnsRequest(name, qtype=qtype)
         resp = req.req()
-        #resp.show()
+	#resp.show()
         # key k: ('wayforward.net', 'A'), value v
 	# FIXME: pydns returns AAAA RR as 16 byte binary string, but
 	# A RR as dotted quad.  For consistency, this driver should
@@ -202,15 +217,14 @@ def DNSLookup(name, qtype):
     except DNS.DNSError, x:
         raise TempError, 'DNS ' + str(x)
 
-def isSPF(txt):
-    "Return True if txt has SPF record signature."
-    return txt.startswith('v=spf1 ') or txt == 'v=spf1'
+RE_SPF = re.compile(r'^v=spf1$|^v=spf1 ',re.IGNORECASE)
 
 # Regular expression to look for modifiers
 RE_MODIFIER = re.compile(r'^([a-z][a-z0-9_\-\.]*)=', re.IGNORECASE)
 
 # Regular expression to find macro expansions
-RE_CHAR = re.compile(r'%(%|_|-|(\{[^\}]*\}))')
+PAT_CHAR = r'%(%|_|-|(\{[^\}]*\}))'
+RE_CHAR = re.compile(PAT_CHAR)
 
 # Regular expression to break up a macro expansion
 RE_ARGS = re.compile(r'([0-9]*)(r?)([^0-9a-zA-Z]*)')
@@ -222,7 +236,8 @@ PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
 RE_IP4 = re.compile(PAT_IP4+'$')
 
 RE_TOPLAB = re.compile(
-    r'\.[0-9a-z]*[a-z][0-9a-z]*|[0-9a-z]+-[0-9a-z-]*[0-9a-z]$', re.IGNORECASE)
+    r'\.(?:[0-9a-z]*[a-z][0-9a-z]*|[0-9a-z]+-[0-9a-z-]*[0-9a-z])\.?$|%s'
+    	% PAT_CHAR, re.IGNORECASE)
 
 RE_IP6 = re.compile(                 '(?:%(hex4)s:){6}%(ls32)s$'
                    '|::(?:%(hex4)s:){5}%(ls32)s$'
@@ -720,10 +735,10 @@ class query(object):
 
         # validate domain-spec
         if m in ('a', 'mx', 'ptr', 'exists', 'include'):
-            arg = self.expand(arg)
             # any trailing dot was removed by expand()
             if RE_TOPLAB.split(arg)[-1]:
                 raise PermError('Invalid domain found (use FQDN)', arg)
+            arg = self.expand(arg)
             if m == 'include':
                 if arg == self.d:
                     if mech != 'include':
@@ -760,11 +775,12 @@ class query(object):
         spf = spf.split()
         # Catch case where SPF record has no spaces.
         # Can never happen with conforming dns_spf(), however
-        # in the future we might want to give permerror
+        # in the future we might want to give warnings
         # for common mistakes like IN TXT "v=spf1" "mx" "-all"
         # in relaxed mode.
-        if spf[0] != 'v=spf1':
-            raise PermError('Invalid SPF record in', self.d)
+        if spf[0].lower() != 'v=spf1':
+	    assert strict > 1
+	    raise AmbiguityWarning('Invalid SPF record in', self.d)
         spf = spf[1:]
 
         # copy of explanations to be modified by exp=
@@ -1037,15 +1053,20 @@ class query(object):
         name.  Returns None if not found, or if more than one record
         is found.
         """
+	# Per RFC 4.3/1, check for malformed domain.  This produces
+	# no results as a special case.
+	for label in domain.split('.'):
+	  if not label or len(label) > 63:
+	    return None
         # for performance, check for most common case of TXT first
-        a = [t for t in self.dns_txt(domain) if isSPF(t)]
+        a = [t for t in self.dns_txt(domain) if RE_SPF.match(t)]
         if len(a) > 1:
             raise PermError('Two or more type TXT spf records found.')
         if len(a) == 1 and self.strict < 2:
             return a[0]               
         # check official SPF type first when it becomes more popular
         try:
-            b = [t for t in self.dns_99(domain) if isSPF(t)]
+            b = [t for t in self.dns_99(domain) if RE_SPF.match(t)]
         except TempError,x:
             # some braindead DNS servers hang on type 99 query
             if self.strict > 1: raise TempError(x)
@@ -1064,7 +1085,7 @@ class query(object):
         if DELEGATE:    # use local record if neither found
             a = [t
               for t in self.dns_txt(domain+'._spf.'+DELEGATE)
-            if isSPF(t)
+            if RE_SPF.match(t)
             ]
             if len(a) == 1: return a[0]
         return None
@@ -1159,7 +1180,7 @@ class query(object):
         result = self.cache.get( (name, qtype) )
         cname = None
         if not result:
-            for k, v in DNSLookup(name, qtype):
+            for k, v in DNSLookup(name, qtype, self.strict):
                 if k == (name, 'CNAME'):
                     cname = v
                 self.cache.setdefault(k, []).append(v)
