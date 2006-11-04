@@ -1,7 +1,14 @@
+Generate DSNs according to RFC 3464
+
+Parse incoming 3464 DSNs for "Action: failed" to recognize delayed
+failures.  This works regardless of Subject.
+
+Get temperror policy from access file.
+
 When training with spam, REJECT after data so that mistakenly blacklisted
 senders at least get an error.
 
-Reporting explanation for failure should show source of sender
+Reporting explanation for failure should show source if sender
 provided explanation.
 
 Reports PROBATION even when rejecting message (works, but confusing in log).

@@ -47,124 +47,8 @@ For news, bugfixes, etc. visit the home page for this implementation at
 # Development taken over by Stuart Gathman <stuart@bmsi.com>.
 #
 # $Log$
-# Revision 1.105  2006/10/07 22:06:28  kitterma
-# Pass strict status to DNSLookup - will be needed for TCP failover.
-#
-# Revision 1.104  2006/10/07 21:59:37  customdesigned
-# long/empty label tests and fix.
-#
-# Revision 1.103  2006/10/07 18:16:20  customdesigned
-# Add tests for and fix RE_TOPLAB.
-#
-# Revision 1.102  2006/10/05 13:57:15  customdesigned
-# Remove isSPF and make missing space after version tag a warning.
-#
-# Revision 1.101  2006/10/05 13:39:11  customdesigned
-# SPF version tag is case insensitive.
-#
-# Revision 1.100  2006/10/04 02:14:04  customdesigned
-# Remove incomplete saving of result.  Was messing up bmsmilter.  Would
-# be useful if done consistently - and disabled when passing spf= to check().
-#
-# Revision 1.99  2006/10/03 21:00:26  customdesigned
-# Correct fat fingered merge error.
-#
-# Revision 1.98  2006/10/03 17:35:45  customdesigned
-# Provide python inet_ntop and inet_pton when not socket.has_ipv6
-#
-# Revision 1.97  2006/10/02 17:10:13  customdesigned
-# Test and fix for uppercase macros.
-#
-# Revision 1.96  2006/10/01 01:27:54  customdesigned
-# Switch to pymilter lax processing convention:
-# Always return strict result, extended result in q.perm_error.ext
-#
-# Revision 1.95  2006/09/30 22:53:44  customdesigned
-# Fix getp to obey SHOULDs in RFC.
-#
-# Revision 1.94  2006/09/30 22:23:25  customdesigned
-# p macro tests and fixes
-#
-# Revision 1.93  2006/09/30 20:57:06  customdesigned
-# Remove generator expression for compatibility with python2.3.
-#
-# Revision 1.92  2006/09/30 19:52:52  customdesigned
-# Removed redundant flag and unneeded global.
-#
-# Revision 1.91  2006/09/30 19:37:49  customdesigned
-# Missing L
-#
-# Revision 1.90  2006/09/30 19:29:58  customdesigned
-# pydns returns AAAA RR as binary string
-#
-# Revision 1.89  2006/09/29 20:23:11  customdesigned
-# Optimize cidrmatch
-#
-# Revision 1.88  2006/09/29 19:44:10  customdesigned
-# Fix ptr with ip6 for harsh mode.
-#
-# Revision 1.87  2006/09/29 19:26:53  customdesigned
-# Add PTR tests and fix ip6 ptr
-#
-# Revision 1.86  2006/09/29 17:55:22  customdesigned
-# Pass ip6 tests
-#
-# Revision 1.85  2006/09/29 15:58:02  customdesigned
-# Pass self test on non IP6 python.
-# PTR accepts no cidr.
-#
-# Revision 1.83  2006/09/27 18:09:40  kitterma
-# Converted spf.check to return pre-MARID result codes for drop in
-# compatibility with pySPF 1.6/1.7.  Added new procedure, spf.check2 to
-# return RFC4408 results in a two part answer (result, explanation).
-# This is the external API for pySPF 2.0.  No longer any need to branch
-# for 'classic' and RFC compliant pySPF libraries.
-#
-# Revision 1.82  2006/09/27 18:02:21  kitterma
-# Converted max MX limit to ambiguity warning for validator.
-#
-# Revision 1.81  2006/09/27 17:38:14  kitterma
-# Updated initial comments and moved pre-1.7 changes to spf_changelog.
-#
-# Revision 1.80  2006/09/27 17:33:53  kitterma
-# Fixed indentation error in check0.
-#
-# Revision 1.79  2006/09/26 18:05:44  kitterma
-# Removed unused receiver policy definitions.
-#
-# Revision 1.78  2006/09/26 16:15:50  kitterma
-# added additional IP4 and CIDR validation tests - no code changes.
-#
-# Revision 1.77  2006/09/25 19:42:32  customdesigned
-# Fix unknown macro sentinel
-#
-# Revision 1.76  2006/09/25 19:10:40  customdesigned
-# Fix exp= error and add another failing test.
-#
-# Revision 1.75  2006/09/25 02:02:30  kitterma
-# Fixed redirect-cancels-exp test suite failure.
-#
-# Revision 1.74  2006/09/24 04:04:08  kitterma
-# Implemented check for macro 'c' - Macro unimplimented.
-#
-# Revision 1.73  2006/09/24 02:08:35  kitterma
-# Fixed invalid-macro-char test failure.
-#
-# Revision 1.72  2006/09/23 05:45:52  kitterma
-# Fixed domain-name-truncation test failure
-#
-# Revision 1.71  2006/09/22 01:02:54  kitterma
-# pySPF correction for nolocalpart in rfc4408-tests.yml failed, 4.3/2.
-# Added comments to testspf.py on where to get YAML.
-#
-# Revision 1.70  2006/09/18 02:13:27  kitterma
-# Worked through a large number of pylint issues - all 4 spaces, not a mix
-# of 4 spaces, 2 spaces, and tabs. Caught a few minor errors in the process.
-# All built in tests still pass.
-#
-# Revision 1.69  2006/09/17 18:44:25  kitterma
-# Fixed validation mode only crash bug when rDNS check had no PTR record
-#
+# Revision 1.107  2006/11/04 21:58:12  customdesigned
+# Prevent cache poisoning by bogus additional RRs in PTR DNS response.
 #
 # See spf_changelog.txt for earlier changes.
 
@@ -303,8 +187,9 @@ MAX_CNAME = 10 # analogous interpretation to MAX_PTR
 MAX_RECURSION = 20
 
 ALL_MECHANISMS = ('a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all')
-COMMON_MISTAKES = { 'prt': 'ptr', 'ip': 'ip4', 'ipv4': 'ip4', 'ipv6': 'ip6' }
-
+COMMON_MISTAKES = {
+  'prt': 'ptr', 'ip': 'ip4', 'ipv4': 'ip4', 'ipv6': 'ip6', 'all.': 'all'
+}
 
 #If harsh processing, for the validator, is invoked, warn if results
 #likely deviate from the publishers intention.
@@ -1163,6 +1048,22 @@ class query(object):
         """Get a list of domain names for an IP address."""
         return self.dns('%s.%s.arpa'%(reverse_dots(i),self.v), 'PTR')
 
+    # We have to be careful which additional DNS RRs we cache.  For
+    # instance, PTR records are controlled by the connecting IP, and they
+    # could poison our local cache with bogus A and MX records.  
+
+    SAFE2CACHE = {
+      ('MX','A'): None,
+      ('MX','MX'): None,
+      ('CNAME','A'): None,
+      ('CNAME','CNAME'): None,
+      ('A','A'): None,
+      ('AAAA','AAAA'): None,
+      ('PTR','PTR'): None,
+      ('TXT','TXT'): None,
+      ('SPF','SPF'): None
+    }
+
     def dns(self, name, qtype, cnames=None):
         """DNS query.
 
@@ -1179,11 +1080,14 @@ class query(object):
         """
         result = self.cache.get( (name, qtype) )
         cname = None
+
         if not result:
+	    safe2cache = query.SAFE2CACHE
             for k, v in DNSLookup(name, qtype, self.strict):
                 if k == (name, 'CNAME'):
                     cname = v
-                self.cache.setdefault(k, []).append(v)
+		if (qtype,k[1]) in safe2cache:
+		    self.cache.setdefault(k, []).append(v)
             result = self.cache.get( (name, qtype), [])
         if not result and cname:
             if not cnames:

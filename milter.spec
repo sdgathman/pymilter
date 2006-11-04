@@ -92,7 +92,7 @@ cat >$RPM_BUILD_ROOT/etc/cron.daily/milter <<'EOF'
 
 find /var/log/milter/save -mtime +7 | xargs $R rm
 # work around memory leak
-/etc/init.d/milter restart
+/etc/init.d/milter condrestart
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 

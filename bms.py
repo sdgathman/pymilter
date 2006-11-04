@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.68  2006/10/04 03:46:01  customdesigned
+# Fix defaults.
+#
 # Revision 1.67  2006/10/01 01:44:06  customdesigned
 # case_sensitive_localpart option, more delayed bounce heuristics,
 # optional smart_alias section.
@@ -1278,13 +1281,19 @@ class bmsMilter(Milter.Milter):
 	  # if confirmed by finding our signed Message-ID, 
 	  # original sender (encoded in Message-ID) is blacklisted
 
+    elif lname == 'from' and val.lower().startswith('postmaster@'):
+      # Yes, if From header comes last, this might not help much.
+      # But this is a heuristic - if MTAs would send proper DSNs in
+      # the first place, none of this would be needed.
+      self.is_bounce = True
+      
     # check for invalid message id
-    if lname == 'message-id' and len(val) < 4:
+    elif lname == 'message-id' and len(val) < 4:
       self.log('REJECT: %s: %s' % (name,val))
       return Milter.REJECT
 
     # check for common bulk mailers
-    if lname == 'x-mailer':
+    elif lname == 'x-mailer':
       mailer = val.lower()
       if mailer in ('direct email','calypso','mail bomber') \
 	or mailer.find('optin') >= 0:
