@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.70  2006/11/21 18:45:49  customdesigned
+# Update a use of deprecated rfc822.  Recognize report-type=delivery-status
 #
 # See ChangeLog
 #
@@ -11,7 +13,6 @@
 import sys
 import os
 import StringIO
-import rfc822
 import mime
 import email.Errors
 import Milter
@@ -1581,12 +1582,8 @@ class bmsMilter(Milter.Milter):
     try:
       msg.dump(out)
       out.seek(0)
-      msg = rfc822.Message(out)
-      msg.rewindbody()
-      while True:
-	buf = out.read(8192)
-	if len(buf) == 0: break
-	self.replacebody(buf)	# feed modified message to sendmail
+      msg = out.read().split('\n\n',1)[-1]
+      self.replacebody(msg)	# feed modified message to sendmail
       if spam_checked: 
 	if gossip and self.umis:
 	  gossip_node.feedback(self.umis,0)
