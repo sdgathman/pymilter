@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.71  2006/11/22 01:03:28  customdesigned
+# Replace last use of deprecated rfc822 module.
+#
 # Revision 1.70  2006/11/21 18:45:49  customdesigned
 # Update a use of deprecated rfc822.  Recognize report-type=delivery-status
 #
@@ -325,6 +328,7 @@ def read_config(list):
     if SES:
       ses = SES.new(secret=srs_secret,expiration=maxage)
       srs_domain = set(cp.getlist('srs','ses'))
+      srs_domain.update(cp.getlist('srs','srs'))
     else:
       srs_domain = set(cp.getlist('srs','srs'))
     srs_domain.update(cp.getlist('srs','sign'))
@@ -1582,6 +1586,8 @@ class bmsMilter(Milter.Milter):
     try:
       msg.dump(out)
       out.seek(0)
+      # Since we wrote headers with '\n' (no CR),
+      # the following header/body split should always work.
       msg = out.read().split('\n\n',1)[-1]
       self.replacebody(msg)	# feed modified message to sendmail
       if spam_checked: 
