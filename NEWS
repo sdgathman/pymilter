@@ -1,4 +1,7 @@
 Here is a history of user visible changes to Python milter.
+0.8.7	Move spf module to pyspf
+	Prevent PTR cache poisoning
+	More lame bounce heuristics
 0.8.6	Support CBV timeout
 	Support fail template, headers in templates
 	Create GOSSiP record only when connection will procede to DATA.

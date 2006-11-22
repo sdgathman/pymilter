@@ -15,13 +15,13 @@ if sys.version < '2.2.3':
   DistributionMetadata.download_url = None
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
-setup(name = "milter", version = '0.8.6',
+setup(name = "milter", version = '0.8.7',
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to
 attach to sendmail's libmilter functionality.  Additional python
 modules provide for navigating and modifying MIME parts, and
-querying SPF records.
+sending DSNs or doing CBVs.
 """,
 	author="Jim Niemira",
 	author_email="urmane@urmane.org",
@@ -29,7 +29,7 @@ querying SPF records.
 	maintainer_email="stuart@bmsi.com",
 	license="GPL",
 	url="http://www.bmsi.com/python/milter.html",
-	py_modules=["mime","spf"],
+	py_modules=["mime"],
 	packages = ['Milter'],
 	ext_modules=[
 	  Extension("milter", ["miltermodule.c"],

@@ -1,23 +1,20 @@
 %define name milter
-%define version 0.8.6
-%define release 2.RH7
+%define version 0.8.7
+%define release 1
 # what version of RH are we building for?
-%define redhat9 0
-%define redhat7 1
-%define redhat6 0
+%define redhat7 0
 
 # Options for Redhat version 6.x:
-# rpm -ba|--rebuild --define "rh6 1"
-%{?rh6:%define redhat7 0}
-%{?rh6:%define redhat6 1}
+# rpm -ba|--rebuild --define "rh7 1"
+%{?rh7:%define redhat7 1}
 
 # some systems dont have initrddir defined
 %{?_initrddir:%define _initrddir /etc/rc.d/init.d}
 
-%if %{redhat9}
-%define sysvinit milter.rc
-%else	# Redhat 7.x and earlier (multiple ps lines per thread)
+%if %{redhat7} # Redhat 7.x and earlier (multiple ps lines per thread)
 %define sysvinit milter.rc7
+%else	
+%define sysvinit milter.rc
 %endif
 # RH9, other systems (single ps line per process)
 %ifos Linux
@@ -43,22 +40,23 @@ Requires: %{python} >= 2.4, sendmail >= 8.13
 %ifos Linux
 Requires: chkconfig
 %endif
-BuildRequires: %{python}-devel , sendmail-devel >= 8.13
+BuildRequires: %{python}-devel >= 2.4, sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
 attach to sendmail's libmilter functionality.  Additional python
-modules provide for navigating and modifying MIME parts.
+modules provide for navigating and modifying MIME parts, sending
+DSNs, and doing CBV.
 
 %prep
 %setup
 #patch -p0 -b .bms
 
 %build
-%if %{redhat9}
-  LDFLAGS="-g"
-%else
+%if %{redhat7}
   LDFLAGS="-s"
+%else # Redhat builds debug packages after 7.3
+  LDFLAGS="-g"
 %endif
 env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 
@@ -176,6 +174,10 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
+- Prevent PTR cache poisoning
+- More lame bounce heuristics
+- SPF moved to pyspf RPM
 * Tue May 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-2
 - Support CBV timeout
 - Support fail template, headers in templates

@@ -1,0 +1,214 @@
+# Revision 1.69  2006/11/04 22:09:39  customdesigned
+# Another lame DSN heuristic.  Block PTR cache poisoning attack.
+#
+# Revision 1.68  2006/10/04 03:46:01  customdesigned
+# Fix defaults.
+#
+# Revision 1.67  2006/10/01 01:44:06  customdesigned
+# case_sensitive_localpart option, more delayed bounce heuristics,
+# optional smart_alias section.
+#
+# Revision 1.66  2006/07/26 16:42:26  customdesigned
+# Support CBV timeout
+#
+# Revision 1.65  2006/06/21 22:22:00  customdesigned
+# Handle multi-line headers in delayed dsns.
+#
+# Revision 1.64  2006/06/21 21:12:04  customdesigned
+# More delayed reject token headers.
+# Don't require HELO pass for CBV.
+#
+# Revision 1.63  2006/05/21 03:41:44  customdesigned
+# Fail dsn
+#
+# Revision 1.61  2006/05/17 21:28:07  customdesigned
+# Create GOSSiP record only when connection will procede to DATA.
+#
+# Revision 1.60  2006/05/12 16:14:48  customdesigned
+# Don't require SPF pass for white/black listing mail from trusted relay.
+# Support localpart wildcard for white and black lists.
+#
+# Revision 1.59  2006/04/06 18:14:17  customdesigned
+# Check whitelist/blacklist even when not checking SPF (e.g. trusted relay).
+#
+# Revision 1.58  2006/03/10 20:52:49  customdesigned
+# Use re to recognize failure DSNs.
+#
+# Revision 1.57  2006/03/07 20:50:54  customdesigned
+# Use signed Message-ID in delayed reject to blacklist senders
+#
+# Revision 1.56  2006/02/24 02:12:54  customdesigned
+# Properly report hard PermError (lax mode fails also) by always setting
+# perm_error attribute with PermError exception.  Improve reporting of
+# invalid domain PermError.
+#
+# Revision 1.55  2006/02/17 05:04:29  customdesigned
+# Use SRS sign domain list.
+# Accept but do not use for training whitelisted senders without SPF pass.
+# Immediate rejection of unsigned bounces.
+#
+# Revision 1.54  2006/02/16 02:16:36  customdesigned
+# User specific SPF receiver policy.
+#
+# Revision 1.53  2006/02/12 04:15:01  customdesigned
+# Remove spf dependency for iniplist
+#
+# Revision 1.52  2006/02/12 02:12:08  customdesigned
+# Use CIDR notation for internal connect list.
+#
+# Revision 1.51  2006/02/12 01:13:58  customdesigned
+# Don't check rcpt user list when signed MFROM.
+#
+# Revision 1.50  2006/02/09 20:39:43  customdesigned
+# Use CIDR notation for trusted_relay iplist
+#
+# Revision 1.49  2006/01/30 23:14:48  customdesigned
+# put back eom condition
+#
+# Revision 1.48  2006/01/12 20:31:24  customdesigned
+# Accelerate training via whitelist and blacklist.
+#
+# Revision 1.47  2005/12/29 04:49:10  customdesigned
+# Do not auto-whitelist autoreplys
+#
+# Revision 1.46  2005/12/28 20:17:29  customdesigned
+# Expire and renew AddrCache entries
+#
+# Revision 1.45  2005/12/23 22:34:46  customdesigned
+# Put guessed result in separate header.
+#
+# Revision 1.44  2005/12/23 21:47:07  customdesigned
+# Move Received-SPF header to top.
+#
+# Revision 1.43  2005/12/09 16:54:01  customdesigned
+# Select neutral DSN template for best_guess
+#
+# Revision 1.42  2005/12/01 22:42:32  customdesigned
+# improve gossip support.
+# Initialize srs_domain from srs.srs config property.  Should probably
+# always block unsigned DSN when signing all.
+#
+# Revision 1.41  2005/12/01 18:59:25  customdesigned
+# Fix neutral policy.  pobox.com -> openspf.org
+#
+# Revision 1.40  2005/11/07 21:22:35  customdesigned
+# GOSSiP support, local database only.
+#
+# Revision 1.39  2005/10/31 00:04:58  customdesigned
+# Simple implementation of trusted_forwarder list.  Inefficient for
+# more than 1 or 2 entries.
+#
+# Revision 1.38  2005/10/28 19:36:54  customdesigned
+# Don't check internal_domains for trusted_relay.
+#
+# Revision 1.37  2005/10/28 09:30:49  customdesigned
+# Do not send quarantine DSN when sender is DSN.
+#
+# Revision 1.36  2005/10/23 16:01:29  customdesigned
+# Consider MAIL FROM a match for supply_sender when a subdomain of From or Sender
+#
+# Revision 1.35  2005/10/20 18:47:27  customdesigned
+# Configure auto_whitelist senders.
+#
+# Revision 1.34  2005/10/19 21:07:49  customdesigned
+# access.db stores keys in lower case
+#
+# Revision 1.33  2005/10/19 19:37:50  customdesigned
+# Train screener on whitelisted messages.
+#
+# Revision 1.32  2005/10/14 16:17:31  customdesigned
+# Auto whitelist refinements.
+#
+# Revision 1.31  2005/10/14 01:14:08  customdesigned
+# Auto whitelist feature.
+#
+# Revision 1.30  2005/10/12 16:36:30  customdesigned
+# Release 0.8.3
+#
+# Revision 1.29  2005/10/11 22:50:07  customdesigned
+# Always check HELO except for SPF pass, temperror.
+#
+# Revision 1.28  2005/10/10 23:50:20  customdesigned
+# Use logging module to make logging threadsafe (avoid splitting log lines)
+#
+# Revision 1.27  2005/10/10 20:15:33  customdesigned
+# Configure SPF policy via sendmail access file.
+#
+# Revision 1.26  2005/10/07 03:23:40  customdesigned
+# Banned users option.  Experimental feature to supply Sender when
+# missing and MFROM domain doesn't match From.  Log cipher bits for
+# SMTP AUTH.  Sketch access file feature.
+#
+# Revision 1.25  2005/09/08 03:55:08  customdesigned
+# Handle perverse MFROM quoting.
+#
+# Revision 1.24  2005/08/18 03:36:54  customdesigned
+# Don't innoculate with SCREENED mail.
+#
+# Revision 1.23  2005/08/17 19:35:27  customdesigned
+# Send DSN before adding message to quarantine.
+#
+# Revision 1.22  2005/08/11 22:17:58  customdesigned
+# Consider SMTP AUTH connections internal.
+#
+# Revision 1.21  2005/08/04 21:21:31  customdesigned
+# Treat fail like softfail for selected (braindead) domains.
+# Treat mail according to extended processing results, but
+# report any PermError that would officially result via DSN.
+#
+# Revision 1.20  2005/08/02 18:04:35  customdesigned
+# Keep screened honeypot mail, but optionally discard honeypot only mail.
+#
+# Revision 1.19  2005/07/20 03:30:04  customdesigned
+# Check pydspam version for honeypot, include latest pyspf changes.
+#
+# Revision 1.18  2005/07/17 01:25:44  customdesigned
+# Log as well as use extended result for best guess.
+#
+# Revision 1.17  2005/07/15 20:25:36  customdesigned
+# Use extended results processing for best_guess.
+#
+# Revision 1.16  2005/07/14 03:23:33  customdesigned
+# Make SES package optional.  Initial honeypot support.
+#
+# Revision 1.15  2005/07/06 04:05:40  customdesigned
+# Initial SES integration.
+#
+# Revision 1.14  2005/07/02 23:27:31  customdesigned
+# Don't match hostnames for internal connects.
+#
+# Revision 1.13  2005/07/01 16:30:24  customdesigned
+# Always log trusted Received and Received-SPF headers.
+#
+# Revision 1.12  2005/06/20 22:35:35  customdesigned
+# Setreply for rejectvirus.
+#
+# Revision 1.11  2005/06/17 02:07:20  customdesigned
+# Release 0.8.1
+#
+# Revision 1.10  2005/06/16 18:35:51  customdesigned
+# Ignore HeaderParseError decoding header
+#
+# Revision 1.9  2005/06/14 21:55:29  customdesigned
+# Check internal_domains for outgoing mail.
+#
+# Revision 1.8  2005/06/06 18:24:59  customdesigned
+# Properly log exceptions from pydspam
+#
+# Revision 1.7  2005/06/04 19:41:16  customdesigned
+# Fix bugs from testing RPM
+#
+# Revision 1.6  2005/06/03 04:57:05  customdesigned
+# Organize config reader by section.  Create defang section.
+#
+# Revision 1.5  2005/06/02 15:00:17  customdesigned
+# Configure banned extensions.  Scan zipfile option with test case.
+#
+# Revision 1.4  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
+# Revision 1.3  2005/06/02 02:09:00  customdesigned
+# Record timestamp in send_dsn.log
+#
+# Revision 1.2  2005/06/02 01:00:36  customdesigned
+# Support configurable templates for DSNs.

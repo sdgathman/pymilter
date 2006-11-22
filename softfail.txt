@@ -17,7 +17,7 @@ Subject: %(subject)s
 Received-SPF: %(spf_result)s
 
 Your sender policy indicated that the above email was likely forged and that
-feedback was desired.  If you are sending from a foreign ISP,
+feedback was desired for debugging.  If you are sending from a foreign ISP,
 then you may need to follow your home ISPs instructions for configuring
 your outgoing mail server.
 

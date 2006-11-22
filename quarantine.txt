@@ -22,6 +22,19 @@ their quarantined mail and may notice your message.  If your message is
 important, please contact them via other means.  You may also try sending
 them a simple plain text message.
 
+If you never sent the above message, then your domain, %(sender_domain)s,
+was forged - i.e. used without your knowlege or authorization by
+someone attempting to steal your mail identity.  This is a very
+serious problem, and you need to provide authentication for your
+SMTP (email) servers to prevent criminals from forging your
+domain.  The simplest step is usually to publish an SPF record
+with your Sender Policy.  
+
+For more information, see: http://www.openspf.org
+
+Your mail admin needs to publish a strict SPF record so that I can reject
+those forgeries instead of bugging you with them.
+
 If you need further assistance, please do not hesitate to contact me.
 
 Kind regards,
