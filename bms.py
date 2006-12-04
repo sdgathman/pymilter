@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.72  2006/11/22 16:31:22  customdesigned
+# SRS domains were missing srs_reject check when SES was active.
+#
 # Revision 1.71  2006/11/22 01:03:28  customdesigned
 # Replace last use of deprecated rfc822 module.
 #
@@ -807,14 +810,19 @@ class bmsMilter(Milter.Milter):
     	or domain in blacklist:
       self.blacklist = True
       self.log("BLACKLIST",self.canon_from)
+    global gossip
     if gossip and domain and rc == Milter.CONTINUE:
       if self.spf and self.spf.result == 'pass':
         qual = 'SPF'
       else:
         qual = self.connectip
-      self.umis = gossip.umis(domain+qual,self.id+time.time())
-      res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
-      self.add_header(hdr,val)
+      try:
+	self.umis = gossip.umis(domain+qual,self.id+time.time())
+	res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
+	self.add_header(hdr,val)
+      except:
+        gossip = None
+	raise
     return rc
 
   def check_spf(self):
@@ -958,8 +966,8 @@ class bmsMilter(Milter.Milter):
   def envrcpt(self,to,*str):
     # mail to MAILER-DAEMON is generally spam that bounced
     if to.startswith('<MAILER-DAEMON@'):
-      self.log('DISCARD: RCPT TO:',to,str)
-      return Milter.DISCARD
+      self.log('REJECT: RCPT TO:',to,str)
+      return Milter.REJECT
     self.log("rcpt to",to,str)
     t = parse_addr(to)
     newaddr = False
@@ -1424,6 +1432,11 @@ class bmsMilter(Milter.Milter):
   def eom(self):
     if not self.fp:
       return Milter.ACCEPT	# no message collected - so no eom processing
+
+    if self.is_bounce and len(self.recipients) > 1:
+      self.log("REJECT: DSN to multiple recipients")
+      self.setreply('550','5.7.1', 'DSN to multiple recipients')
+      return Milter.REJECT
 
     try:
       # check for delayed bounce
