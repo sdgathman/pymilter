@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.73  2006/12/04 18:47:03  customdesigned
+# Reject multiple recipients to DSN.
+# Auto-disable gossip on DB error.
+#
 # Revision 1.72  2006/11/22 16:31:22  customdesigned
 # SRS domains were missing srs_reject check when SES was active.
 #
@@ -28,6 +32,7 @@ import time
 import socket
 import struct
 import re
+import shutil
 import gc
 import anydbm
 import Milter.dsn as dsn
@@ -85,6 +90,8 @@ reject_virus_from = ()
 wiretap_users = {}
 discard_users = {}
 wiretap_dest = None
+mail_archive = None
+_archive_lock = None
 blind_wiretap = True
 check_user = {}
 block_forward = {}
@@ -258,12 +265,13 @@ def read_config(list):
   reject_virus_from = cp.getlist('scrub','reject_virus_from')
 
   # wiretap section
-  global blind_wiretap, wiretap_users, wiretap_dest, discard_users
+  global blind_wiretap,wiretap_users,wiretap_dest,discard_users,mail_archive
   blind_wiretap = cp.getboolean('wiretap','blind')
   wiretap_users = cp.getaddrset('wiretap','users')
   discard_users = cp.getaddrset('wiretap','discard')
   wiretap_dest = cp.getdefault('wiretap','dest')
   if wiretap_dest: wiretap_dest = '<%s>' % wiretap_dest
+  mail_archive = cp.getdefault('wiretap','archive')
 
   global smart_alias
   for sa,v in [
@@ -811,7 +819,8 @@ class bmsMilter(Milter.Milter):
       self.blacklist = True
       self.log("BLACKLIST",self.canon_from)
     global gossip
-    if gossip and domain and rc == Milter.CONTINUE:
+    if gossip and domain and rc == Milter.CONTINUE \
+    	and not self.internal_connection:
       if self.spf and self.spf.result == 'pass':
         qual = 'SPF'
       else:
@@ -1579,6 +1588,21 @@ class bmsMilter(Milter.Milter):
       if rc != Milter.CONTINUE:
         return rc
 
+    if mail_archive:
+      global _archive_lock
+      if not _archive_lock:
+        import thread
+	_archive_lock = thread.allocate_lock()
+      _archive_lock.acquire()
+      try:
+	fin = open(self.tempname,'r')
+	fout = open(mail_archive,'a')
+	shutil.copyfileobj(fin,fout,8192)
+      finally:
+        _archive_lock.release()
+        fin.close()
+        fout.close()
+      
     if not defanged and not spam_checked:
       os.remove(self.tempname)
       self.tempname = None	# prevent re-removal
