@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.74  2006/12/19 00:59:30  customdesigned
+# Add archive option to wiretap.
+#
 # Revision 1.73  2006/12/04 18:47:03  customdesigned
 # Reject multiple recipients to DSN.
 # Auto-disable gossip on DB error.
@@ -818,20 +821,27 @@ class bmsMilter(Milter.Milter):
     	or domain in blacklist:
       self.blacklist = True
       self.log("BLACKLIST",self.canon_from)
-    global gossip
-    if gossip and domain and rc == Milter.CONTINUE \
-    	and not self.internal_connection:
-      if self.spf and self.spf.result == 'pass':
-        qual = 'SPF'
-      else:
-        qual = self.connectip
-      try:
-	self.umis = gossip.umis(domain+qual,self.id+time.time())
-	res,hdr,val = gossip_node.query(self.umis,domain,qual,1)
-	self.add_header(hdr,val)
-      except:
-        gossip = None
-	raise
+    else:
+      global gossip
+      if gossip and domain and rc == Milter.CONTINUE \
+	  and not self.internal_connection:
+	if self.spf and self.spf.result == 'pass':
+	  qual = 'SPF'
+	elif res == 'pass':
+	  qual = 'GUESS'
+	else:
+	  qual = self.connectip
+	try:
+	  umis = gossip.umis(domain+qual,self.id+time.time())
+	  res,hdr,val = gossip_node.query(umis,domain,qual,1)
+	  self.add_header(hdr,val)
+	  a = val.split(',')
+	  self.reputation = int(a[-2])
+	  self.confidence = int(a[-1])
+	  self.umis = umis
+	except:
+	  gossip = None
+	  raise
     return rc
 
   def check_spf(self):
@@ -884,6 +894,8 @@ class bmsMilter(Milter.Milter):
 	  res,code,txt = q.best_guess('v=spf1 a/24 mx/24')
 	else:
 	  res,code,txt = q.best_guess()
+	if res != 'pass' and hres == 'pass' and spf.domainmatch([q.h],q.o):
+	  res = 'pass'	# get a guessed pass for valid matching HELO 
       if self.missing_ptr and ores == 'none' and res != 'pass' \
       		and hres != 'pass':
 	# this bad boy has no credentials whatsoever
@@ -998,6 +1010,7 @@ class bmsMilter(Milter.Milter):
 	    # Currently, a sendmail map reverses SRS.  We just log it here.
 	    self.log("srs rcpt:",newaddr)
 	  self.dspam = False	# verified as reply to mail we sent
+	  self.blacklist = False
 	except:
 	  if not (self.internal_connection or self.trusted_relay):
 	    if srsre.match(oldaddr):
@@ -1022,7 +1035,8 @@ class bmsMilter(Milter.Milter):
       if self.discard:
         self.del_recipient(to)
       # don't check userlist if signed MFROM for now
-      if users and not newaddr and not user.lower() in users:
+      userl = user.lower()
+      if users and not newaddr and not userl in users:
         self.log('REJECT: RCPT TO:',to)
 	return Milter.REJECT
       # FIXME: should dspam_exempt be case insensitive?
@@ -1030,7 +1044,17 @@ class bmsMilter(Milter.Milter):
         self.forward = False
       exempt_users = dspam_exempt.get(domain,())
       if user in exempt_users or '' in exempt_users:
+	if self.blacklist:
+	  self.log('REJECT: BLACKLISTED')
+	  self.setreply('550','5.7.1','Sending domain has been blacklisted')
+	  return Milter.REJECT
 	self.dspam = False
+      if userl != 'postmaster' and self.umis	\
+      	and self.reputation < -50 and self.confidence > 1:
+        self.log('REJECT: REPUTATION')
+	self.setreply('550','5.7.1','Your domain has been sending mostly spam')
+	return Milter.REJECT
+
       if domain in hide_path:
         self.hidepath = True
       if not domain in dspam_reject:
@@ -1196,7 +1220,7 @@ class bmsMilter(Milter.Milter):
 	    hd = t[1].lower()
 	    if hd == mf_domain or mf_domain.endswith('.'+hd): break
 	else:
-	  for f in msg.get_all('from'):
+	  for f in msg.get_all('from',[]):
 	    self.log(f)
 	  sender = msg.get_all('sender')
 	  if sender:
