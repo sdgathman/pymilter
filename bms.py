@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.75  2006/12/28 01:54:32  customdesigned
+# Reject on bad_reputation or blacklist and nodspam.  Match valid helo like
+# PTR for guessed SPF pass.
+#
 # Revision 1.74  2006/12/19 00:59:30  customdesigned
 # Add archive option to wiretap.
 #
@@ -805,6 +809,7 @@ class bmsMilter(Milter.Milter):
     if not (self.internal_connection or self.trusted_relay)	\
     	and self.connectip and spf:
       rc = self.check_spf()
+      if rc != Milter.CONTINUE: return rc
     else:
       rc = Milter.CONTINUE
     # FIXME: parse Received-SPF from trusted_relay for SPF result
@@ -864,6 +869,7 @@ class bmsMilter(Milter.Milter):
       res,code,txt = q.perm_error.ext	# extended (lax processing) result
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.s)
+    hres = None
     if res not in ('pass','error','temperror'):
       if self.mailfrom != '<>':
 	# check hello name via spf unless spf pass
@@ -975,6 +981,8 @@ class bmsMilter(Milter.Milter):
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
     self.add_header('Received-SPF',q.get_header(q.result,receiver),0)
+    if hres and q.h != q.o:
+      self.add_header('X-Hello-SPF',hres,0)
     q.guess = res
     if res != q.result:
       self.add_header('X-Guessed-SPF',res,0)
