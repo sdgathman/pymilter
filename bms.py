@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.76  2006/12/30 18:58:53  customdesigned
+# Skip reputation/whitelist/blacklist when rejecting on SPF.  Add X-Hello-SPF.
+#
 # Revision 1.75  2006/12/28 01:54:32  customdesigned
 # Reject on bad_reputation or blacklist and nodspam.  Match valid helo like
 # PTR for guessed SPF pass.
@@ -813,7 +816,8 @@ class bmsMilter(Milter.Milter):
     else:
       rc = Milter.CONTINUE
     # FIXME: parse Received-SPF from trusted_relay for SPF result
-    res = self.spf and self.spf.guess
+    res = self.spf and self.spf_guess
+    hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
     if auto_whitelist.has_key(self.canon_from):
       if res == 'pass' or self.trusted_relay:
@@ -834,6 +838,9 @@ class bmsMilter(Milter.Milter):
 	  qual = 'SPF'
 	elif res == 'pass':
 	  qual = 'GUESS'
+	elif hres == 'pass':
+	  qual = 'HELO'
+	  domain = self.spf.h
 	else:
 	  qual = self.connectip
 	try:
@@ -983,7 +990,8 @@ class bmsMilter(Milter.Milter):
     self.add_header('Received-SPF',q.get_header(q.result,receiver),0)
     if hres and q.h != q.o:
       self.add_header('X-Hello-SPF',hres,0)
-    q.guess = res
+    self.spf_guess = res
+    self.spf_helo = hres
     if res != q.result:
       self.add_header('X-Guessed-SPF',res,0)
     self.spf = q
@@ -1730,7 +1738,6 @@ def main():
   Milter.set_flags(flags)
   socket.setdefaulttimeout(60)
   milter_log.info("bms milter startup")
-  sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,timeout)
   milter_log.info("bms milter shutdown")
 
