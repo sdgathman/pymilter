@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.77  2006/12/31 03:07:20  customdesigned
+# Use HELO identity if good when MAILFROM is bad.
+#
 # Revision 1.76  2006/12/30 18:58:53  customdesigned
 # Skip reputation/whitelist/blacklist when rejecting on SPF.  Add X-Hello-SPF.
 #
@@ -81,7 +84,7 @@ subjpats = (
  r'^subjectbounce',
  r'^returned mail',
  r'^undeliver',
- r'^delivery\b.*\bfailure',
+ r'^delivery\b.*\bfail',
  r'^delivery problem',
  r'\buser unknown\b',
  r'^failed',
@@ -1683,24 +1686,29 @@ class bmsMilter(Milter.Milter):
       self.log('CBV:',sender,'(cached)')
       res = cbv_cache[sender]
     else:
-      self.log('CBV:',sender)
+      fname = template_name+'.txt'
       try:
 	template = file(template_name+'.txt').read()
-      except IOError: template = None
+	self.log('CBV:',sender,'Using:',fname)
+      except IOError:
+        template = None
+	self.log('CBV:',sender,'PLAIN')
       m = dsn.create_msg(q,self.recipients,msg,template)
-      if srs:
-        # Add SRS coded sender to various headers.  When (incorrectly)
-	# replying to our DSN, any of these which are preserved
-	# allow us to track the source.
-	msgid = srs.forward(sender,self.receiver)
-	m.add_header('Message-Id','<%s>'%msgid)
-	if 'x-mailer' in m:
-	  m.replace_header('x-mailer','"%s" <%s>' % (m['x-mailer'],msgid))
-	else:
-	  m.add_header('X-Mailer','"Python Milter" <%s>'%msgid)
-	m.add_header('Sender','"Python Milter" <%s>'%msgid)
-      m = m.as_string()
-      print >>open(template_name+'.last_dsn','w'),m
+      if m:
+	if srs:
+	  # Add SRS coded sender to various headers.  When (incorrectly)
+	  # replying to our DSN, any of these which are preserved
+	  # allow us to track the source.
+	  msgid = srs.forward(sender,self.receiver)
+	  m.add_header('Message-Id','<%s>'%msgid)
+	  if 'x-mailer' in m:
+	    m.replace_header('x-mailer','"%s" <%s>' % (m['x-mailer'],msgid))
+	  else:
+	    m.add_header('X-Mailer','"Python Milter" <%s>'%msgid)
+	  m.add_header('Sender','"Python Milter" <%s>'%msgid)
+	m = m.as_string()
+	print >>open(template_name+'.last_dsn','w'),m
+      # if missing template, do plain CBV
       res = dsn.send_dsn(sender,self.receiver,m,timeout=timeout)
     if res:
       desc = "CBV: %d %s" % res[:2]

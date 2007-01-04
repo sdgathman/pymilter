@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.12  2006/07/26 16:37:35  customdesigned
+# Support timeout.
+#
 # Revision 1.11  2006/06/21 21:07:11  customdesigned
 # Include header fields in DSN template.
 #
@@ -79,6 +82,8 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600):
 
 def create_msg(q,rcptlist,origmsg=None,template=None):
   "Create a DSN message from a template.  Template must be '\n' separated."
+  if not template:
+    return None
   heloname = q.h
   sender = q.s
   connectip = q.i
@@ -98,11 +103,6 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   msg.add_header('X-Mailer','PyMilter-'+Milter.__version__)
   msg.set_type('text/plain')
 
-  if not template:
-    if spf_result and spf_result.startswith('softfail'):
-      template = softfail_msg
-    else:
-      template = nospf_msg
   hdrs,body = template.split('\n\n',1)
   for ln in hdrs.splitlines():
     name,val = ln.split(':',1)
