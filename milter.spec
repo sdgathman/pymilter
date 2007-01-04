@@ -151,7 +151,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README HOWTO NEWS TODO CREDITS sample.py
+%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %ifos aix4.1
@@ -178,6 +178,7 @@ rm -rf $RPM_BUILD_ROOT
 - More lame bounce heuristics
 - SPF moved to pyspf RPM
 - wiretap archive option
+- Do plain CBV if missing template
 * Tue May 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-2
 - Support CBV timeout
 - Support fail template, headers in templates

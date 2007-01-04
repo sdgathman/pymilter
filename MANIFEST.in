@@ -4,6 +4,7 @@ include NEWS
 include HOWTO
 include CREDITS
 include README
+include ChangeLog
 include MANIFEST.in
 include testsample.py
 include testmime.py
