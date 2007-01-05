@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.78  2007/01/04 18:01:10  customdesigned
+# Do plain CBV when template missing.
+#
 # Revision 1.77  2006/12/31 03:07:20  customdesigned
 # Use HELO identity if good when MAILFROM is bad.
 #
@@ -510,79 +513,7 @@ def iniplist(ipaddr,iplist):
       return True
   return False
 
-class AddrCache(object):
-  time_format = '%Y%b%d %H:%M:%S %Z'
-
-  def __init__(self,renew=7):
-    self.age = renew
-
-  def load(self,fname,age=0):
-    if not age:
-      age = self.age
-    self.fname = fname
-    cache = {}
-    self.cache = cache
-    now = time.time()
-    try:
-      too_old = now - age*24*60*60	# max age in days
-      for ln in open(self.fname):
-	try:
-	  rcpt,ts = ln.strip().split(None,1)
-	  l = time.strptime(ts,AddrCache.time_format)
-	  t = time.mktime(l)
-	  if t > too_old:
-	    cache[rcpt.lower()] = (t,None)
-	except:
-	  cache[ln.strip().lower()] = (now,None)
-    except IOError: pass
-
-  def has_key(self,sender):
-    try:
-      ts,res = self.cache[sender.lower()]
-      too_old = time.time() - self.age*24*60*60	# max age in days
-      if ts > too_old:
-        return True
-      del self.cache[sender.lower()]
-      try:
-	user,host = sender.split('@',1)
-	return self.has_key(host)
-      except ValueError:
-        pass
-    except KeyError:
-      try:
-	user,host = sender.split('@',1)
-	return self.has_key(host)
-      except ValueError:
-        pass
-    return False
-
-  def __getitem__(self,sender):
-    try:
-      ts,res = self.cache[sender.lower()]
-      too_old = time.time() - self.age*24*60*60	# max age in days
-      if ts > too_old:
-	return res
-      del self.cache[sender.lower()]
-      raise KeyError, sender
-    except KeyError,x:
-      try:
-	user,host = sender.split('@',1)
-	return self.__getitem__(host)
-      except ValueError:
-        raise x
-
-  def __setitem__(self,sender,res):
-    lsender = sender.lower()
-    now = time.time()
-    cached = self.has_key(sender)
-    if not cached:
-      self.cache[lsender] = (now,res)
-      if not res:
-	s = time.strftime(AddrCache.time_format,time.localtime(now))
-	print >>open(self.fname,'a'),sender,s # log refreshed senders
-
-  def __len__(self):
-    return len(self.cache)
+from Milter.cache import AddrCache
 
 cbv_cache = AddrCache(renew=7)
 cbv_cache.load('send_dsn.log',age=7)

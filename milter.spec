@@ -11,7 +11,8 @@
 # some systems dont have initrddir defined
 %{?_initrddir:%define _initrddir /etc/rc.d/init.d}
 
-%if %{redhat7} # Redhat 7.x and earlier (multiple ps lines per thread)
+%if %{redhat7} 
+# Redhat 7.x and earlier (multiple ps lines per thread)
 %define sysvinit milter.rc7
 %else	
 %define sysvinit milter.rc
@@ -167,6 +168,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /var/log/milter/bms.py
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
+%config(noreplace) /var/log/milter/fail.txt
 %config(noreplace) /var/log/milter/neutral.txt
 %config(noreplace) /var/log/milter/quarantine.txt
 %config(noreplace) /var/log/milter/permerror.txt

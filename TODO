@@ -1,7 +1,6 @@
-When bms.py can't find templates, it passes None to dsn.create_msg(),
-which uses local variable as backup, which no longer exist.
-
-Purge old GOSSiP records nightly.
+DONE When bms.py can't find templates, it passes None to dsn.create_msg(),
+which uses local variable as backup, which no longer exist.  Do plain
+CBV in that case instead.
 
 Find and use X-GOSSiP: header for SPAM: and FP: submissions.  Would need to 
 keep tags longer.
