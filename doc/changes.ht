@@ -2,6 +2,14 @@ Title: Recent Changes
 
 <h2> Recent Changes </h2>
 
+<h3> 0.8.7 </h3>
+
+The spf module has been moved to the 
+<a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a> package.
+Download <a href="http://sourceforge.net/project/showfiles.php?group_id=139894&package_id=191419">here</a>.
+
+<h3> 0.8.6 </h3>
+
 Python milter has been moved to 
 <a href="http://sourceforge.net/projects/pymilter/">pymilter Sourceforge
 project</a> for development and release downloads.
