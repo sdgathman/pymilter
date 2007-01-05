@@ -19,6 +19,7 @@ class AddrCacheTestCase(unittest.TestCase):
     cache['temp@bar.com'] = 'testing'
     self.failUnless(cache.has_key('foo@bar.com'))
     self.failUnless(not cache.has_key('hello@bar.com'))
+    self.failUnless('baz@bar.com' in cache)
     self.assertEquals(cache['temp@bar.com'],'testing')
     s = open(self.fname).readlines()
     self.failUnless(len(s) == 2)

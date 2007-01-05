@@ -176,6 +176,9 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
 %changelog
+* Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
+- Move AddrCache, parse_addr, iniplist to Milter package
+- add sample spfmilter.py milter
 * Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
 - More lame bounce heuristics
 - SPF moved to pyspf RPM

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.80  2007/01/05 23:12:12  customdesigned
+# Move parse_addr, iniplist, ip4re to Milter.utils
+#
 # Revision 1.79  2007/01/05 21:25:40  customdesigned
 # Move AddrCache to Milter package.
 #
@@ -466,13 +469,11 @@ class SPFPolicy(object):
 from Milter.cache import AddrCache
 
 cbv_cache = AddrCache(renew=7)
-cbv_cache.load('send_dsn.log',age=7)
+cbv_cache.load('send_dsn.log',age=30)
 auto_whitelist = AddrCache(renew=30)
 auto_whitelist.load('auto_whitelist.log',age=120)
-try:
-  blacklist = set(open('blacklist.log').read().split())
-except:
-  blacklist = {}
+blacklist = AddrCache(renew=30)
+blacklist.load('blacklist.log',age=60)
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,

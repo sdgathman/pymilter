@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.1  2007/01/05 21:25:40  customdesigned
+# Move AddrCache to Milter package.
+#
 
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
@@ -67,6 +70,8 @@ class AddrCache(object):
       except ValueError:
         pass
     return False
+
+  __contains__ = has_key
 
   def __getitem__(self,sender):
     try:
