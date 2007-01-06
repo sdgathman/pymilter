@@ -8,12 +8,8 @@
 # This code is under GPL.  See COPYING for details.
 
 import sys
-import os
-import re
 import Milter
 import spf
-import struct
-import socket
 import syslog
 import anydbm
 from Milter.config import MilterConfigParser
@@ -40,7 +36,7 @@ def read_config(list):
 
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
-  def __init__(self,sender):
+  def __init__(self,sender,access_file=None):
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
     if access_file:
@@ -176,7 +172,7 @@ class spfMilter(Milter.Milter):
         hres,hcode,htxt = res,code,txt
     else: hres = None
 
-    p = SPFPolicy(q.s)
+    p = SPFPolicy(q.s,self.conf.access_file)
 
     if res == 'fail':
       policy = p.getPolicy('spf-fail:')
