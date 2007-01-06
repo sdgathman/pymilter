@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.81  2007/01/05 23:33:55  customdesigned
+# Make blacklist an AddrCache
+#
 # Revision 1.80  2007/01/05 23:12:12  customdesigned
 # Move parse_addr, iniplist, ip4re to Milter.utils
 #
@@ -49,7 +52,6 @@ import mime
 import email.Errors
 import Milter
 import tempfile
-from ConfigParser import ConfigParser
 import time
 import socket
 import struct
@@ -60,6 +62,7 @@ import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
 from Milter.utils import iniplist,parse_addr,ip4re
+from Milter.config import MilterConfigParser
 
 from fnmatch import fnmatchcase
 from email.Header import decode_header
@@ -166,64 +169,6 @@ milter_log = logging.getLogger('milter')
 
 if gossip:
   gossip_node = Gossip('gossip4.db',120)
-
-class MilterConfigParser(ConfigParser):
-
-  def __init__(self,defaults):
-    ConfigParser.__init__(self)
-    self.defaults = defaults
-
-  # The defaults provided by ConfigParser show up in all sections,
-  # which screws up iterating over all options in a section.
-  # Worse, passing "defaults" with vars= overrides the config file!
-  # So we roll our own defaults.
-  def get(self,sect,opt):
-    if not self.has_option(sect,opt) and opt in self.defaults:
-      return self.defaults[opt]
-    return ConfigParser.get(self,sect,opt)
-    
-  def getlist(self,sect,opt):
-    if self.has_option(sect,opt):
-      return [q.strip() for q in self.get(sect,opt).split(',')]
-    return []
-
-  def getaddrset(self,sect,opt):
-    if not self.has_option(sect,opt):
-      return {}
-    s = self.get(sect,opt)
-    d = {}
-    for q in s.split(','):
-      q = q.strip()
-      if q.startswith('file:'):
-        domain = q[5:].lower()
-	d[domain] = d.setdefault(domain,[]) + open(domain,'r').read().split()
-      else:
-	user,domain = q.split('@')
-	d.setdefault(domain.lower(),[]).append(user)
-    return d
-  
-  def getaddrdict(self,sect,opt):
-    if not self.has_option(sect,opt):
-      return {}
-    d = {}
-    for q in self.get(sect,opt).split(','):
-      q = q.strip()
-      if self.has_option(sect,q):
-        l = self.get(sect,q)
-	for addr in l.split(','):
-	  addr = addr.strip()
-	  if addr.startswith('file:'):
-	    fname = addr[5:]
-	    for a in open(fname,'r').read().split():
-	      d[a] = q
-	  else:
-	    d[addr] = q
-    return d
-
-  def getdefault(self,sect,opt,default=None):
-    if self.has_option(sect,opt):
-      return self.get(sect,opt)
-    return default
 
 def read_config(list):
   cp = MilterConfigParser({
@@ -393,7 +338,7 @@ def parse_header(val):
   return val
 
 class SPFPolicy(object):
-  "Get SPF policy by result, defaulting to classic policy from pymilter.cfg"
+  "Get SPF policy by result from sendmail style access file."
   def __init__(self,sender):
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
