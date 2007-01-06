@@ -1,8 +1,10 @@
 # A simple SPF milter.
 # You must install pyspf for this to work.
 
+# http://www.sendmail.org/doc/sendmail-current/libmilter/docs/installation.html
+
 # Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001 Business Management Systems, Inc.
+# Copyright 2007 Business Management Systems, Inc.
 # This code is under GPL.  See COPYING for details.
 
 import sys
@@ -13,6 +15,7 @@ import spf
 import struct
 import socket
 import syslog
+import anydbm
 from Milter.config import MilterConfigParser
 from Milter.utils import iniplist,parse_addr
 
