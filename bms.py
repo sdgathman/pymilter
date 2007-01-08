@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.82  2007/01/06 04:21:30  customdesigned
+# Add config file to spfmilter
+#
 # Revision 1.81  2007/01/05 23:33:55  customdesigned
 # Make blacklist an AddrCache
 #
@@ -54,7 +57,6 @@ import Milter
 import tempfile
 import time
 import socket
-import struct
 import re
 import shutil
 import gc
@@ -168,7 +170,7 @@ logging.basicConfig(
 milter_log = logging.getLogger('milter')
 
 if gossip:
-  gossip_node = Gossip('gossip4.db',120)
+  gossip_node = Gossip('gossip4.db',1000)
 
 def read_config(list):
   cp = MilterConfigParser({
@@ -1149,6 +1151,15 @@ class bmsMilter(Milter.Milter):
       if not blind_wiretap:
         self.addheader('Cc',rcpt)
 
+  # 
+  def gossip_header(self):
+    "Set UMIS from GOSSiP header."
+    msg = email.message_from_file(self.fp)
+    gh = msg.get('x-gossip')
+    if gh:
+      self.log('X-GOSSiP:',gh)
+      self.umis,_ = gh.split(',',1)
+
   # check spaminess for recipients in dictionary groups
   # if there are multiple users getting dspammed, then
   # a signature tag for each is added to the message.
@@ -1158,6 +1169,7 @@ class bmsMilter(Milter.Milter):
 
   def check_spam(self):
     "return True/False if self.fp, else return Milter.REJECT/TEMPFAIL/etc"
+    self.screened = False
     if not dspam_userdir: return False
     ds = Dspam.DSpamDirectory(dspam_userdir)
     ds.log = self.log
@@ -1173,9 +1185,11 @@ class bmsMilter(Milter.Milter):
 	    if user == 'spam' and self.internal_connection:
 	      sender = dspam_users.get(self.canon_from)
 	      if sender:
-	        self.log("SPAM: %s" % sender)	# log user for FP
+	        self.log("SPAM: %s" % sender)	# log user for SPAM
 		ds.add_spam(sender,txt)
 		txt = None
+		self.fp.seek(0)
+		self.gossip_header()
 		self.fp = None
 		return Milter.DISCARD
 	    elif user == 'falsepositive' and self.internal_connection:
@@ -1184,6 +1198,7 @@ class bmsMilter(Milter.Milter):
 	        self.log("FP: %s" % sender)	# log user for FP
 	        txt = ds.false_positive(sender,txt)
 		self.fp = StringIO.StringIO(txt)
+		self.gossip_header()
 		self.delrcpt('<%s>' % rcpt)
 		self.recipients = None
 		self.rejectvirus = False
@@ -1287,6 +1302,9 @@ class bmsMilter(Milter.Milter):
 	ds.check_spam(screener,txt,self.recipients,
 		force_result=dspam.DSR_ISINNOCENT)
 	return False
+      # log spam score for screened messages
+      self.add_header("X-DSpam-Score",'%f' % ds.probability)
+      self.screened = True
     return modified
 
   # train late in eom(), after failed CBV
@@ -1453,6 +1471,8 @@ class bmsMilter(Milter.Milter):
       rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
       if rc == Milter.REJECT:
+        if gossip and self.umis:
+	  gossip_node.feedback(self.umis,1)
 	self.train_spam()
 	return Milter.DISCARD
       if rc != Milter.CONTINUE:
@@ -1474,6 +1494,8 @@ class bmsMilter(Milter.Milter):
         fout.close()
       
     if not defanged and not spam_checked:
+      if gossip and self.umis and self.screened:
+	gossip_node.feedback(self.umis,0)
       os.remove(self.tempname)
       self.tempname = None	# prevent re-removal
       self.log("eom")

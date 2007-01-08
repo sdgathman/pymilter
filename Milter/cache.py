@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.2  2007/01/05 23:33:55  customdesigned
+# Make blacklist an AddrCache
+#
 # Revision 1.1  2007/01/05 21:25:40  customdesigned
 # Move AddrCache to Milter package.
 #
@@ -52,7 +55,7 @@ class AddrCache(object):
   def has_key(self,sender):
     "True if sender is cached and has not expired."
     try:
-      lsender = sender.lower()
+      lsender = sender and sender.lower()
       ts,res = self.cache[lsender]
       too_old = time.time() - self.age*24*60*60	# max age in days
       if not ts or ts > too_old:
@@ -67,8 +70,7 @@ class AddrCache(object):
       try:
 	user,host = sender.split('@',1)
 	return self.has_key(host)
-      except ValueError:
-        pass
+      except: pass
     return False
 
   __contains__ = has_key
