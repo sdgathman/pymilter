@@ -1,14 +1,9 @@
-DONE When bms.py can't find templates, it passes None to dsn.create_msg(),
-which uses local variable as backup, which no longer exist.  Do plain
-CBV in that case instead.
 
-Find and use X-GOSSiP: header for SPAM: and FP: submissions.  Would need to 
-keep tags longer.
+Feedback from user training is ignored because UMIS has already been
+removed from queue.  Maybe keep UMIS in queue, and add method to 
+alter last feedback for ID.
 
 Generate DSNs according to RFC 3464
-
-Parse incoming 3464 DSNs for "Action: failed" to recognize delayed
-failures.  This works regardless of Subject.
 
 Get temperror policy from access file.
 
@@ -18,13 +13,7 @@ senders at least get an error.
 Reporting explanation for failure should show source if sender
 provided explanation.
 
-Reports PROBATION even when rejecting message (works, but confusing in log).
-
 Bug in Auto-whitelist.  Recent Auto-whitelist doesn't override expired entry.
-
-DONE Delayed_failure detection needs to handle multi-line header fields.  
-Also, delayed_failure should be recognized when addressed to
-postmaster@helodomain 
 
 Need to use wildcards in blacklist.log: *.madcowsrecord.net
 Need to exclude emails like !*-admin@example.com in whitelist_sender.
@@ -42,24 +31,16 @@ Received-SPF header field should show identity that was checked.
 Check SPF for outgoing mail (including local policy for internal addresses).
 This could also solve the second part of the mail from relay problem below.
 
-Whitelisted sender from trusted relay get PROBATION.  Need to extracted
+Whitelisted senders from trusted relay get PROBATION.  Need to extracted
 SPF result from headers - and in the case of mail internal to relay
 (e.g. bmsi.com), supply 'pass' result.  
-
-FIXME: DSN for Permerror shows 'None' for error under some condition.
-
-Another metaDSN format:
-Subject: Delivery Report
-...
-Original-Envelope-ID: SRS0...@...
 
 For selected domains, check rcpts via CBV before accepting mail.  Cache
 results.  This will kick out dictonary attacks against a mail domain
 behind a gateway sooner.
 
-Allow blacklisted emails as well as domains in blacklist.log.  Use same
-data structure as autowhitelist.log.  Add emails blacklisted via CBV
-so that they are remembered across milter restarts.
+Add emails blacklisted via CBV so that they are remembered across milter
+restarts.
 
 Make all dictionaries work like honeypot.  Do not train as ham unless
 whitelisted.  Train on blacklisted messages, or spam feedback.  This
@@ -146,8 +127,6 @@ a separate process.  However, a significant amount of memory is wasted
 for each additional Python VM, and communication between milters
 is cumbersome (e.g., adding mail headers, writing external files).
 
-Backup copies for outgoing/incoming mail.
-
 Copy incoming wiretap mail, even though sendmail alias works perfectly
 for the purpose, to avoid having to change two configs for a wiretap.
 
@@ -165,3 +144,28 @@ embarrass yourself), and also removing Received headers with hidepath.
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
+
+DONE When bms.py can't find templates, it passes None to dsn.create_msg(),
+which uses local variable as backup, which no longer exist.  Do plain
+CBV in that case instead.
+
+DONE Find and use X-GOSSiP: header for SPAM: and FP: submissions.  Would need
+to keep tags longer.
+
+DONE Parse incoming 3464 DSNs for "Action: failed" to recognize delayed
+failures.  This works regardless of Subject.
+
+DONE Reports PROBATION even when rejecting message (works, but confusing in
+log).
+
+DONE Delayed_failure detection needs to handle multi-line header fields.  
+Also, delayed_failure should be recognized when addressed to
+postmaster@helodomain 
+
+DONE DSN for Permerror shows 'None' for error under some condition.
+
+DONE Allow blacklisted emails as well as domains in blacklist.log.  Use same
+data structure as autowhitelist.log.  
+
+DONE Backup copies for outgoing/incoming mail.
+

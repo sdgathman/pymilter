@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.83  2007/01/08 23:20:54  customdesigned
+# Get user feedback.
+#
 # Revision 1.82  2007/01/06 04:21:30  customdesigned
 # Add config file to spfmilter
 #
@@ -1471,7 +1474,16 @@ class bmsMilter(Milter.Milter):
       rc = self.send_dsn(q,msg,template_name)
       self.cbv_needed = None
       if rc == Milter.REJECT:
-        if gossip and self.umis:
+        # Do not feedback here, because feedback should only occur
+	# for messages that have gone to DATA.  Reputation lets us
+	# reject before DATA for persistent spam domains, saving
+	# cycles and bandwidth.
+
+	# Do feedback here, because CBV costs quite a bit more than
+	# simply rejecting before DATA.  Bad reputation will acrue to
+	# the IP or HELO, since we won't get here for validated MAILFROM.
+	# 	See Proverbs 26:4,5
+	if gossip and self.umis:
 	  gossip_node.feedback(self.umis,1)
 	self.train_spam()
 	return Milter.DISCARD

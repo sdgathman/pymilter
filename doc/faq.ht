@@ -2,8 +2,17 @@ Title: Python Milter FAQ
 
 <h1> Python Milter <a name=faq>FAQ</a> </h1>
 
+<menu>
+<li> <a href="#compiling">Compiling Python Milter</a>
+<li> <a href="#running">Running Python Milter</a>
+<li> <a href="#spf">Using SPF</a>
+<li> <a href="#srs">Using SRS</a>
+</menu>
+
 <ol>
-<h3> Compiling Python Milter </h3>
+
+<h3> <a name="compiling">Compiling Python Milter </a> </h3>
+
 <li> Q. I have installed sendmail from source, but Python milter won't
 compile.
 <p>  A. Even though libmilter is officially supported in sendmail-8.12, 
@@ -36,7 +45,7 @@ in setup.py to
             define_macros = [ ('MAX_ML_REPLY',1) ]
 </pre>
 
-<h3> Running Python Milter </h3>
+<h3> <a name="running">Running Python Milter </a></h3>
 
 <li> Q. The sample.py milter prints a message, then just sits there.
 <pre>
@@ -186,10 +195,16 @@ The <code>internal_domains</code> option is simplistic, it assumes all
 valid senders of the domains are internal.  SPF provides a much more general
 check of IP and MAIL FROM for external email.  Pymilter should soon
 have a local policy feature for more general checking of internal mail.
+<li> Q. <code>mail_archive</code> isn't working.  Or I don't understand how
+	it's suppose to work.  I have
+	<code>mail_archive = /var/mail/mail_archive</code>
+	in <code>pymilter.cfg</code> but nothing ever gets dumped into
+	<code>/var/mail/mail_archive</code>.
+<p>  A. The 'mail' user needs to have write access.  Permission failures
+	should be logged as a traceback in milter.log if it doesn't.
 
-<h3> Using SPF </h3>
+<h3> <a name="spf">Using SPF </a></h3>
 
-<a name="spf">
 <li> Q. So how do I use the SPF support?  The sample.py milter doesn't seem
         to use it.
 <p>  A. The bms.py milter supports spf.  The RedHat RPMs will set almost
@@ -209,5 +224,63 @@ everything up for you.  For other systems:
      logfiles and a simple cron script using <code>find</code> to clean
      <code>tempdir</code>.
 </ol>
+	In CVS, there is <code>spfmilter.py</code>.  Run that as a service,
+	and it does just SPF.  It uses the sendmail <code>access</code>
+	file to configure SPF responses just like <code>bms.py</code>, but
+	supports only REJECT and OK.
+<li> Q. The SPF DSN is sent at least once for domains that don't publish a SPF.
+	How do I stop this behavior?
+<p>  A. The SPF response is controlled by <code>/etc/mail/access</code>
+	(actually the file you specify with <code>access_file</code> in
+	the <code>[spf]</code> section of <code>pymilter.cfg</code>.  Responses
+	are OK, CBV, and REJECT.  CBV sends the DSN.
+<p>
+You can change the defaults.  For instance, I have:
+<pre>
+SPF-None:	REJECT
+SPF-Neutral:	CBV
+SPF-Softfail:	CBV
+SPF-Permerror:	CBV
+</pre>
+I have best_guess = 1, so SPF none is converted to PASS/NEUTRAL for policy
+lookup, and 3 strikes (no PTR, no HELO, no SPF) becomes "SPF NONE" for local
+policy purposes (the Received-SPF header always shows the official SPF
+result.)
+<p>
+You can change the default for specific domains:
+<pre>
+# these guys aren't going to pay attention to CBVs anyway...
+SPF-None:cia.gov	REJECT
+SPF-None:fbi.gov	REJECT
+SPF-Neutral:aol.com	REJECT
+SPF-Softfail:ebay.com	REJECT
+</pre>
+
+<h3> <a name="srs">Using SRS </a></h3>
+
+<li> Q. The SRS part doesn't seem to work as whenever I try to start
+	<code>/etc/init.d/pysrs</code>, I get this in
+	<code>/var/log/milter/pysrs.log</code>:
+<pre>
+ConfigParser.NoOptionError: No option 'fwdomain' in section: 'srs'
+</pre>
+<p>  A. You need to specify the forward domain - i.e. the domain you want
+	SRS to rewrite stuff too.
+<p>
+For instance, I have:
+<pre>
+# sample SRS configuration
+[srs]
+secret = don't you wish
+maxage = 8
+hashlength = 5
+;database=/var/log/milter/srs.db
+fwdomain = bmsi.com
+sign=bmsi.com,mail.bmsi.com,gathman.org
+srs=bmsaix.bmsi.com,bmsred.bmsi.com,stl.gathman.org,bampa.gathman.org
+</pre>
+The <code>sign</code> is for local domains which are signed.
+The <code>srs</code> list is for other domains which you are relaying,
+and which need to have SRS checked/undone for bounces.
 
 </ol>
