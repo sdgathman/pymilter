@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.4  2007/01/11 04:31:26  customdesigned
+# Negative feedback for bad headers.  Purge cache logs on startup.
+#
 # Revision 1.3  2007/01/08 23:20:54  customdesigned
 # Get user feedback.
 #
@@ -45,6 +48,7 @@ class AddrCache(object):
     now = time.time()
     lock = PLock(self.fname)
     wfp = lock.lock()
+    changed = False
     try:
       too_old = now - age*24*60*60	# max age in days
       for ln in open(self.fname):
@@ -52,12 +56,17 @@ class AddrCache(object):
 	  rcpt,ts = ln.strip().split(None,1)
 	  l = time.strptime(ts,AddrCache.time_format)
 	  t = time.mktime(l)
-	  if t < too_old: continue
+	  if t < too_old:
+	    changed = True
+	    continue
 	  cache[rcpt.lower()] = (t,None)
 	except:
 	  cache[ln.strip().lower()] = (now,None)
 	wfp.write(ln)
-      lock.commit(self.fname+'.old')
+      if changed:
+	lock.commit(self.fname+'.old')
+      else:
+        lock.unlock()
     except IOError:
       lock.unlock()
 
