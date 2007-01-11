@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.3  2007/01/08 23:20:54  customdesigned
+# Get user feedback.
+#
 # Revision 1.2  2007/01/05 23:33:55  customdesigned
 # Make blacklist an AddrCache
 #
@@ -22,6 +25,7 @@
 # This code is under the GNU General Public License.  See COPYING for details.
 
 import time
+from plock import PLock
 
 class AddrCache(object):
   time_format = '%Y%b%d %H:%M:%S %Z'
@@ -39,6 +43,8 @@ class AddrCache(object):
     cache = {}
     self.cache = cache
     now = time.time()
+    lock = PLock(self.fname)
+    wfp = lock.lock()
     try:
       too_old = now - age*24*60*60	# max age in days
       for ln in open(self.fname):
@@ -46,11 +52,14 @@ class AddrCache(object):
 	  rcpt,ts = ln.strip().split(None,1)
 	  l = time.strptime(ts,AddrCache.time_format)
 	  t = time.mktime(l)
-	  if t > too_old:
-	    cache[rcpt.lower()] = (t,None)
+	  if t < too_old: continue
+	  cache[rcpt.lower()] = (t,None)
 	except:
 	  cache[ln.strip().lower()] = (now,None)
-    except IOError: pass
+	wfp.write(ln)
+      lock.commit(self.fname+'.old')
+    except IOError:
+      lock.unlock()
 
   def has_key(self,sender):
     "True if sender is cached and has not expired."

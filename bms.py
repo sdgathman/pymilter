@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.84  2007/01/10 04:44:25  customdesigned
+# Documentation updates.
+#
 # Revision 1.83  2007/01/08 23:20:54  customdesigned
 # Get user feedback.
 #
@@ -1017,7 +1020,10 @@ class bmsMilter(Milter.Milter):
     val = parse_header(hval)
     if not self.internal_connection and not (self.blacklist or self.whitelist):
       rc = self.check_header(name,val)
-      if rc != Milter.CONTINUE: return rc
+      if rc != Milter.CONTINUE:
+        if gossip and self.umis:
+	  gossip_node.feedback(self.umis,1)
+        return rc
     elif self.whitelist_sender and lname == 'subject':
 	# check for AutoReplys
 	vl = val.lower()
