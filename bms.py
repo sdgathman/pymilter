@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.85  2007/01/11 04:31:26  customdesigned
+# Negative feedback for bad headers.  Purge cache logs on startup.
+#
 # Revision 1.84  2007/01/10 04:44:25  customdesigned
 # Documentation updates.
 #
@@ -1304,7 +1307,8 @@ class bmsMilter(Milter.Milter):
 	ds.check_spam(screener,txt,self.recipients,quarantine=False,
 		force_result=dspam.DSR_ISSPAM)
 	self.fp = None
-	return Milter.DISCARD
+	self.setreply('550','5.7.1', 'Sender email local blacklist')
+	return Milter.REJECT
       elif self.whitelist and ds.totals[1] < 1000:
 	self.log("TRAIN:",screener,'X-Dspam-Score: %f' % ds.probability)
 	# user can't correct anyway if really spam, so discard tag
@@ -1492,7 +1496,7 @@ class bmsMilter(Milter.Milter):
 	if gossip and self.umis:
 	  gossip_node.feedback(self.umis,1)
 	self.train_spam()
-	return Milter.DISCARD
+	return Milter.REJECT
       if rc != Milter.CONTINUE:
         return rc
 
