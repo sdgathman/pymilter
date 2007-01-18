@@ -17,5 +17,6 @@
 <li><a href="http://www.openspf.org/">SPF</a>
 <li><a href="pysrs.html">pysrs</a>
 <li><a href="http://cheeseshop.python.org/pypi/pyspf">pyspf</a>
+<li><a href="http://bmsi.com/python/pygossip.html">pygossip</a>
 <li><a href="http://bmsi.com/python/dspam.html">pydspam</a>
 <li><a href="http://bmsi.com/libdspam/dspam.html">libdspam</a>

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.86  2007/01/16 05:17:29  customdesigned
+# REJECT after data for blacklisted emails - so in case of mistakes, a
+# legitimate sender will know what happened.
+#
 # Revision 1.85  2007/01/11 04:31:26  customdesigned
 # Negative feedback for bad headers.  Purge cache logs on startup.
 #
@@ -77,7 +81,7 @@ from Milter.config import MilterConfigParser
 
 from fnmatch import fnmatchcase
 from email.Header import decode_header
-from email.Utils import getaddresses
+from email.Utils import getaddresses,parseaddr
 
 # Import gossip if available
 try:
@@ -108,6 +112,7 @@ subjpats = (
  r'^undeliver',
  r'^delivery\b.*\bfail',
  r'^delivery problem',
+ r'\bnot\bbe\bdelivered',
  r'\buser unknown\b',
  r'^failed',
  r'^echec de distribution',
@@ -674,7 +679,7 @@ class bmsMilter(Milter.Milter):
     else:
       global gossip
       if gossip and domain and rc == Milter.CONTINUE \
-	  and not self.internal_connection:
+	  and not (self.internal_connection or self.trusted_relay):
 	if self.spf and self.spf.result == 'pass':
 	  qual = 'SPF'
 	elif res == 'pass':
@@ -682,6 +687,9 @@ class bmsMilter(Milter.Milter):
 	elif hres == 'pass':
 	  qual = 'HELO'
 	  domain = self.spf.h
+	elif self.missing_ptr and self.spf.result == 'none':
+	  qual = 'IP'
+	  domain = self.connectip
 	else:
 	  qual = self.connectip
 	try:
@@ -976,11 +984,13 @@ class bmsMilter(Milter.Milter):
 	  # if confirmed by finding our signed Message-ID, 
 	  # original sender (encoded in Message-ID) is blacklisted
 
-    elif lname == 'from' and val.lower().startswith('postmaster@'):
-      # Yes, if From header comes last, this might not help much.
-      # But this is a heuristic - if MTAs would send proper DSNs in
-      # the first place, none of this would be needed.
-      self.is_bounce = True
+    elif lname == 'from':
+      name,email = parseaddr(val)
+      if email.lower().startswith('postmaster@'):
+	# Yes, if From header comes last, this might not help much.
+	# But this is a heuristic - if MTAs would send proper DSNs in
+	# the first place, none of this would be needed.
+	self.is_bounce = True
       
     # check for invalid message id
     elif lname == 'message-id' and len(val) < 4:

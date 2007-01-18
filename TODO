@@ -1,5 +1,13 @@
+Need to exclude robot users from autowhitelist.  Don't want to have to
+list all users, so implement something like !*-admin@bmsi.com,@bmsi.com.
 
-Feedback from user training is ignored because UMIS has already been
+Milter won't start when a whitelist/blacklist file is missing.
+
+Milter won't start when it can't change permissions on *.lock to match
+*.log.  Should maybe ignore that error - the effect will be to set
+the permissions to default.
+
+GOSSiP feedback from user training is ignored because UMIS has already been
 removed from queue.  Maybe keep UMIS in queue, and add method to 
 alter last feedback for ID.
 
@@ -144,6 +152,8 @@ embarrass yourself), and also removing Received headers with hidepath.
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
+
+DONE Delayed failure detection should parse From header to find email address.
 
 DONE When bms.py can't find templates, it passes None to dsn.create_msg(),
 which uses local variable as backup, which no longer exist.  Do plain

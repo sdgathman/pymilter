@@ -13,6 +13,13 @@ Title: Python Milter FAQ
 
 <h3> <a name="compiling">Compiling Python Milter </a> </h3>
 
+<li> Q. I have tried to download the current milter code and my virus scan
+traps several viruses in the download.
+<p>  A. The milter source includes a number of deactivated viruses in
+the test directory.  All but the first and last lines of the base64
+encoded virus data has been removed.  I suppose I should randomize
+the first and last lines as well, since pymilter just deletes executables,
+and doesn't look for signatures.
 <li> Q. I have installed sendmail from source, but Python milter won't
 compile.
 <p>  A. Even though libmilter is officially supported in sendmail-8.12, 
