@@ -11,24 +11,28 @@ class PLock(object):
     self.basename = basename
     self.fp = None
 
-  def lock(self,lockname=None):
+  def lock(self,lockname=None,mode=0660,strict_perms=False):
     "Start an update transaction.  Return FILE to write new version."
     self.unlock()
     if not lockname:
       lockname = self.basename + '.lock'
     self.lockname = lockname
-    st = os.stat(self.basename)
+    try:
+      st = os.stat(self.basename)
+      mode |= st.st_mode
+    except OSError: pass
     u = os.umask(0002)
     try:
-      fd = os.open(lockname,os.O_WRONLY+os.O_CREAT+os.O_EXCL,st.st_mode|0660)
+      fd = os.open(lockname,os.O_WRONLY+os.O_CREAT+os.O_EXCL,mode)
     finally:
       os.umask(u)
     self.fp = os.fdopen(fd,'w')
     try:
       os.chown(self.lockname,-1,st.st_gid)
     except:
-      self.unlock()
-      raise
+      if strict_perms:
+	self.unlock()
+	raise
     return self.fp
 
   def wlock(self,lockname=None):

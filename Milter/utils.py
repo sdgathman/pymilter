@@ -1,7 +1,9 @@
 import re
 import struct
 import socket
+import email.Errors
 from fnmatch import fnmatchcase
+from email.Header import decode_header
 
 ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 
@@ -56,3 +58,28 @@ def parse_addr(t):
     pos = t.find('"@')
     if pos > 0: return [t[1:pos],t[pos+2:]]
   return t.split('@')
+
+def parse_header(val):
+  """Decode headers gratuitously encoded to hide the content.
+  """
+  try:
+    h = decode_header(val)
+    if not len(h) or (not h[0][1] and len(h) == 1): return val
+    u = []
+    for s,enc in h:
+      if enc:
+        try:
+	  u.append(unicode(s,enc))
+	except LookupError:
+	  u.append(unicode(s))
+      else:
+	u.append(unicode(s))
+    u = ''.join(u)
+    for enc in ('us-ascii','iso-8859-1','utf8'):
+      try:
+	return u.encode(enc)
+      except UnicodeError: continue
+  except UnicodeDecodeError: pass
+  except LookupError: pass
+  except email.Errors.HeaderParseError: pass
+  return val

@@ -2,7 +2,7 @@ import unittest
 import testbms
 import testmime
 import testsample
-import testcache
+import testutils
 import os
 
 def suite(): 
@@ -10,7 +10,7 @@ def suite():
   s.addTest(testbms.suite())
   s.addTest(testmime.suite())
   s.addTest(testsample.suite())
-  s.addTest(testcache.suite())
+  s.addTest(testutils.suite())
   return s
 
 if __name__ == '__main__':

@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.87  2007/01/18 16:48:44  customdesigned
+# Doc update.
+# Parse From header for delayed failure detection.
+# Don't check reputation of trusted host.
+# Track IP reputation only when missing PTR.
+#
 # Revision 1.86  2007/01/16 05:17:29  customdesigned
 # REJECT after data for blacklisted emails - so in case of mistakes, a
 # legitimate sender will know what happened.
@@ -76,11 +82,10 @@ import gc
 import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
-from Milter.utils import iniplist,parse_addr,ip4re
+from Milter.utils import iniplist,parse_addr,parse_header,ip4re
 from Milter.config import MilterConfigParser
 
 from fnmatch import fnmatchcase
-from email.Header import decode_header
 from email.Utils import getaddresses,parseaddr
 
 # Import gossip if available
@@ -328,30 +333,26 @@ def read_config(list):
     srs_domain.add(cp.getdefault('srs','fwdomain'))
     banned_users = cp.getlist('srs','banned_users')
 
-def parse_header(val):
-  """Decode headers gratuitously encoded to hide the content.
-  """
-  try:
-    h = decode_header(val)
-    if not len(h) or (not h[0][1] and len(h) == 1): return val
-    u = []
-    for s,enc in h:
-      if enc:
-        try:
-	  u.append(unicode(s,enc))
-	except LookupError:
-	  u.append(unicode(s))
-      else:
-	u.append(unicode(s))
-    u = ''.join(u)
-    for enc in ('us-ascii','iso-8859-1','utf8'):
+def findsrs(fp):
+  lastln = None
+  for ln in fp:
+    if lastln:
+      if ln[0].isspace() and ln[0] != '\n':
+	lastln += ln
+	continue
       try:
-	return u.encode(enc)
-      except UnicodeError: continue
-  except UnicodeDecodeError: pass
-  except LookupError: pass
-  except email.Errors.HeaderParseError: pass
-  return val
+	name,val = lastln.rstrip().split(None,1)
+	pos = val.find('<SRS')
+	if pos >= 0:
+	  return srs.reverse(val[pos+1:-1])
+      except: continue
+    lnl = ln.lower()
+    if lnl.startswith('action:'):
+      if lnl.split()[-1] != 'failed': break
+    for k in ('message-id:','x-mailer:','sender:'):
+      if lnl.startswith(k):
+	lastln = ln
+	break
 
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
@@ -1362,35 +1363,19 @@ class bmsMilter(Milter.Milter):
       # check for delayed bounce
       if self.delayed_failure:
         self.fp.seek(0)
-	lastln = None
-	for ln in self.fp:
-	  if lastln:
-	    if ln[0].isspace() and ln[0] != '\n':
-	      lastln += ln
-	      continue
-	    try:
-	      name,val = lastln.rstrip().split(None,1)
-	      pos = val.find('<SRS')
-	      if pos >= 0:
-		sender = srs.reverse(val[pos+1:-1])
-		cbv_cache[sender] = 500,self.delayed_failure,time.time()
-		try:
-		  # save message for debugging
-		  fname = tempfile.mktemp(".dsn")
-		  os.rename(self.tempname,fname)
-		except:
-		  fname = self.tempname
-		self.tempname = None
-		self.log('BLACKLIST:',sender,fname)
-		return Milter.DISCARD
-	    except: continue
-	  lnl = ln.lower()
-	  if lnl.startswith('action:'):
-	    if lnl.split()[-1] != 'failed': break
-	  for k in ('message-id:','x-mailer:','sender:'):
-	    if lnl.startswith(k):
-	      lastln = ln
-	      break
+	sender = findsrs(self.fp)
+	if sender:
+	  cbv_cache[sender] = 500,self.delayed_failure,time.time()
+	  try:
+	    # save message for debugging
+	    fname = tempfile.mktemp(".dsn")
+	    os.rename(self.tempname,fname)
+	  except:
+	    fname = self.tempname
+	  self.tempname = None
+	  self.log('BLACKLIST:',sender,fname)
+	  return Milter.DISCARD
+
 
       # analyze external mail for spam
       spam_checked = self.check_spam()	# tag or quarantine for spam

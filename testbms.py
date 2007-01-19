@@ -277,6 +277,25 @@ class BMSMilterTestCase(unittest.TestCase):
     fp = milter._body
     open("test/test1.tstout","w").write(fp.getvalue())
 
+  def testFindsrs(self):
+    if not bms.srs:
+      import SRS
+      bms.srs = SRS.new(secret='test')
+    sender = bms.srs.forward('foo@bar.com','mail.example.com')
+    sndr = bms.findsrs(StringIO.StringIO(
+"""Received: from [1.16.33.86] (helo=mail.example.com)
+	by bastion4.mail.zen.co.uk with smtp (Exim 4.50) id 1H3IBC-00013b-O9
+	for foo@bar.com; Sat, 06 Jan 2007 20:30:17 +0000
+X-Mailer: "PyMilter-0.8.5"
+	<%s> foo
+MIME-Version: 1.0
+Content-Type: text/plain
+To: foo@bar.com
+From: postmaster@mail.example.com
+""" % sender
+    ))
+    self.assertEqual(sndr,'foo@bar.com')
+
 #  def testReject(self):
 #    "Test content based spam rejection."
 #    milter = TestMilter()

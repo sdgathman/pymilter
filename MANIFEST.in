@@ -8,7 +8,7 @@ include ChangeLog
 include MANIFEST.in
 include testsample.py
 include testmime.py
-include testcache.py
+include testutils.py
 include testbms.py
 include rejects.py
 include report.py

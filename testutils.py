@@ -1,6 +1,7 @@
 import unittest
+import doctest
 import os
-
+import Milter.utils
 from Milter.cache import AddrCache
 
 class AddrCacheTestCase(unittest.TestCase):
@@ -26,7 +27,10 @@ class AddrCacheTestCase(unittest.TestCase):
     self.failUnless(s[0].startswith('foo@bar.com '))
     self.assertEquals(s[1].strip(),'baz@bar.com')
 
-def suite(): return unittest.makeSuite(AddrCacheTestCase,'test')
+def suite(): 
+  s = unittest.makeSuite(AddrCacheTestCase,'test')
+  s.addTest(doctest.DocTestSuite(Milter.utils))
+  return s
 
 if __name__ == '__main__':
-  unittest.main()
+  unittest.TextTestRunner().run(suite())

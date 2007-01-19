@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.5  2007/01/11 19:59:40  customdesigned
+# Purge old entries in auto_whitelist and send_dsn logs.
+#
 # Revision 1.4  2007/01/11 04:31:26  customdesigned
 # Negative feedback for bad headers.  Purge cache logs on startup.
 #
@@ -51,7 +54,11 @@ class AddrCache(object):
     changed = False
     try:
       too_old = now - age*24*60*60	# max age in days
-      for ln in open(self.fname):
+      try:
+        fp = open(self.fname)
+      except OSError:
+        fp = ()
+      for ln in fp:
 	try:
 	  rcpt,ts = ln.strip().split(None,1)
 	  l = time.strptime(ts,AddrCache.time_format)
