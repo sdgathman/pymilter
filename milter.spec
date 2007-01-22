@@ -177,7 +177,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
-- Move AddrCache, parse_addr, iniplist to Milter package
+- move AddrCache, parse_addr, iniplist to Milter package
+- move parse_header to Milter.utils
+- fix plock for missing source and can't change owner/group
 - add sample spfmilter.py milter
 * Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
 - More lame bounce heuristics
