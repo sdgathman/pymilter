@@ -1,11 +1,7 @@
+Need to use wildcards in blacklist.log: *.madcowsrecord.net
+Need to exclude emails like !*-admin@example.com in whitelist_sender.
 Need to exclude robot users from autowhitelist.  Don't want to have to
 list all users, so implement something like !*-admin@bmsi.com,@bmsi.com.
-
-Milter won't start when a whitelist/blacklist file is missing.
-
-Milter won't start when it can't change permissions on *.lock to match
-*.log.  Should maybe ignore that error - the effect will be to set
-the permissions to default.
 
 GOSSiP feedback from user training is ignored because UMIS has already been
 removed from queue.  Maybe keep UMIS in queue, and add method to 
@@ -15,26 +11,16 @@ Generate DSNs according to RFC 3464
 
 Get temperror policy from access file.
 
-When training with spam, REJECT after data so that mistakenly blacklisted
-senders at least get an error.
-
 Reporting explanation for failure should show source if sender
 provided explanation.
 
 Bug in Auto-whitelist.  Recent Auto-whitelist doesn't override expired entry.
-
-Need to use wildcards in blacklist.log: *.madcowsrecord.net
-Need to exclude emails like !*-admin@example.com in whitelist_sender.
 
 SPF permerror diagnostics should include corrected mechanism.
 
 Delay SPF check until RCPT TO.  Cache result to avoid repeating
 for multiple RCPT.  This avoids overhead for invalid RCPT, and
 allows for per RCPT local policy.
-
-Add auto-blacklisted senders to blacklist.log with timestamp.
-
-Received-SPF header field should show identity that was checked.
 
 Check SPF for outgoing mail (including local policy for internal addresses).
 This could also solve the second part of the mail from relay problem below.
@@ -47,6 +33,7 @@ For selected domains, check rcpts via CBV before accepting mail.  Cache
 results.  This will kick out dictonary attacks against a mail domain
 behind a gateway sooner.
 
+Add auto-blacklisted senders to blacklist.log with timestamp.
 Add emails blacklisted via CBV so that they are remembered across milter
 restarts.
 
@@ -58,9 +45,6 @@ to train on error to minimize labor.
 
 Allow unsigned DSNs from selected domains (that don't accept signed MFROM,
 e.g. verizon.net).
-
-Added Message-ID header to DSN with SRS signed sender.  When seen on incoming
-rfc ignorant failure message, blacklist sender.
 
 Allow verified hostnames for trusted_relay.  E.g. HELO name that
 passes SPF.
@@ -86,11 +70,9 @@ wildcard (e.g. empty localpart).
 Quarantined mail is missing headers modified/added by milter after
 checking dspam.
 
-Require signed MFROM for all incoming bounces when signing all outgoing mail -
-except from trusted relays.
-
 Send DSN for permerror before processing extended result.  An additional
-DSN may be sent based on extended result.
+DSN may be sent based on extended result.  Send permerror DSN to
+postmaster@sending_domain.
 
 Rescind whitelist for banned extensions, in case sender is infected.
 
@@ -103,9 +85,6 @@ SPF-Neutral:aol.com	ERROR:"550 AOL mail must get SPF PASS"
 
 Defer TEMPERROR in SPF evaluation - give precedence to security
 (only defer for PASS mechanisms).
-
-Option to add Received-SPF header, but never reject on SPF.
-  I think the above will handle this.
 
 Create null config that does nothing - except maybe add Received-SPF
 headers.  Many admins would like to turn features on one at a time.
@@ -152,6 +131,26 @@ embarrass yourself), and also removing Received headers with hidepath.
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
+
+DONE Require signed MFROM for all incoming bounces when signing all outgoing
+mail - except from trusted relays.
+
+DONE Added Message-ID header to DSN with SRS signed sender.  When seen on
+incoming rfc ignorant failure message, blacklist sender.
+
+DONE Option to add Received-SPF header, but never reject on SPF.
+  I think the above will handle this.
+
+DONE Received-SPF header field should show identity that was checked.
+
+DONE When training with spam, REJECT after data so that mistakenly blacklisted
+senders at least get an error.
+
+DONE Milter won't start when it can't change permissions on *.lock to match
+*.log.  Should maybe ignore that error - the effect will be to set
+the permissions to default.
+
+DONE Milter won't start when a whitelist/blacklist file is missing.
 
 DONE Delayed failure detection should parse From header to find email address.
 

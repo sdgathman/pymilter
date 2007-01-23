@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.89  2007/01/22 02:46:01  customdesigned
+# Convert tabs to spaces.
+#
 # Revision 1.88  2007/01/19 23:31:38  customdesigned
 # Move parse_header to Milter.utils.
 # Test case for delayed DSN parsing.
@@ -157,6 +160,7 @@ scan_html = True
 scan_rfc822 = True
 internal_connect = ()
 trusted_relay = ()
+private_relay = ()
 trusted_forwarder = ()
 internal_domains = ()
 banned_users = ()
@@ -222,7 +226,7 @@ def read_config(list):
   tempfile.tempdir = cp.get('milter','tempdir')
   global socketname, timeout, check_user, log_headers
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
-  global case_sensitive_localpart
+  global case_sensitive_localpart, private_relay
   socketname = cp.get('milter','socket')
   timeout = cp.getint('milter','timeout')
   check_user = cp.getaddrset('milter','check_user')
@@ -230,6 +234,7 @@ def read_config(list):
   internal_connect = cp.getlist('milter','internal_connect')
   internal_domains = cp.getlist('milter','internal_domains')
   trusted_relay = cp.getlist('milter','trusted_relay')
+  private_relay = cp.getlist('milter','private_relay')
   hello_blacklist = cp.getlist('milter','hello_blacklist')
   case_sensitive_localpart = cp.getboolean('milter','case_sensitive_localpart')
 
@@ -898,6 +903,10 @@ class bmsMilter(Milter.Milter):
               return self.forged_bounce()
             self.data_allowed = not srs_reject_spoofed
 
+      if not self.internal_connection and domain in private_relay:
+        self.log('REJECT: RELAY:',to)
+	self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
+        return Milter.REJECT
       # non DSN mail to SRS address will bounce due to invalid local part
       canon_to = '@'.join(t)
       self.recipients.append(canon_to)

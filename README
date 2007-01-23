@@ -51,8 +51,9 @@ Xpythonfilter,        S=local:/home/username/pythonsock
 Note that milters should almost certainly not run as root.
 
 That's it.  Incoming mail will cause the milter to print some things, and
-some email will be rejected (see the "header" method).  Edit and play.  See
-bms.py for an example milter used in production.
+some email will be rejected (see the "header" method).  Edit and play.  
+See spfmilter.py for a functional SPF milter, or see bms.py for an complex
+milter used in production.
 
 
 Not-so-quick Installation

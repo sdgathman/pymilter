@@ -1,4 +1,7 @@
 Here is a history of user visible changes to Python milter.
+0.8.8	move AddrCache, parse_addr, iniplist, parse_header to Milter package
+	fix plock for missing source and can't change owner/group
+	add sample spfmilter.py milter
 0.8.7	Move spf module to pyspf
 	Prevent PTR cache poisoning
 	More lame bounce heuristics
