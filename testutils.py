@@ -8,13 +8,12 @@ class AddrCacheTestCase(unittest.TestCase):
 
   def setUp(self):
     self.fname = 'test.dat'
-    self.cache = AddrCache(fname=self.fname)
 
   def tearDown(self):
     os.remove(self.fname)
 
   def testAdd(self):
-    cache = self.cache
+    cache = AddrCache(fname=self.fname)
     cache['foo@bar.com'] = None
     cache.addperm('baz@bar.com')
     cache['temp@bar.com'] = 'testing'
@@ -26,6 +25,17 @@ class AddrCacheTestCase(unittest.TestCase):
     self.failUnless(len(s) == 2)
     self.failUnless(s[0].startswith('foo@bar.com '))
     self.assertEquals(s[1].strip(),'baz@bar.com')
+    # check that new result overrides old
+    cache['temp@bar.com'] = None
+    self.failUnless(not cache['temp@bar.com'])
+
+  def testDomain(self):
+    fp = open(self.fname,'w')
+    print >>fp,'spammer.com'
+    fp.close()
+    cache = AddrCache(fname=self.fname)
+    cache.load(self.fname,30)
+    self.failUnless('spammer.com' in cache)
 
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')

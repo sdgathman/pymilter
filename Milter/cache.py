@@ -10,6 +10,11 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.6  2007/01/19 23:31:38  customdesigned
+# Move parse_header to Milter.utils.
+# Test case for delayed DSN parsing.
+# Fix plock when source missing or cannot set owner/group.
+#
 # Revision 1.5  2007/01/11 19:59:40  customdesigned
 # Purge old entries in auto_whitelist and send_dsn logs.
 #
@@ -129,12 +134,10 @@ class AddrCache(object):
   def __setitem__(self,sender,res):
     lsender = sender.lower()
     now = time.time()
-    cached = self.has_key(sender)
-    if not cached:
-      self.cache[lsender] = (now,res)
-      if not res and self.fname:
-	s = time.strftime(AddrCache.time_format,time.localtime(now))
-	print >>open(self.fname,'a'),sender,s # log refreshed senders
+    self.cache[lsender] = (now,res)
+    if not res and self.fname:
+      s = time.strftime(AddrCache.time_format,time.localtime(now))
+      print >>open(self.fname,'a'),sender,s # log refreshed senders
 
   def __len__(self):
     return len(self.cache)

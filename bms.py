@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.90  2007/01/23 19:46:20  customdesigned
+# Add private relay.
+#
 # Revision 1.89  2007/01/22 02:46:01  customdesigned
 # Convert tabs to spaces.
 #
@@ -359,7 +362,7 @@ def findsrs(fp):
     lnl = ln.lower()
     if lnl.startswith('action:'):
       if lnl.split()[-1] != 'failed': break
-    for k in ('message-id:','x-mailer:','sender:'):
+    for k in ('message-id:','x-mailer:','sender:','references:'):
       if lnl.startswith(k):
         lastln = ln
         break
@@ -907,6 +910,7 @@ class bmsMilter(Milter.Milter):
         self.log('REJECT: RELAY:',to)
 	self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
         return Milter.REJECT
+
       # non DSN mail to SRS address will bounce due to invalid local part
       canon_to = '@'.join(t)
       self.recipients.append(canon_to)
@@ -941,8 +945,8 @@ class bmsMilter(Milter.Milter):
         self.reject_spam = False
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
-    #rcpt = self.getsymval("{rcpt_addr}")
-    #self.log("rcpt-addr",rcpt);
+    rcpt = self.getsymval("{rcpt_addr}")
+    self.log("rcpt-addr",rcpt);
     return Milter.CONTINUE
 
   # Heuristic checks for spam headers
@@ -1379,7 +1383,9 @@ class bmsMilter(Milter.Milter):
         self.fp.seek(0)
         sender = findsrs(self.fp)
         if sender:
-          cbv_cache[sender] = 500,self.delayed_failure,time.time()
+          cbv_cache[sender] = 550,self.delayed_failure
+	  # make blacklisting persistent, since delayed DSNs are expensive
+	  blacklist[sender] = None
           try:
             # save message for debugging
             fname = tempfile.mktemp(".dsn")
@@ -1596,7 +1602,6 @@ class bmsMilter(Milter.Milter):
         self.log('TEMPFAIL:',desc)
         self.setreply('450','4.2.0',*desc.splitlines())
         return Milter.TEMPFAIL
-      if len(res) < 3: res += time.time(),
       cbv_cache[sender] = res
       self.log('REJECT:',desc)
       self.setreply('550','5.7.1',*desc.splitlines())
