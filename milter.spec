@@ -182,6 +182,7 @@ rm -rf $RPM_BUILD_ROOT
 - fix plock for missing source and can't change owner/group
 - add sample spfmilter.py milter
 - private_relay config option
+- persist delayed DSN blacklisting
 * Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
 - More lame bounce heuristics
 - SPF moved to pyspf RPM

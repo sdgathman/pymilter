@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.91  2007/01/25 22:47:25  customdesigned
+# Persist blacklisting from delayed DSNs.
+#
 # Revision 1.90  2007/01/23 19:46:20  customdesigned
 # Add private relay.
 #
@@ -701,11 +704,10 @@ class bmsMilter(Milter.Milter):
         elif hres == 'pass':
           qual = 'HELO'
           domain = self.spf.h
-        elif self.missing_ptr and self.spf.result == 'none':
-          qual = 'IP'
-          domain = self.connectip
-        else:
-          qual = self.connectip
+        else:	
+	  # No good identity: blame purported domain.  Qualify by SPF
+	  # result so NEUTRAL will get separate reputation from SOFTFAIL.
+          qual = res
         try:
           umis = gossip.umis(domain+qual,self.id+time.time())
           res,hdr,val = gossip_node.query(umis,domain,qual,1)
@@ -945,8 +947,8 @@ class bmsMilter(Milter.Milter):
         self.reject_spam = False
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
-    rcpt = self.getsymval("{rcpt_addr}")
-    self.log("rcpt-addr",rcpt);
+    #rcpt = self.getsymval("{rcpt_addr}")
+    #self.log("rcpt-addr",rcpt);
     return Milter.CONTINUE
 
   # Heuristic checks for spam headers
@@ -1480,8 +1482,12 @@ class bmsMilter(Milter.Milter):
 
     for name,val,idx in self.new_headers:
       try:
-        self.addheader(name,val,idx)
-      except:
+	try:
+	  self.addheader(name,val,idx)
+	except TypeError:
+	  val = val.replace('\x00',r'\x00')
+	  self.addheader(name,val,idx)
+      except milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
 
     if self.cbv_needed:
