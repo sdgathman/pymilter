@@ -1,3 +1,6 @@
+rcpt-addr may let us know when a recipient is unknown.  That should count
+against reputation.
+
 Need to use wildcards in blacklist.log: *.madcowsrecord.net
 Need to exclude emails like !*-admin@example.com in whitelist_sender.
 Need to exclude robot users from autowhitelist.  Don't want to have to

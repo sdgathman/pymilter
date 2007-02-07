@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.92  2007/01/26 03:47:23  customdesigned
+# Handle null in header value.
+#
 # Revision 1.91  2007/01/25 22:47:25  customdesigned
 # Persist blacklisting from delayed DSNs.
 #
@@ -124,7 +127,7 @@ except: spf = None
 # Sometimes, MTAs reply to our DSN.  We recognize this type of reply/DSN
 # and check for the original recipient SRS encoded in Message-ID.
 # If found, we blacklist that recipient.
-subjpats = (
+_subjpats = (
  r'^failure notice',
  r'^subjectbounce',
  r'^returned mail',
@@ -138,7 +141,19 @@ subjpats = (
  r'^fallo en la entrega',
  r'\bfehlgeschlagen\b'
 )
-refaildsn = re.compile('|'.join(subjpats),re.IGNORECASE)
+refaildsn = re.compile('|'.join(_subjpats),re.IGNORECASE)
+
+# We don't want to whitelist recipients of Autoreplys and other robots.
+# There doesn't seem to be a foolproof way to recognize these, so
+# we use this heuristic.  The worst that can happen is someone won't get
+# whitelisted when they should, or we'll whitelist some spammer for a while.
+_autopats = (
+ r'^read:',
+ r'\bautoreply:\b',
+ r'^return receipt',
+ r'^Your message\b.*\bawaits moderator approval'
+)
+reautoreply = re.compile('|'.join(_autopats),re.IGNORECASE)
 import logging
 
 # Thanks to Chris Liechti for config parsing suggestions
@@ -1060,9 +1075,7 @@ class bmsMilter(Milter.Milter):
         return rc
     elif self.whitelist_sender and lname == 'subject':
         # check for AutoReplys
-        vl = val.lower()
-        if vl.startswith('read:')       \
-        or vl.find('autoreply:') >= 0 or vl.startswith('return receipt'):
+	if reautoreply.match(val):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
