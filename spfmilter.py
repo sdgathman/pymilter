@@ -110,6 +110,10 @@ class spfMilter(Milter.Milter):
   # of each message.
   def envfrom(self,f,*str):
     self.log("mail from",f,str)
+    if not self.hello_name:
+      self.log('REJECT: SPF %s %i %s' % (res,code,txt))
+      self.setreply('550','5.7.1',"It's polite to say helo first.")
+      return Milter.REJECT
     self.mailfrom = f
     self.new_headers = []
     t = parse_addr(f)
