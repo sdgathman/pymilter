@@ -1,3 +1,10 @@
+On Sun, 11 Feb 2007, Rick Saul wrote:
+
+> Stuart I was planning to move to centos4.4 in a couple of weeks anyway... 
+> Your advice of where to go from here. 
+
+Oh - you are asking for a howto.
+
 	Step one.  Which DSPAM is right for you?
 
 The DSPAM project makes dspam part of the LDA (Local Delivery Agent).
@@ -28,39 +35,42 @@ wish to install pydspam.
 For basic pymilter you'll need:
 
 python-2.4
-milter-0.8.2	(the RH9 rpm should work on Fedora Core - let me know)
+milter-0.8.7
 sendmail-8.13.x	(with milter support enabled)
 
 and for SPF you'll need:
 
 pydns-2.3.0-2.4
+pyspf-2.0.3-2.py24
 
 and for SRS you'll need:
 
-pysrs-0.30.9-1.py24
+pysrs-0.30.11-1.py24
 
 I'm pretty sure you will want to have SPF and SRS available.
 
 	Step three.  Activate basic milter.
 
-Activate the basic milter by editing /etc/mail/sendmail.mc and adding:
+Activate the basic milter and pysrs by editing /etc/mail/sendmail.mc and adding:
 
+define(`NO_SRS_FILE',`/etc/mail/no-srs-mailers')dnl
+dnl define(`NO_SRS_FROM_LOCAL')dnl
+HACK(`pysrs',`/var/run/milter/pysrs')dnl
 INPUT_MAIL_FILTER(`pythonfilter', `S=local:/var/run/milter/pythonsock, F=T, T=C:5m;S:20s;R:5m;E:5m')
 
 You can then "make sendmail.cf" and restart sendmail.
 
+Start milter and pysrs with "service milter start", "service pysrs start".
+
 Tail /var/log/milter/milter.log while SMTP clients connect to your
 sendmail instance.  This should show you what the milter is doing.
 
-By default, milter-0.8.2 rejects on SPF fail, except for listed domains
-(that are known to be broken).  Some admins don't like that, and 0.8.3 will use
-the /etc/mail/access database to configure SPF responses.  For now,
-if you don't like SPF, you can disable spf by replacing "import spf"
-with "spf = None" around line 285 in /var/log/milter/bms.py.
+By default, milter-0.8.7 rejects on SPF fail.
 
 	Step four.  Tweaking the basic config.
 
-Most pymilter configuration is in /etc/mail/pymilter.cfg.
+Most pymilter configuration is in /etc/mail/pymilter.cfg.  To activate
+changes, "service milter restart".
 
 By default, milter scans attachments for executable extensions.  You can
 turn this off by setting banned_exts to the empty list.  There are options
@@ -76,7 +86,9 @@ should also run pymilter with similar policies.  (But this isn't
 needed for initial testing.)
 
 Configure internal_connect with subnets of your internal SMTP clients.
-Internal connections skip SPF testing and other policies.
+Internal connections skip SPF testing and other policies.  You will
+likely need to set this to allow outgoing mail if you have
+an SPF policy already.
 
 Configure internal_domains with domains used by your internal SMTP clients.
 If they attempt to use any other domain, the attempt is blocked and the
@@ -134,3 +146,9 @@ SRS config
 
 pydspam config
 wiretap config
+
+-- 
+	      Stuart D. Gathman <stuart@bmsi.com>
+    Business Management Systems Inc.  Phone: 703 591-0911 Fax: 703 591-6154
+"Confutatis maledictis, flammis acribus addictis" - background song for
+a Microsoft sponsored "Where do you want to go from here?" commercial.
