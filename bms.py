@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.94  2007/03/03 18:46:26  customdesigned
+# Improve delayed failure detection.
+#
 # Revision 1.93  2007/02/07 23:21:26  customdesigned
 # Use re for auto-reply recognition.
 #
@@ -378,8 +381,9 @@ def findsrs(fp):
         name,val = lastln.rstrip().split(None,1)
         pos = val.find('<SRS')
         if pos >= 0:
-          return srs.reverse(val[pos+1:-1])
-      except: continue
+	  end = val.find('>',pos+4)
+          return srs.reverse(val[pos+1:end])
+      except: pass
     lnl = ln.lower()
     if lnl.startswith('action:'):
       if lnl.split()[-1] != 'failed': break
