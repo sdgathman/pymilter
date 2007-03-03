@@ -9,7 +9,7 @@ import milter
 import thread
 
 from milter import ACCEPT,CONTINUE,REJECT,DISCARD,TEMPFAIL,	\
-  set_flags, setdbg, setbacklog, settimeout, \
+  set_flags, setdbg, setbacklog, settimeout, error,	\
   ADDHDRS, CHGBODY, ADDRCPT, DELRCPT, CHGHDRS,	\
   V1_ACTS, V2_ACTS, CURR_ACTS
 

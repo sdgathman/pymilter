@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.13  2007/01/04 18:01:11  customdesigned
+# Do plain CBV when template missing.
+#
 # Revision 1.12  2006/07/26 16:37:35  customdesigned
 # Support timeout.
 #
@@ -28,8 +31,11 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600):
      Receiver is the MTA sending the DSN.
      Return None for success or (code,msg) for failure."""
   user,domain = mailfrom.split('@')
-  q = spf.query(None,None,None)
-  mxlist = q.dns(domain,'MX')
+  try:
+    q = spf.query(None,None,None)
+    mxlist = q.dns(domain,'MX')
+  except spf.TempError:
+    return (450,'DNS Timeout: %s MX'%domain)	# temp error
   if not mxlist:
     mxlist = (0,domain),	# fallback to A record when no MX
   else:
