@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.93  2007/02/07 23:21:26  customdesigned
+# Use re for auto-reply recognition.
+#
 # Revision 1.92  2007/01/26 03:47:23  customdesigned
 # Handle null in header value.
 #
@@ -108,7 +111,7 @@ from email.Utils import getaddresses,parseaddr
 # Import gossip if available
 try:
   import gossip
-  from gossip.server import Gossip
+  from gossip.server import Gossip,Peer
 except: gossip = None
 
 # Import pysrs if available
@@ -132,11 +135,11 @@ _subjpats = (
  r'^subjectbounce',
  r'^returned mail',
  r'^undeliver',
- r'^delivery\b.*\bfail',
- r'^delivery problem',
- r'\bnot\bbe\bdelivered',
+ r'\bdelivery\b.*\bfail',
+ r'\bdelivery problem',
+ r'\bnot\s+be\s+delivered',
  r'\buser unknown\b',
- r'^failed',
+ r'^failed', r'^mail failed',
  r'^echec de distribution',
  r'^fallo en la entrega',
  r'\bfehlgeschlagen\b'
@@ -608,6 +611,7 @@ class bmsMilter(Milter.Milter):
     self.recipients = []
     self.cbv_needed = None
     self.whitelist_sender = False
+    self.postmaster_reply = False
     t = parse_addr(f)
     if len(t) == 2: t[1] = t[1].lower()
     self.canon_from = '@'.join(t)
@@ -930,6 +934,9 @@ class bmsMilter(Milter.Milter):
 
       # non DSN mail to SRS address will bounce due to invalid local part
       canon_to = '@'.join(t)
+      if canon_to == 'postmaster@' + self.receiver:
+        self.postmaster_reply = True
+
       self.recipients.append(canon_to)
       # FIXME: use newaddr to check rcpt
       users = check_user.get(domain)
@@ -960,6 +967,7 @@ class bmsMilter(Milter.Milter):
         self.hidepath = True
       if not domain in dspam_reject:
         self.reject_spam = False
+
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
     #rcpt = self.getsymval("{rcpt_addr}")
@@ -1014,7 +1022,7 @@ class bmsMilter(Milter.Milter):
           return Milter.REJECT
 
       # check for delayed bounce of CBV
-      if self.is_bounce and srs:
+      if (self.is_bounce or self.postmaster_reply) and srs:
         if refaildsn.search(lval):
           self.delayed_failure = val.strip()
           # if confirmed by finding our signed Message-ID, 
@@ -1500,7 +1508,7 @@ class bmsMilter(Milter.Milter):
 	except TypeError:
 	  val = val.replace('\x00',r'\x00')
 	  self.addheader(name,val,idx)
-      except milter.error:
+      except Milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
 
     if self.cbv_needed:
