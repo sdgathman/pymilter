@@ -14,6 +14,7 @@ Delivery to the following recipients has been delayed.
 	%(rcpt)s
 
 Subject: %(subject)s 
+Received-SPF: %(spf_result)s
 
 Your spf record has a permanent error.  The error was:
 
