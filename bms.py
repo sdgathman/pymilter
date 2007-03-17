@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.95  2007/03/03 19:18:57  customdesigned
+# Fix continuing findsrs when srs.reverse fails.
+#
 # Revision 1.94  2007/03/03 18:46:26  customdesigned
 # Improve delayed failure detection.
 #
@@ -145,7 +148,8 @@ _subjpats = (
  r'^failed', r'^mail failed',
  r'^echec de distribution',
  r'^fallo en la entrega',
- r'\bfehlgeschlagen\b'
+ r'\bfehlgeschlagen\b',
+ r'^error sending\b'
 )
 refaildsn = re.compile('|'.join(_subjpats),re.IGNORECASE)
 
@@ -381,7 +385,7 @@ def findsrs(fp):
         name,val = lastln.rstrip().split(None,1)
         pos = val.find('<SRS')
         if pos >= 0:
-	  end = val.find('>',pos+4)
+          end = val.find('>',pos+4)
           return srs.reverse(val[pos+1:end])
       except: pass
     lnl = ln.lower()
@@ -727,9 +731,9 @@ class bmsMilter(Milter.Milter):
         elif hres == 'pass':
           qual = 'HELO'
           domain = self.spf.h
-        else:	
-	  # No good identity: blame purported domain.  Qualify by SPF
-	  # result so NEUTRAL will get separate reputation from SOFTFAIL.
+        else:   
+          # No good identity: blame purported domain.  Qualify by SPF
+          # result so NEUTRAL will get separate reputation from SOFTFAIL.
           qual = res
         try:
           umis = gossip.umis(domain+qual,self.id+time.time())
@@ -933,7 +937,7 @@ class bmsMilter(Milter.Milter):
 
       if not self.internal_connection and domain in private_relay:
         self.log('REJECT: RELAY:',to)
-	self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
+        self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
         return Milter.REJECT
 
       # non DSN mail to SRS address will bounce due to invalid local part
@@ -1087,7 +1091,7 @@ class bmsMilter(Milter.Milter):
         return rc
     elif self.whitelist_sender and lname == 'subject':
         # check for AutoReplys
-	if reautoreply.match(val):
+        if reautoreply.match(val):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
@@ -1411,8 +1415,8 @@ class bmsMilter(Milter.Milter):
         sender = findsrs(self.fp)
         if sender:
           cbv_cache[sender] = 550,self.delayed_failure
-	  # make blacklisting persistent, since delayed DSNs are expensive
-	  blacklist[sender] = None
+          # make blacklisting persistent, since delayed DSNs are expensive
+          blacklist[sender] = None
           try:
             # save message for debugging
             fname = tempfile.mktemp(".dsn")
@@ -1507,11 +1511,11 @@ class bmsMilter(Milter.Milter):
 
     for name,val,idx in self.new_headers:
       try:
-	try:
-	  self.addheader(name,val,idx)
-	except TypeError:
-	  val = val.replace('\x00',r'\x00')
-	  self.addheader(name,val,idx)
+        try:
+          self.addheader(name,val,idx)
+        except TypeError:
+          val = val.replace('\x00',r'\x00')
+          self.addheader(name,val,idx)
       except Milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
 
