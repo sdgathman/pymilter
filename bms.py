@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.96  2007/03/17 21:22:48  customdesigned
+# New delayed DSN pattern.  Retab (expandtab).
+#
 # Revision 1.95  2007/03/03 19:18:57  customdesigned
 # Fix continuing findsrs when srs.reverse fails.
 #
@@ -117,7 +120,8 @@ from email.Utils import getaddresses,parseaddr
 # Import gossip if available
 try:
   import gossip
-  from gossip.server import Gossip,Peer
+  import gossip.client
+  import gossip.server
 except: gossip = None
 
 # Import pysrs if available
@@ -227,9 +231,6 @@ logging.basicConfig(
         datefmt='%Y%b%d %H:%M:%S'
 )
 milter_log = logging.getLogger('milter')
-
-if gossip:
-  gossip_node = Gossip('gossip4.db',1000)
 
 def read_config(list):
   cp = MilterConfigParser({
@@ -373,6 +374,18 @@ def read_config(list):
     srs_domain.update(cp.getlist('srs','sign'))
     srs_domain.add(cp.getdefault('srs','fwdomain'))
     banned_users = cp.getlist('srs','banned_users')
+
+  if gossip:
+    global gossip_node
+    if cp.has_option('gossip','server'):
+      server = cp.get('gossip','server')
+      host,port = gossip.splitaddr(server)
+      gossip_node = gossip.client.Gossip(host,port)
+    else:
+      gossip_node = gossip.server.Gossip('gossip4.db',1000)
+      for p in cp.getlist('gossip','peers'):
+        host,port = gossip.splitaddr(p)
+        gossip_node.peers.append(gossip.server.Peer(host,port))
 
 def findsrs(fp):
   lastln = None
