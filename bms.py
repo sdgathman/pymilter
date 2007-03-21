@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.97  2007/03/18 02:32:21  customdesigned
+# Gossip configuration options: client or standalone with optional peers.
+#
 # Revision 1.96  2007/03/17 21:22:48  customdesigned
 # New delayed DSN pattern.  Retab (expandtab).
 #
@@ -967,6 +970,8 @@ class bmsMilter(Milter.Milter):
       userl = user.lower()
       if users and not newaddr and not userl in users:
         self.log('REJECT: RCPT TO:',to)
+        if gossip and self.umis:
+          gossip_node.feedback(self.umis,1)
         return Milter.REJECT
       # FIXME: should dspam_exempt be case insensitive?
       if user in block_forward.get(domain,()):
@@ -1154,11 +1159,11 @@ class bmsMilter(Milter.Milter):
             if hd == mf_domain or mf_domain.endswith('.'+hd): break
         else:
           for f in msg.get_all('from',[]):
-            self.log(f)
+            self.log('From:',f)
           sender = msg.get_all('sender')
           if sender:
             for f in sender:
-              self.log(f)
+              self.log('Sender:',f)
           else:
             self.log("NOTE: Supplying MFROM as Sender");
             self.add_header('Sender',self.mailfrom)

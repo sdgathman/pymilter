@@ -1,3 +1,6 @@
+Add signature (x-sig=AB7485f=TS) to Received-SPF, so it can be used
+to blacklist sources of delayed DSNs.
+
 rcpt-addr may let us know when a recipient is unknown.  That should count
 against reputation.
 

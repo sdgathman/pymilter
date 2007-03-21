@@ -24,11 +24,13 @@ exists by sending you this DSN.  We will remember this sender and not
 bother you again for a while.  You can avoid this message entirely for
 legitimate mail by using an authorized SMTP server.  Contact your mail
 administrator and ask how to configure your email client to use an
-authorized server.  
+authorized server.
 
 If you never sent the above message, then your domain has been forged.
 Your mail admin needs to publish a strict SPF record so that I can reject
-those forgeries instead of bugging you about them.
+those forgeries instead of bugging you about them.  
+
+See http://openspf.org for details.
 
 If you need further assistance, please do not hesitate to contact me.
 
