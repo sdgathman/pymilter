@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.98  2007/03/21 04:02:13  customdesigned
+# Properly log From: and Sender:
+#
 # Revision 1.97  2007/03/18 02:32:21  customdesigned
 # Gossip configuration options: client or standalone with optional peers.
 #
@@ -682,7 +685,21 @@ class bmsMilter(Milter.Milter):
               self.setreply('550','5.7.1','I hate talking to myself.')
               return Milter.REJECT
       else:
-        if internal_domains:
+        if self.user:
+          p = SPFPolicy('%s@%s'%(self.user,domain))
+          policy = p.getPolicy('SMTP-Auth:')
+        else:
+          policy = None
+        if policy:
+          if policy != 'OK':
+            self.log("REJECT: unauthorized user",self.user,
+                "at",self.connectip,"sending MAIL FROM",self.canon_from)
+            self.setreply('550','5.7.1',
+              'SMTP user %s is not authorized to use MAIL FROM %s.' %
+              (self.user,self.canon_from)
+            )
+          return Milter.REJECT
+        elif internal_domains:
           for pat in internal_domains:
             if fnmatchcase(domain,pat): break
           else:
