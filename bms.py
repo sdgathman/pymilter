@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.99  2007/03/23 22:39:10  customdesigned
+# Get SMTP-Auth policy from access_file.
+#
 # Revision 1.98  2007/03/21 04:02:13  customdesigned
 # Properly log From: and Sender:
 #
@@ -675,19 +678,17 @@ class bmsMilter(Milter.Milter):
         )
 
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
+    self.internal_domain = True
     if len(t) == 2:
       user,domain = t
-      if not self.internal_connection:
-        if not self.trusted_relay:
-          for pat in internal_domains:
-            if fnmatchcase(domain,pat):
-              self.log("REJECT: spam from self",pat)
-              self.setreply('550','5.7.1','I hate talking to myself.')
-              return Milter.REJECT
+      for pat in internal_domains:
+        if fnmatchcase(domain,pat): break
       else:
+        self.internal_domain = False
+      if self.internal_connection:
         if self.user:
           p = SPFPolicy('%s@%s'%(self.user,domain))
-          policy = p.getPolicy('SMTP-Auth:')
+          policy = p.getPolicy('smtp-auth:')
         else:
           policy = None
         if policy:
@@ -699,17 +700,14 @@ class bmsMilter(Milter.Milter):
               (self.user,self.canon_from)
             )
           return Milter.REJECT
-        elif internal_domains:
-          for pat in internal_domains:
-            if fnmatchcase(domain,pat): break
-          else:
-            self.log("REJECT: zombie PC at ",self.connectip,
-                " sending MAIL FROM ",self.canon_from)
-            self.setreply('550','5.7.1',
-            'Your PC is using an unauthorized MAIL FROM.',
-            'It is either badly misconfigured or controlled by organized crime.'
-            )
-            return Milter.REJECT
+        elif internal_domains and not self.internal_domain:
+          self.log("REJECT: zombie PC at ",self.connectip,
+              " sending MAIL FROM ",self.canon_from)
+          self.setreply('550','5.7.1',
+          'Your PC is using an unauthorized MAIL FROM.',
+          'It is either badly misconfigured or controlled by organized crime.'
+          )
+          return Milter.REJECT
         wl_users = whitelist_senders.get(domain,())
         if user in wl_users or '' in wl_users:
           self.whitelist_sender = True
@@ -1554,7 +1552,9 @@ class bmsMilter(Milter.Milter):
       except Milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
 
-    if self.cbv_needed:
+    # do not send CBV to internal domains (since we'll just get
+    # the "Fraudulent MX" error).
+    if self.cbv_needed and not self.internal_domain:
       q,res = self.cbv_needed
       if res == 'softfail':
         template_name = 'softfail'
