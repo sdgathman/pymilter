@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.100  2007/03/24 00:30:24  customdesigned
+# Do not CBV for internal domains.
+#
 # Revision 1.99  2007/03/23 22:39:10  customdesigned
 # Get SMTP-Auth policy from access_file.
 #
@@ -678,13 +681,13 @@ class bmsMilter(Milter.Milter):
         )
 
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
-    self.internal_domain = True
+    self.internal_domain = False
     if len(t) == 2:
       user,domain = t
       for pat in internal_domains:
-        if fnmatchcase(domain,pat): break
-      else:
-        self.internal_domain = False
+        if fnmatchcase(domain,pat):
+          self.internal_domain = True
+          break
       if self.internal_connection:
         if self.user:
           p = SPFPolicy('%s@%s'%(self.user,domain))
@@ -820,6 +823,11 @@ class bmsMilter(Milter.Milter):
       else:
         hres,hcode,htxt = res,code,txt
       ores = res
+      if self.internal_domain and res == 'none':
+        # we don't accept our own domains externally without an SPF record
+        self.log('REJECT: spam from self',q.o)
+        self.setreply('550','5.7.1',"I hate talking to myself!")
+        return Milter.REJECT
       if spf_best_guess and res == 'none':
         #self.log('SPF: no record published, guessing')
         q.set_default_explanation(

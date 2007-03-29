@@ -1,3 +1,35 @@
+Configuration is problematic when handling incoming, but not outgoing mail.
+The problem comes when alice@example.com sends mail to bill@example.com,
+and we are the MX for example.com, but alice is sending from some other
+MTA.  The mail is flagged external, so we don't list example.com in
+internal_domains (or we would get "spam from self").  But, if we try to do a
+CBV, we get "fraudulent MX", because the MX is ourself!  So we need to 
+avoid doing CBV on such domains.  Currently, we try to make sure the SPF
+policies don't do CBV.
+
+On the other hand, if alice is sending internally, or with SMTP AUTH, she
+*does* need the domain to be in internal_domains.  The solution to that 
+is to use the new SMTP AUTH access configuration to specify which domains
+can be used by smtp AUTH (by user if desired).
+
+It would be cleaner if CBV would know which domains we have agreed to
+be MX for. Some ideas for external connections:
+
+a) check access file for To:example.com	RELAY
+b) check mailertable
+c) check mx_domains config list
+d) if there is an SPF record, don't check internal_domains
+   (let SPF block unauthorized machines)
+
+But that still doesn't handle the roaming user, who won't use SMTP
+AUTH, but sends through some hotel MTA.  Maybe we don't want to support
+him?
+
+When setting up pydspam, both sender and rcpt must resolve to dspam users
+for falsepositive recognition.  Usually, this means adding 
+honeypot@mail.example.com to alias list for honeypot in pymilter.cfg.
+This needs to be documented.  I was caught by it setting up a new site.
+
 Add signature (x-sig=AB7485f=TS) to Received-SPF, so it can be used
 to blacklist sources of delayed DSNs.
 
