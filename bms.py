@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.101  2007/03/29 03:06:10  customdesigned
+# Don't count DSN and unqualified MAIL FROM as internal_domain.
+#
 # Revision 1.100  2007/03/24 00:30:24  customdesigned
 # Do not CBV for internal domains.
 #
@@ -702,7 +705,7 @@ class bmsMilter(Milter.Milter):
               'SMTP user %s is not authorized to use MAIL FROM %s.' %
               (self.user,self.canon_from)
             )
-          return Milter.REJECT
+            return Milter.REJECT
         elif internal_domains and not self.internal_domain:
           self.log("REJECT: zombie PC at ",self.connectip,
               " sending MAIL FROM ",self.canon_from)
@@ -918,13 +921,14 @@ class bmsMilter(Milter.Milter):
       self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
       self.setreply(str(code),'4.3.0',txt)
       return Milter.TEMPFAIL
-    self.add_header('Received-SPF',q.get_header(q.result,receiver),0)
+    kv = {}
     if hres and q.h != q.o:
-      self.add_header('X-Hello-SPF',hres,0)
+      kv['helo_spf'] = hres
+    if res != q.result:
+      kv['bestguess'] = res
+    self.add_header('Received-SPF',q.get_header(q.result,receiver,**kv),0)
     self.spf_guess = res
     self.spf_helo = hres
-    if res != q.result:
-      self.add_header('X-Guessed-SPF',res,0)
     self.spf = q
     return Milter.CONTINUE
 

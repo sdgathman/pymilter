@@ -37,7 +37,7 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, sendmail >= 8.13
+Requires: %{python} >= 2.4, sendmail >= 8.13, pyspf >= 2.0.4
 %ifos Linux
 Requires: chkconfig
 %endif
