@@ -239,8 +239,8 @@ everything up for you.  For other systems:
 	How do I stop this behavior?
 <p>  A. The SPF response is controlled by <code>/etc/mail/access</code>
 	(actually the file you specify with <code>access_file</code> in
-	the <code>[spf]</code> section of <code>pymilter.cfg</code>.  Responses
-	are OK, CBV, and REJECT.  CBV sends the DSN.
+	the <code>[spf]</code> section of <code>pymilter.cfg</code>).  
+	Responses are OK, CBV, and REJECT.  CBV sends the DSN.
 <p>
 You can change the defaults.  For instance, I have:
 <pre>

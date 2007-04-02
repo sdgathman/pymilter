@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.102  2007/03/30 18:13:41  customdesigned
+# Report bestguess and helo-spf as key-value pairs in Received-SPF
+# instead of in their own headers.
+#
 # Revision 1.101  2007/03/29 03:06:10  customdesigned
 # Don't count DSN and unqualified MAIL FROM as internal_domain.
 #
@@ -774,12 +778,14 @@ class bmsMilter(Milter.Milter):
           qual = res
         try:
           umis = gossip.umis(domain+qual,self.id+time.time())
-          res,hdr,val = gossip_node.query(umis,domain,qual,1)
-          self.add_header(hdr,val)
-          a = val.split(',')
-          self.reputation = int(a[-2])
-          self.confidence = int(a[-1])
-          self.umis = umis
+          res = gossip_node.query(umis,domain,qual,1)
+          if res:
+            res,hdr,val = gossip_node.query(umis,domain,qual,1)
+            self.add_header(hdr,val)
+            a = val.split(',')
+            self.reputation = int(a[-2])
+            self.confidence = int(a[-1])
+            self.umis = umis
         except:
           gossip = None
           raise
