@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.103  2007/04/02 18:37:25  customdesigned
+# Don't disable gossip for temporary error.
+#
 # Revision 1.102  2007/03/30 18:13:41  customdesigned
 # Report bestguess and helo-spf as key-value pairs in Received-SPF
 # instead of in their own headers.
@@ -780,7 +783,7 @@ class bmsMilter(Milter.Milter):
           umis = gossip.umis(domain+qual,self.id+time.time())
           res = gossip_node.query(umis,domain,qual,1)
           if res:
-            res,hdr,val = gossip_node.query(umis,domain,qual,1)
+            res,hdr,val = res
             self.add_header(hdr,val)
             a = val.split(',')
             self.reputation = int(a[-2])
