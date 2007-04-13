@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.104  2007/04/05 17:59:07  customdesigned
+# Stop querying gossip server twice.
+#
 # Revision 1.103  2007/04/02 18:37:25  customdesigned
 # Don't disable gossip for temporary error.
 #
@@ -442,6 +445,10 @@ class SPFPolicy(object):
     else: acf = None
     self.acf = acf
 
+  def close(self):
+    if self.acf:
+      self.acf.close()
+
   def getPolicy(self,pfx):
     acf = self.acf
     if not acf: return None
@@ -702,6 +709,7 @@ class bmsMilter(Milter.Milter):
         if self.user:
           p = SPFPolicy('%s@%s'%(self.user,domain))
           policy = p.getPolicy('smtp-auth:')
+          p.close()
         else:
           policy = None
         if policy:
@@ -814,6 +822,7 @@ class bmsMilter(Milter.Milter):
       res,code,txt = q.perm_error.ext   # extended (lax processing) result
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.s)
+    # FIXME: try:finally to close policy db, or reuse with lock
     hres = None
     if res not in ('pass','error','temperror'):
       if self.mailfrom != '<>':
@@ -949,87 +958,92 @@ class bmsMilter(Milter.Milter):
     if to.startswith('<MAILER-DAEMON@'):
       self.log('REJECT: RCPT TO:',to,str)
       return Milter.REJECT
-    self.log("rcpt to",to,str)
-    t = parse_addr(to)
-    newaddr = False
-    if len(t) == 2:
-      t[1] = t[1].lower()
-      user,domain = t
-      if self.is_bounce and srs and domain in srs_domain:
-        oldaddr = '@'.join(parse_addr(to))
-        try:
-          if ses:
-            newaddr = ses.verify(oldaddr)
-          else:
-            newaddr = oldaddr,
-          if len(newaddr) > 1:
-            newaddr = newaddr[0]
-            self.log("ses rcpt:",newaddr)
-          else:
-            newaddr = srs.reverse(oldaddr)
-            # Currently, a sendmail map reverses SRS.  We just log it here.
-            self.log("srs rcpt:",newaddr)
-          self.dspam = False    # verified as reply to mail we sent
-          self.blacklist = False
-        except:
-          if not (self.internal_connection or self.trusted_relay):
-            if srsre.match(oldaddr):
-              self.log("REJECT: srs spoofed:",oldaddr)
-              self.setreply('550','5.7.1','Invalid SRS signature')
-              return Milter.REJECT
-            if oldaddr.startswith('SES='):
-              self.log("REJECT: ses spoofed:",oldaddr)
-              self.setreply('550','5.7.1','Invalid SES signature')
-              return Milter.REJECT
-            # reject for certain recipients are delayed until after DATA
-            if srs_reject_spoofed \
-                and not user.lower() in ('postmaster','abuse'):
-              return self.forged_bounce()
-            self.data_allowed = not srs_reject_spoofed
+    try:
+      t = parse_addr(to)
+      newaddr = False
+      if len(t) == 2:
+        t[1] = t[1].lower()
+        user,domain = t
+        if self.is_bounce and srs and domain in srs_domain:
+          oldaddr = '@'.join(parse_addr(to))
+          try:
+            if ses:
+              newaddr = ses.verify(oldaddr)
+            else:
+              newaddr = oldaddr,
+            if len(newaddr) > 1:
+              newaddr = newaddr[0]
+              self.log("ses rcpt:",newaddr)
+            else:
+              newaddr = srs.reverse(oldaddr)
+              # Currently, a sendmail map reverses SRS.  We just log it here.
+              self.log("srs rcpt:",newaddr)
+            self.dspam = False    # verified as reply to mail we sent
+            self.blacklist = False
+          except:
+            if not (self.internal_connection or self.trusted_relay):
+              if srsre.match(oldaddr):
+                self.log("REJECT: srs spoofed:",oldaddr)
+                self.setreply('550','5.7.1','Invalid SRS signature')
+                return Milter.REJECT
+              if oldaddr.startswith('SES='):
+                self.log("REJECT: ses spoofed:",oldaddr)
+                self.setreply('550','5.7.1','Invalid SES signature')
+                return Milter.REJECT
+              # reject for certain recipients are delayed until after DATA
+              if srs_reject_spoofed \
+                  and not user.lower() in ('postmaster','abuse'):
+                return self.forged_bounce()
+              self.data_allowed = not srs_reject_spoofed
 
-      if not self.internal_connection and domain in private_relay:
-        self.log('REJECT: RELAY:',to)
-        self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
-        return Milter.REJECT
-
-      # non DSN mail to SRS address will bounce due to invalid local part
-      canon_to = '@'.join(t)
-      if canon_to == 'postmaster@' + self.receiver:
-        self.postmaster_reply = True
-
-      self.recipients.append(canon_to)
-      # FIXME: use newaddr to check rcpt
-      users = check_user.get(domain)
-      if self.discard:
-        self.del_recipient(to)
-      # don't check userlist if signed MFROM for now
-      userl = user.lower()
-      if users and not newaddr and not userl in users:
-        self.log('REJECT: RCPT TO:',to)
-        if gossip and self.umis:
-          gossip_node.feedback(self.umis,1)
-        return Milter.REJECT
-      # FIXME: should dspam_exempt be case insensitive?
-      if user in block_forward.get(domain,()):
-        self.forward = False
-      exempt_users = dspam_exempt.get(domain,())
-      if user in exempt_users or '' in exempt_users:
-        if self.blacklist:
-          self.log('REJECT: BLACKLISTED')
-          self.setreply('550','5.7.1','Sending domain has been blacklisted')
+        if not self.internal_connection and domain in private_relay:
+          self.log('REJECT: RELAY:',to)
+          self.setreply('550','5.7.1','Unauthorized relay for %s' % domain)
           return Milter.REJECT
-        self.dspam = False
-      if userl != 'postmaster' and self.umis    \
-        and self.reputation < -50 and self.confidence > 1:
-        self.log('REJECT: REPUTATION')
-        self.setreply('550','5.7.1','Your domain has been sending mostly spam')
-        return Milter.REJECT
 
-      if domain in hide_path:
-        self.hidepath = True
-      if not domain in dspam_reject:
-        self.reject_spam = False
+        # non DSN mail to SRS address will bounce due to invalid local part
+        canon_to = '@'.join(t)
+        if canon_to == 'postmaster@' + self.receiver:
+          self.postmaster_reply = True
 
+        self.recipients.append(canon_to)
+        # FIXME: use newaddr to check rcpt
+        users = check_user.get(domain)
+        if self.discard:
+          self.del_recipient(to)
+        # don't check userlist if signed MFROM for now
+        userl = user.lower()
+        if users and not newaddr and not userl in users:
+          self.log('REJECT: RCPT TO:',to,str)
+          if gossip and self.umis:
+            gossip_node.feedback(self.umis,1)
+          return Milter.REJECT
+        # FIXME: should dspam_exempt be case insensitive?
+        if user in block_forward.get(domain,()):
+          self.forward = False
+        exempt_users = dspam_exempt.get(domain,())
+        if user in exempt_users or '' in exempt_users:
+          if self.blacklist:
+            self.log('REJECT: BLACKLISTED, rcpt to',to,str)
+            self.setreply('550','5.7.1','Sending domain has been blacklisted')
+            return Milter.REJECT
+          self.dspam = False
+        if userl != 'postmaster' and self.umis    \
+          and self.reputation < -50 and self.confidence > 1:
+          self.log('REJECT: REPUTATION, rcpt to',to,str)
+          self.setreply('550','5.7.1','Your domain has been sending mostly spam')
+          return Milter.REJECT
+
+        if domain in hide_path:
+          self.hidepath = True
+        if not domain in dspam_reject:
+          self.reject_spam = False
+
+    except:
+      self.log("rcpt to",to,str)
+      raise
+    self.log("rcpt to",to,str)
+      
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
     #rcpt = self.getsymval("{rcpt_addr}")
@@ -1713,6 +1727,13 @@ class bmsMilter(Milter.Milter):
     return Milter.CONTINUE
 
 def main():
+  if access_file:
+    try:
+      acf = anydbm.open(access_file,'r')
+      acf.close()
+    except:
+      milter_log.error('Unable to read: %s',access_file)
+      return
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:
@@ -1727,6 +1748,7 @@ def main():
 
 if __name__ == "__main__":
   read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
+      
   if dspam_dict:
     import dspam        # low level spam check
   if dspam_userdir:
