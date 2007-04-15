@@ -139,7 +139,7 @@ import gc
 import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
-from Milter.utils import iniplist,parse_addr,parse_header,ip4re
+from Milter.utils import iniplist,parse_addr,parse_header,ip4re,addr2bin
 from Milter.config import MilterConfigParser
 
 from fnmatch import fnmatchcase
@@ -251,6 +251,7 @@ spf_reject_noptr = False
 supply_sender = False
 access_file = None
 timeout = 600
+banned_ips = set()
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -583,6 +584,11 @@ class bmsMilter(Milter.Milter):
     if self.missing_ptr:
       connecttype += ' DYN'
     self.log("connect from %s at %s %s" % (hostname,hostaddr,connecttype))
+    if addr2bin(ipaddr) in banned_ips:
+      self.log("REJECT: BANNED IP")
+      self.setreply('550','5.7.1', 'Banned for dictionary attacks')
+      return Milter.REJECT
+    self.bad_rcpts = 0
     self.hello_name = None
     self.connecthost = hostname
     if hostname == 'localhost' and not ipaddr.startswith('127.') \
@@ -805,7 +811,7 @@ class bmsMilter(Milter.Milter):
             # we have to wait until envrcpt().  Perhaps an especially
             # bad reputation could be rejected here.
             if self.reputation < -70 and self.confidence > 5:
-              self.log('REJECT: REPUTATION, rcpt to',to,str)
+              self.log('REJECT: REPUTATION')
               self.setreply('550','5.7.1',
                 'Your domain has been sending nothing but spam')
               return Milter.REJECT
@@ -1029,6 +1035,15 @@ class bmsMilter(Milter.Milter):
           self.log('REJECT: RCPT TO:',to,str)
           if gossip and self.umis:
             gossip_node.feedback(self.umis,1)
+	    self.umis = None
+	  self.bad_rcpts += 1
+          if self.bad_rcpts > 3:
+	    try:
+	      ip = addr2bin(self.connectip)
+	      if ip not in banned_ips:
+	        banned_ips.add(ip)
+	        print >>open('banned_ips','a'),self.connectip
+	    except: pass
           return Milter.REJECT
         # FIXME: should dspam_exempt be case insensitive?
         if user in block_forward.get(domain,()):
@@ -1746,6 +1761,10 @@ def main():
     except:
       milter_log.error('Unable to read: %s',access_file)
       return
+  try:
+    fp = open('banned_ips','r')
+    banned_ips = set(addr2bin(ip) for ip in fp)
+  except: pass
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:
