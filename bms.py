@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.105  2007/04/13 17:20:09  customdesigned
+# Check access_file at startup.  Compress rcpt to log.
+#
 # Revision 1.104  2007/04/05 17:59:07  customdesigned
 # Stop querying gossip server twice.
 #
@@ -797,6 +800,15 @@ class bmsMilter(Milter.Milter):
             self.reputation = int(a[-2])
             self.confidence = int(a[-1])
             self.umis = umis
+            # We would like to reject on bad reputation here, but we
+            # need to give special consideration to postmaster.  So
+            # we have to wait until envrcpt().  Perhaps an especially
+            # bad reputation could be rejected here.
+            if self.reputation < -70 and self.confidence > 5:
+              self.log('REJECT: REPUTATION, rcpt to',to,str)
+              self.setreply('550','5.7.1',
+                'Your domain has been sending nothing but spam')
+              return Milter.REJECT
         except:
           gossip = None
           raise
