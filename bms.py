@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.107  2007/04/15 01:01:13  customdesigned
+# Ban ips with too many bad rcpts on a connection.
+#
 # Revision 1.105  2007/04/13 17:20:09  customdesigned
 # Check access_file at startup.  Compress rcpt to log.
 #
@@ -998,6 +1001,7 @@ class bmsMilter(Milter.Milter):
               self.log("srs rcpt:",newaddr)
             self.dspam = False    # verified as reply to mail we sent
             self.blacklist = False
+            self.delayed_failure = False
           except:
             if not (self.internal_connection or self.trusted_relay):
               if srsre.match(oldaddr):
