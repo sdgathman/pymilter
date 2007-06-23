@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.108  2007/04/19 16:02:43  customdesigned
+# Do not process valid SRS recipients as delayed_failure.
+#
 # Revision 1.107  2007/04/15 01:01:13  customdesigned
 # Ban ips with too many bad rcpts on a connection.
 #
@@ -182,9 +185,9 @@ _subjpats = (
  r'\buser unknown\b',
  r'^failed', r'^mail failed',
  r'^echec de distribution',
+ r'\berror\s+sending\b',
  r'^fallo en la entrega',
- r'\bfehlgeschlagen\b',
- r'^error sending\b'
+ r'\bfehlgeschlagen\b'
 )
 refaildsn = re.compile('|'.join(_subjpats),re.IGNORECASE)
 
@@ -782,8 +785,19 @@ class bmsMilter(Milter.Milter):
         self.log("PROBATION",self.canon_from)
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
         or domain in blacklist:
-      self.blacklist = True
-      self.log("BLACKLIST",self.canon_from)
+      if not self.internal_connection:
+        if not dspam_userdir:
+          if domain in blacklist:
+            self.log('REJECT: BLACKLIST',self.canon_from)
+            self.setreply('550','5.7.1', 'Sender email local blacklist')
+          else:
+            res = cbv_cache[self.canon_from]
+            desc = "CBV: %d %s" % res[:2]
+            self.log('REJECT:',desc)
+            self.setreply('550','5.7.1',*desc.splitlines())
+          return Milter.REJECT
+        self.blacklist = True
+        self.log("BLACKLIST",self.canon_from)
     else:
       global gossip
       if gossip and domain and rc == Milter.CONTINUE \
@@ -828,6 +842,8 @@ class bmsMilter(Milter.Milter):
     for tf in trusted_forwarder:
       q = spf.query(self.connectip,'',tf,receiver=receiver,strict=False)
       res,code,txt = q.check()
+      if res == 'none':
+        res,code,txt = q.best_guess('v=spf1 a mx')
       if res == 'pass':
         self.log("TRUSTED_FORWARDER:",tf)
         break
@@ -861,7 +877,9 @@ class bmsMilter(Milter.Milter):
           return Milter.REJECT
         if hres == 'none' and spf_best_guess \
           and not dynip(self.hello_name,self.connectip):
-          hres,hcode,htxt = h.best_guess()
+          # HELO must match more exactly.  Don't match PTR or zombies
+          # will be able to get a best_guess pass on their ISPs domain.
+          hres,hcode,htxt = h.best_guess('v=spf1 a mx')
       else:
         hres,hcode,htxt = res,code,txt
       ores = res
@@ -889,6 +907,7 @@ class bmsMilter(Milter.Milter):
         if policy == 'CBV':
           if self.mailfrom != '<>':
             self.cbv_needed = (q,ores)  # accept, but inform sender via DSN
+	  self.bad_rcpts = 3    # ban ip if any bad recipient
         elif policy != 'OK':
           self.log('REJECT: no PTR, HELO or SPF')
           self.setreply('550','5.7.1',
@@ -1129,7 +1148,7 @@ class bmsMilter(Milter.Milter):
           return Milter.REJECT
 
       # check for delayed bounce of CBV
-      if (self.is_bounce or self.postmaster_reply) and srs:
+      if self.postmaster_reply and srs:
         if refaildsn.search(lval):
           self.delayed_failure = val.strip()
           # if confirmed by finding our signed Message-ID, 
@@ -1766,9 +1785,13 @@ def main():
       milter_log.error('Unable to read: %s',access_file)
       return
   try:
-    fp = open('banned_ips','r')
-    banned_ips = set(addr2bin(ip) for ip in fp)
-  except: pass
+    from glob import glob
+    banned_ips = set(addr2bin(ip) 
+        for fn in glob('banned_ips*')
+        for ip in open(fn))
+    print len(banned_ips),'banned ips'
+  except:
+    milter_log.exception('Error reading banned_ips')
   Milter.factory = bmsMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
   if wiretap_dest or smart_alias or dspam_userdir:

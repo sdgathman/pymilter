@@ -77,6 +77,11 @@ cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
   copytruncate
   compress
 }
+/var/log/milter/banned_ips {
+  rotate 3
+  daily
+  copytruncate
+}
 EOF
 
 # purge saved defanged message copies
@@ -152,7 +157,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py
+%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %ifos aix4.1
@@ -183,6 +188,7 @@ rm -rf $RPM_BUILD_ROOT
 - add sample spfmilter.py milter
 - private_relay config option
 - persist delayed DSN blacklisting
+- handle gossip server restart without disabling gossip
 * Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
 - More lame bounce heuristics
 - SPF moved to pyspf RPM
