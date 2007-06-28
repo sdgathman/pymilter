@@ -44,6 +44,8 @@ def is_dynip(host,addr):
   True
   >>> is_dynip('[1.2.3.4]','1.2.3.4')
   True
+  >>> is_dynip('c-71-63-151-151.hsd1.mn.comcast.net','71.63.151.151')
+  True
   """
   if host.startswith('[') and host.endswith(']'):
     return True
@@ -54,7 +56,7 @@ def is_dynip(host,addr):
     h = host
     m = ip3.findall(host)
     if m:
-      g = map(int,m)
+      g = map(int,m)[:4]
       ia3 = (ia[1:],ia[:3])
       if g[-3:] in ia3: return True
       if g[0] == ia[3] and g[1:3] == ia[:2]: return True

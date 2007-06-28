@@ -3,6 +3,7 @@ import doctest
 import os
 import Milter.utils
 from Milter.cache import AddrCache
+from Milter.dynip import is_dynip
 
 class AddrCacheTestCase(unittest.TestCase):
 
@@ -40,6 +41,7 @@ class AddrCacheTestCase(unittest.TestCase):
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')
   s.addTest(doctest.DocTestSuite(Milter.utils))
+  s.addTest(doctest.DocTestSuite(Milter.dynip))
   return s
 
 if __name__ == '__main__':
