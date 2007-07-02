@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.109  2007/06/23 20:53:05  customdesigned
+# Ban IPs based on too many invalid recipients in a connection.  Requires
+# configuring check_user.  Tighten HELO best_guess policy.
+#
 # Revision 1.108  2007/04/19 16:02:43  customdesigned
 # Do not process valid SRS recipients as delayed_failure.
 #
@@ -594,7 +598,6 @@ class bmsMilter(Milter.Milter):
       self.log("REJECT: BANNED IP")
       self.setreply('550','5.7.1', 'Banned for dictionary attacks')
       return Milter.REJECT
-    self.bad_rcpts = 0
     self.hello_name = None
     self.connecthost = hostname
     if hostname == 'localhost' and not ipaddr.startswith('127.') \
@@ -602,6 +605,7 @@ class bmsMilter(Milter.Milter):
       self.log("REJECT: PTR is",hostname)
       self.setreply('550','5.7.1', '"%s" is not a reasonable PTR name'%hostname)
       return Milter.REJECT
+    self.offenses = 0
     return Milter.CONTINUE
 
   def hello(self,hostname):
@@ -649,6 +653,17 @@ class bmsMilter(Milter.Milter):
           self.del_recipient(to)
           for t in smart_alias[key]:
             self.add_recipient('<%s>'%t)
+
+  def offense(self,inc=1):
+    self.offenses += inc
+    if self.offenses > 3:
+      try:
+        ip = addr2bin(self.connectip)
+        if ip not in banned_ips:
+          banned_ips.add(ip)
+          print >>open('banned_ips','a'),self.connectip
+      except: pass
+    return Milter.REJECT
 
   # multiple messages can be received on a single connection
   # envfrom (MAIL FROM in the SMTP protocol) seems to mark the start
@@ -769,7 +784,9 @@ class bmsMilter(Milter.Milter):
     if not (self.internal_connection or self.trusted_relay)     \
         and self.connectip and spf:
       rc = self.check_spf()
-      if rc != Milter.CONTINUE: return rc
+      if rc != Milter.CONTINUE:
+        if rc != Milter.TEMPFAIL: self.offense()
+        return rc
     else:
       rc = Milter.CONTINUE
     # FIXME: parse Received-SPF from trusted_relay for SPF result
@@ -786,6 +803,7 @@ class bmsMilter(Milter.Milter):
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
         or domain in blacklist:
       if not self.internal_connection:
+        self.offense()
         if not dspam_userdir:
           if domain in blacklist:
             self.log('REJECT: BLACKLIST',self.canon_from)
@@ -866,6 +884,8 @@ class bmsMilter(Milter.Milter):
         # check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
         hres,hcode,htxt = h.check()
+        # FIXME: in a few cases, rejecting on HELO neutral causes problems
+        # for senders forced to use their braindead ISPs email service.
         if hres in ('deny','fail','neutral','softfail'):
           self.log('REJECT: hello SPF: %s 550 %s' % (hres,htxt))
           self.setreply('550','5.7.1',htxt,
@@ -907,7 +927,7 @@ class bmsMilter(Milter.Milter):
         if policy == 'CBV':
           if self.mailfrom != '<>':
             self.cbv_needed = (q,ores)  # accept, but inform sender via DSN
-	  self.bad_rcpts = 3    # ban ip if any bad recipient
+	  self.offenses = 3    # ban ip if any bad recipient
         elif policy != 'OK':
           self.log('REJECT: no PTR, HELO or SPF')
           self.setreply('550','5.7.1',
@@ -1059,15 +1079,7 @@ class bmsMilter(Milter.Milter):
           if gossip and self.umis:
             gossip_node.feedback(self.umis,1)
 	    self.umis = None
-	  self.bad_rcpts += 1
-          if self.bad_rcpts > 3:
-	    try:
-	      ip = addr2bin(self.connectip)
-	      if ip not in banned_ips:
-	        banned_ips.add(ip)
-	        print >>open('banned_ips','a'),self.connectip
-	    except: pass
-          return Milter.REJECT
+          return self.offense()
         # FIXME: should dspam_exempt be case insensitive?
         if user in block_forward.get(domain,()):
           self.forward = False
