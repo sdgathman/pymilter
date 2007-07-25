@@ -1,3 +1,8 @@
+Don't match dynamic ptr in bestguess.
+
+When content filtering is not installed, reject BLACKLISTed MFROM
+immediately.  There is no use waiting until EOM.
+
 Configuration is problematic when handling incoming, but not outgoing mail.
 The problem comes when alice@example.com sends mail to bill@example.com,
 and we are the MX for example.com, but alice is sending from some other
@@ -6,6 +11,9 @@ internal_domains (or we would get "spam from self").  But, if we try to do a
 CBV, we get "fraudulent MX", because the MX is ourself!  So we need to 
 avoid doing CBV on such domains.  Currently, we try to make sure the SPF
 policies don't do CBV.
+
+We now don't check internal domains for incoming mail if there is an
+SPF record.
 
 On the other hand, if alice is sending internally, or with SMTP AUTH, she
 *does* need the domain to be in internal_domains.  The solution to that 
