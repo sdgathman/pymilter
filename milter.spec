@@ -1,5 +1,5 @@
-%define name milter
-%define version 0.8.7
+%define name pymilter
+%define version 0.8.8
 %define release 1
 # what version of RH are we building for?
 %define redhat7 0
@@ -37,7 +37,7 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, sendmail >= 8.13, pyspf >= 2.0.4
+Requires: %{python} >= 2.4, sendmail >= 8.13
 %ifos Linux
 Requires: chkconfig
 %endif
@@ -48,6 +48,14 @@ This is a python extension module to enable python scripts to
 attach to sendmail's libmilter functionality.  Additional python
 modules provide for navigating and modifying MIME parts, sending
 DSNs, and doing CBV.
+
+%package -n milter
+Group: Applications/System
+Summary:  BMS spam and reputation milter
+Requires: pyspf >= 2.0.4
+
+%description -n milter
+An effective spam filtering and reputation tracking mail application.
 
 %prep
 %setup
@@ -158,6 +166,9 @@ rm -rf $RPM_BUILD_ROOT
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+
+%files -n milter
+%defattr(-,root,root)
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %ifos aix4.1
