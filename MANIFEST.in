@@ -19,6 +19,8 @@ include spfquery.py
 include test.py
 include sample.py
 include spfmilter.py
+include spfmilter.rc
+include spfmilter.cfg
 include test/*
 include doc/*
 include Milter/*.py

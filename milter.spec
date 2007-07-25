@@ -94,6 +94,7 @@ mkdir -p $RPM_BUILD_ROOT%{libdir}
 cp *.txt $RPM_BUILD_ROOT/var/log/milter
 cp bms.py spfmilter.py $RPM_BUILD_ROOT%{libdir}
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
+cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
 
 # logfile rotation
 mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
@@ -146,7 +147,6 @@ python="%{python}"
 w
 q
 EOF
-%endif
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter <<'EOF'
 /^python=/
 c
