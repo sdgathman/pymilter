@@ -156,6 +156,14 @@ python="%{python}"
 w
 q
 EOF
+ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
+/^python=/
+c
+python="%{python}"
+.
+w
+q
+EOF
 %endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
