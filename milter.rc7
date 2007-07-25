@@ -8,7 +8,7 @@
 # config: /etc/mail/pymilter.cfg
 # pidfile: /var/run/milter/milter.pid
 
-python="python2.3"
+python="python2.4"
 
 pidof() {
 	set - ""
@@ -32,7 +32,11 @@ start() {
 	# Start daemons.
 
 	echo -n "Starting $prog: "
-	daemon --check milter --user mail /var/log/milter/start.sh
+        if ! test -d /var/run/milter; then
+		mkdir -p /var/run/milter
+		chown mail:mail /var/run/milter
+	fi
+	daemon --check milter --user mail /var/log/milter/start.sh milter bms
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/milter

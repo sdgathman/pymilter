@@ -25,6 +25,8 @@ def read_config(list):
   "Return new config object."
   cp = MilterConfigParser()
   cp.read(list)
+  if cp.has_option('milter','datadir'):
+        os.chdir(cp.get('milter','datadir'))
   conf = Config()
   conf.socketname = cp.getdefault('milter','socketname', '/tmp/spfmiltersock')
   conf.miltername = cp.getdefault('milter','name','pyspffilter')

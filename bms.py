@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.110  2007/07/02 03:06:10  customdesigned
+# Ban ips on bad mailfrom offenses as well as bad rcpts.
+#
 # Revision 1.109  2007/06/23 20:53:05  customdesigned
 # Ban IPs based on too many invalid recipients in a connection.  Requires
 # configuring check_user.  Tighten HELO best_guess policy.
@@ -292,6 +295,8 @@ def read_config(list):
     'case_sensitive_localpart': 'no'
   })
   cp.read(list)
+  if cp.has_option('milter','datadir'):
+      os.chdir(cp.get('milter','datadir'))
 
   # milter section
   tempfile.tempdir = cp.get('milter','tempdir')

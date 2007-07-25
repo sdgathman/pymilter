@@ -23,6 +23,11 @@
 %else
 %define python python
 %endif
+%ifos aix4.1
+%define libdir /var/log/milter
+%else
+%define libdir /usr/lib/pymilter
+%endif
 
 Summary: Python interface to sendmail milter API
 Name: %{name}
@@ -55,7 +60,17 @@ Summary:  BMS spam and reputation milter
 Requires: pyspf >= 2.0.4
 
 %description -n milter
-An effective spam filtering and reputation tracking mail application.
+A complex but effective spam filtering, SPF checking, and reputation tracking
+mail application.  It uses pydspam if installed for bayesian filtering.
+
+%package spf
+Group: Applications/System
+Summary:  BMS spam and reputation milter
+Requires: pyspf >= 2.0.4
+
+%description spf
+A simple mail filter to add Received-SPF headers and reject forged mail.
+Rejection policy is configured via sendmail access file.
 
 %prep
 %setup
@@ -75,7 +90,9 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
-cp bms.py *.txt $RPM_BUILD_ROOT/var/log/milter
+mkdir -p $RPM_BUILD_ROOT%{libdir}
+cp *.txt $RPM_BUILD_ROOT/var/log/milter
+cp bms.py spfmilter.py $RPM_BUILD_ROOT%{libdir}
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 
 # logfile rotation
@@ -109,7 +126,7 @@ EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
 %ifos aix4.1
-cat >$RPM_BUILD_ROOT/var/log/milter/start.sh <<'EOF'
+cat >$RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
 #!/bin/sh
 cd /var/log/milter
 # uncomment to enable sgmlop if installed
@@ -117,15 +134,10 @@ cd /var/log/milter
 exec /usr/local/bin/python bms.py >>milter.log 2>&1
 EOF
 %else
-cat >$RPM_BUILD_ROOT/var/log/milter/start.sh <<'EOF'
-#!/bin/sh
-cd /var/log/milter
-exec >>milter.log 2>&1
-%{python} bms.py &
-echo $! >/var/run/milter/milter.pid
-EOF
+cp start.sh $RPM_BUILD_ROOT%{libdir}
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
+cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/milter <<'EOF'
 /^python=/
 c
@@ -135,7 +147,16 @@ w
 q
 EOF
 %endif
-chmod a+x $RPM_BUILD_ROOT/var/log/milter/start.sh
+ed $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter <<'EOF'
+/^python=/
+c
+python="%{python}"
+.
+w
+q
+EOF
+%endif
+chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
 mkdir -p $RPM_BUILD_ROOT/var/run/milter
 mkdir -p $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
@@ -143,20 +164,28 @@ cp -p rhsbl.m4 $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 
 %ifos aix4.1
 %post
-mkssys -s milter -p /var/log/milter/start.sh -u 25 -S -n 15 -f 9 -G mail || :
+mkssys -s milter -p %{libdir}/start.sh -u 25 -S -n 15 -f 9 -G mail || :
 
 %preun
 if [ $1 = 0 ]; then
   rmssys -s milter || :
 fi
 %else
-%post
+%post -n milter
 #echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
 /sbin/chkconfig --add milter
 
-%preun
+%preun -n milter
 if [ $1 = 0 ]; then
   /sbin/chkconfig --del milter
+fi
+%post spf
+#echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
+/sbin/chkconfig --add spfmilter
+
+%preun spf
+if [ $1 = 0 ]; then
+  /sbin/chkconfig --del spfmilter
 fi
 %endif
 
@@ -166,6 +195,7 @@ rm -rf $RPM_BUILD_ROOT
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+%config %{libdir}/start.sh
 
 %files -n milter
 %defattr(-,root,root)
@@ -178,10 +208,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,mail,mail)
 %endif
 %dir /var/log/milter
-%dir /var/run/milter
 %dir /var/log/milter/save
-%config /var/log/milter/start.sh
-%config /var/log/milter/bms.py
+%config %{libdir}/bms.py
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt
@@ -190,6 +218,12 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /var/log/milter/permerror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
+
+%files spf
+%defattr(-,root,root)
+%dir /var/log/milter
+%{libdir}/spfmilter.py
+%config(noreplace) /etc/mail/spfmilter.cfg
 
 %changelog
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
@@ -200,6 +234,8 @@ rm -rf $RPM_BUILD_ROOT
 - private_relay config option
 - persist delayed DSN blacklisting
 - handle gossip server restart without disabling gossip
+- split out pymilter and pymilter-spf packages
+- move milter apps to /usr/lib/pymilter
 * Sat Nov 04 2006 Stuart Gathman <stuart@bmsi.com> 0.8.7-1
 - More lame bounce heuristics
 - SPF moved to pyspf RPM
