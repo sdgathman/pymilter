@@ -19,7 +19,7 @@
 %endif
 # RH9, other systems (single ps line per process)
 %ifos Linux
-%define python python2.4
+%define python python
 %else
 %define python python
 %endif
@@ -35,7 +35,7 @@ Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
-Copyright: GPL
+License: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Prefix: %{_prefix}
@@ -87,6 +87,7 @@ env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 %install
 rm -rf $RPM_BUILD_ROOT
 %{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
@@ -210,6 +211,7 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter
 %dir /var/log/milter/save
 %config %{libdir}/bms.py
+%{libdir}/bms.py?
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt
@@ -222,8 +224,9 @@ rm -rf $RPM_BUILD_ROOT
 %files spf
 %defattr(-,root,root)
 %dir /var/log/milter
-%{libdir}/spfmilter.py
+%{libdir}/spfmilter.py*
 %config(noreplace) /etc/mail/spfmilter.cfg
+/etc/rc.d/init.d/spfmilter
 
 %changelog
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
