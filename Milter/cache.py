@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.7  2007/01/25 22:47:26  customdesigned
+# Persist blacklisting from delayed DSNs.
+#
 # Revision 1.6  2007/01/19 23:31:38  customdesigned
 # Move parse_header to Milter.utils.
 # Test case for delayed DSN parsing.
@@ -66,13 +69,17 @@ class AddrCache(object):
       for ln in fp:
 	try:
 	  rcpt,ts = ln.strip().split(None,1)
-	  l = time.strptime(ts,AddrCache.time_format)
-	  t = time.mktime(l)
-	  if t < too_old:
-	    changed = True
-	    continue
-	  cache[rcpt.lower()] = (t,None)
-	except:
+          try:
+            l = time.strptime(ts,AddrCache.time_format)
+            t = time.mktime(l)
+            if t < too_old:
+              changed = True
+              continue
+            cache[rcpt.lower()] = (t,None)
+          except:       # unparsable timestamp - likely garbage
+            changed = True
+            continue
+	except: # manual entry (no timestamp)
 	  cache[ln.strip().lower()] = (now,None)
 	wfp.write(ln)
       if changed:
