@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.111  2007/07/25 17:14:59  customdesigned
+# Move milter apps to /usr/lib/pymilter
+#
 # Revision 1.110  2007/07/02 03:06:10  customdesigned
 # Ban ips on bad mailfrom offenses as well as bad rcpts.
 #
@@ -846,6 +849,7 @@ class bmsMilter(Milter.Milter):
             self.reputation = int(a[-2])
             self.confidence = int(a[-1])
             self.umis = umis
+            self.from_domain = domain
             # We would like to reject on bad reputation here, but we
             # need to give special consideration to postmaster.  So
             # we have to wait until envrcpt().  Perhaps an especially
@@ -1096,9 +1100,10 @@ class bmsMilter(Milter.Milter):
             return Milter.REJECT
           self.dspam = False
         if userl != 'postmaster' and self.umis    \
-          and self.reputation < -50 and self.confidence > 1:
+          and self.reputation < -50 and self.confidence > 3:
+          domain = self.from_domain
           self.log('REJECT: REPUTATION, rcpt to',to,str)
-          self.setreply('550','5.7.1','Your domain has been sending mostly spam')
+          self.setreply('550','5.7.1','%s has been sending mostly spam'%domain)
           return Milter.REJECT
 
         if domain in hide_path:
