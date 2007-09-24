@@ -6,6 +6,7 @@ from distutils.core import setup, Extension
 # on slackware and debian, leave it out entirely.  It depends
 # on how libmilter was built by the sendmail package.
 libs = ["milter", "smutil"]
+libdirs = ["/usr/lib/libmilter"]    # needed for Debian
 
 # patch distutils if it can't cope with the "classifiers" or
 # "download_url" keywords
@@ -15,7 +16,7 @@ if sys.version < '2.2.3':
   DistributionMetadata.download_url = None
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
-setup(name = "pymilter", version = '0.8.8',
+setup(name = "pymilter", version = '0.8.9',
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to
@@ -33,6 +34,7 @@ sending DSNs or doing CBVs.
 	packages = ['Milter'],
 	ext_modules=[
 	  Extension("milter", ["miltermodule.c"],
+            library_dirs=libdirs,
 	    libraries=libs,
 	    # set MAX_ML_REPLY to 1 for sendmail < 8.13
 	    define_macros = [ ('MAX_ML_REPLY',32) ]
