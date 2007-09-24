@@ -23,7 +23,7 @@ pidof() {
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-[ -x /var/log/milter/start.sh ] || exit 0
+[ -x /usr/lib/pymilter/start.sh ] || exit 0
 
 RETVAL=0
 prog="milter"
@@ -36,7 +36,7 @@ start() {
 		mkdir -p /var/run/milter
 		chown mail:mail /var/run/milter
 	fi
-	daemon --check milter --user mail /var/log/milter/start.sh milter bms
+	daemon --check milter --user mail /usr/lib/pymilter/start.sh milter bms
 	RETVAL=$?
 	echo
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/milter

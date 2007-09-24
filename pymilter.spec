@@ -1,8 +1,7 @@
-%define name pymilter
-%define version 0.8.8
+%define version 0.8.9
 %define release 1
 # what version of RH are we building for?
-%define redhat7 0
+%define redhat7 1
 
 # Options for Redhat version 6.x:
 # rpm -ba|--rebuild --define "rh7 1"
@@ -19,7 +18,7 @@
 %endif
 # RH9, other systems (single ps line per process)
 %ifos Linux
-%define python python
+%define python python2.4
 %else
 %define python python
 %endif
@@ -29,11 +28,17 @@
 %define libdir /usr/lib/pymilter
 %endif
 
-Summary: Python interface to sendmail milter API
-Name: %{name}
+# This spec file contains 2 noarch packages in addition to the pymilter
+# module.  To compile all three, use:
+# rpmbuild -ba --target=i386,noarch pymilter.spec
+
+%ifarch noarch
+Name: milter
+Group: Applications/System
+Summary:  BMS spam and reputation milter
 Version: %{version}
 Release: %{release}
-Source: %{name}-%{version}.tar.gz
+Source: pymilter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPL
 Group: Development/Libraries
@@ -42,22 +47,10 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, sendmail >= 8.13
+Requires: %{python} >= 2.4, pyspf >= 2.0.4, pymilter
 %ifos Linux
 Requires: chkconfig
 %endif
-BuildRequires: %{python}-devel >= 2.4, sendmail-devel >= 8.13
-
-%description
-This is a python extension module to enable python scripts to
-attach to sendmail's libmilter functionality.  Additional python
-modules provide for navigating and modifying MIME parts, sending
-DSNs, and doing CBV.
-
-%package -n milter
-Group: Applications/System
-Summary:  BMS spam and reputation milter
-Requires: pyspf >= 2.0.4
 
 %description -n milter
 A complex but effective spam filtering, SPF checking, and reputation tracking
@@ -66,28 +59,18 @@ mail application.  It uses pydspam if installed for bayesian filtering.
 %package spf
 Group: Applications/System
 Summary:  BMS spam and reputation milter
-Requires: pyspf >= 2.0.4
+Requires: pyspf >= 2.0.4, pymilter
 
 %description spf
 A simple mail filter to add Received-SPF headers and reject forged mail.
 Rejection policy is configured via sendmail access file.
 
 %prep
-%setup
+%setup -n pymilter-%{version}
 #patch -p0 -b .bms
-
-%build
-%if %{redhat7}
-  LDFLAGS="-s"
-%else # Redhat builds debug packages after 7.3
-  LDFLAGS="-g"
-%endif
-env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
-grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 mkdir -p $RPM_BUILD_ROOT/var/log/milter
 mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
@@ -198,16 +181,9 @@ if [ $1 = 0 ]; then
 fi
 %endif
 
-%clean
-rm -rf $RPM_BUILD_ROOT
-
-%files -f INSTALLED_FILES
+%files 
 %defattr(-,root,root)
-%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
 %config %{libdir}/start.sh
-
-%files -n milter
-%defattr(-,root,root)
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %ifos aix4.1
@@ -219,7 +195,9 @@ rm -rf $RPM_BUILD_ROOT
 %dir /var/log/milter
 %dir /var/log/milter/save
 %config %{libdir}/bms.py
+%if !%{redhat7}
 %{libdir}/bms.py?
+%endif
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt
@@ -236,7 +214,62 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /etc/mail/spfmilter.cfg
 /etc/rc.d/init.d/spfmilter
 
+%else # not noarch
+
+%define name pymilter
+Summary: Python interface to sendmail milter API
+Name: %{name}
+Version: %{version}
+Release: %{release}
+Source: %{name}-%{version}.tar.gz
+#Patch: %{name}-%{version}.patch
+License: GPL
+Group: Development/Libraries
+BuildRoot: %{_tmppath}/%{name}-buildroot
+Prefix: %{_prefix}
+Vendor: Stuart D. Gathman <stuart@bmsi.com>
+Packager: Stuart D. Gathman <stuart@bmsi.com>
+Url: http://www.bmsi.com/python/milter.html
+Requires: %{python} >= 2.4, sendmail >= 8.13
+BuildRequires: %{python}-devel >= 2.4, sendmail-devel >= 8.13
+
+%description
+This is a python extension module to enable python scripts to
+attach to sendmail's libmilter functionality.  Additional python
+modules provide for navigating and modifying MIME parts, sending
+DSNs, and doing CBV.
+
+%prep
+%setup
+#patch -p0 -b .bms
+
+%build
+%if %{redhat7} 
+  LDFLAGS="-s"
+%else # Redhat builds debug packages after 7.3
+  LDFLAGS="-g"
+%endif
+env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
+
+%install
+rm -rf $RPM_BUILD_ROOT
+%{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+%if !%{redhat7}
+grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
+%endif
+
+%files -f INSTALLED_FILES
+%defattr(-,root,root)
+%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+
+%endif # noarch
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
 %changelog
+* Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1
+- Use %ifarch hack to build milter and milter-spf packages as noarch
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
 - move AddrCache, parse_addr, iniplist to Milter package
 - move parse_header to Milter.utils

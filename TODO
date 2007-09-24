@@ -1,4 +1,6 @@
-Don't match dynamic ptr in bestguess.
+Convert DSN to REJECT unless sender gets SPF pass or best guess pass.  Make
+configurable by SPF result with NOTSPAM policy (reject or deliver without DSN).
+Maybe policy should be NODSN - still verify sender with CBV.
 
 When content filtering is not installed, reject BLACKLISTed MFROM
 immediately.  There is no use waiting until EOM.
@@ -224,3 +226,4 @@ data structure as autowhitelist.log.
 
 DONE Backup copies for outgoing/incoming mail.
 
+DONE Don't match dynamic ptr in bestguess.

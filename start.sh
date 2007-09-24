@@ -12,5 +12,5 @@ fi
 
 cd /var/log/milter
 exec >>${appname}.log 2>&1
-${python} ${appname}.py &
+${python} ${script}.py &
 echo $! >/var/run/milter/${appname}.pid
