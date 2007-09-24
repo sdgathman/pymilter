@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.14  2007/03/03 18:19:40  customdesigned
+# Handle DNS error sending DSN.
+#
 # Revision 1.13  2007/01/04 18:01:11  customdesigned
 # Do plain CBV when template missing.
 #
@@ -19,22 +22,22 @@
 #
 
 import smtplib
-import spf
 import socket
 from email.Message import Message
 import Milter
 import time
+import dns
 
-def send_dsn(mailfrom,receiver,msg=None,timeout=600):
+def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None):
   """Send DSN.  If msg is None, do callback verification.
      Mailfrom is original sender we are sending DSN or CBV to.
      Receiver is the MTA sending the DSN.
      Return None for success or (code,msg) for failure."""
   user,domain = mailfrom.split('@')
+  if not session: session = dns.Session()
   try:
-    q = spf.query(None,None,None)
-    mxlist = q.dns(domain,'MX')
-  except spf.TempError:
+    mxlist = session.dns(domain,'MX')
+  except dns.DNSError:
     return (450,'DNS Timeout: %s MX'%domain)	# temp error
   if not mxlist:
     mxlist = (0,domain),	# fallback to A record when no MX
@@ -124,6 +127,7 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   return msg
 
 if __name__ == '__main__':
+  import spf
   q = spf.query('192.168.9.50',
   'SRS0=pmeHL=RH==stuart@example.com',
   'red.example.com',receiver='mail.example.com')
