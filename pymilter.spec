@@ -1,7 +1,7 @@
 %define version 0.8.9
 %define release 1
 # what version of RH are we building for?
-%define redhat7 1
+%define redhat7 0
 
 # Options for Redhat version 6.x:
 # rpm -ba|--rebuild --define "rh7 1"
@@ -17,8 +17,9 @@
 %define sysvinit milter.rc
 %endif
 # RH9, other systems (single ps line per process)
-%ifos Linux
-%define python python2.4
+%ifos Linux	# whether to use system default python?
+%define python python
+#define python python2.4
 %else
 %define python python
 %endif
@@ -60,6 +61,7 @@ mail application.  It uses pydspam if installed for bayesian filtering.
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Requires: pyspf >= 2.0.4, pymilter
+Obsoletes: pymilter-spf
 
 %description spf
 A simple mail filter to add Received-SPF headers and reject forged mail.
@@ -186,7 +188,7 @@ fi
 %config %{libdir}/start.sh
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
-#{libdir}/bms.py?
+%{libdir}/bms.py?
 %ifos aix4.1
 %defattr(-,smmsp,mail)
 %else
