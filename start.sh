@@ -10,7 +10,5 @@ else
   cd /usr/lib/pymilter
 fi
 
-cd /var/log/milter
-exec >>${appname}.log 2>&1
 ${python} ${script}.py &
 echo $! >/var/run/milter/${appname}.pid

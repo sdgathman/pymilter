@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.112  2007/09/13 14:51:03  customdesigned
+# Report domain on reputation reject.
+#
 # Revision 1.111  2007/07/25 17:14:59  customdesigned
 # Move milter apps to /usr/lib/pymilter
 #
@@ -280,6 +283,7 @@ milter_log = logging.getLogger('milter')
 def read_config(list):
   cp = MilterConfigParser({
     'tempdir': "/var/log/milter/save",
+    'datadir': "/var/log/milter",
     'socket': "/var/run/milter/pythonsock",
     'timeout': '600',
     'scan_html': 'no',
@@ -299,6 +303,7 @@ def read_config(list):
   })
   cp.read(list)
   if cp.has_option('milter','datadir'):
+      print "chdir:",cp.get('milter','datadir')
       os.chdir(cp.get('milter','datadir'))
 
   # milter section
@@ -537,11 +542,8 @@ class SPFPolicy(object):
 from Milter.cache import AddrCache
 
 cbv_cache = AddrCache(renew=7)
-cbv_cache.load('send_dsn.log',age=30)
 auto_whitelist = AddrCache(renew=30)
-auto_whitelist.load('auto_whitelist.log',age=120)
 blacklist = AddrCache(renew=30)
-blacklist.load('blacklist.log',age=60)
 
 class bmsMilter(Milter.Milter):
   """Milter to replace attachments poisonous to Windows with a WARNING message,
@@ -1828,6 +1830,10 @@ def main():
 
 if __name__ == "__main__":
   read_config(["/etc/mail/pymilter.cfg","milter.cfg"])
+
+  cbv_cache.load('send_dsn.log',age=30)
+  auto_whitelist.load('auto_whitelist.log',age=120)
+  blacklist.load('blacklist.log',age=60)
       
   if dspam_dict:
     import dspam        # low level spam check

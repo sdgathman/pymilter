@@ -118,7 +118,7 @@ cd /var/log/milter
 #export PYTHONPATH=/usr/local/lib/python2.1/site-packages
 exec /usr/local/bin/python bms.py >>milter.log 2>&1
 EOF
-%else
+%else # not aix4.1
 cp start.sh $RPM_BUILD_ROOT%{libdir}
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
@@ -147,7 +147,7 @@ python="%{python}"
 w
 q
 EOF
-%endif
+%endif	# aix4.1
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
 mkdir -p $RPM_BUILD_ROOT/var/run/milter
@@ -162,7 +162,7 @@ mkssys -s milter -p %{libdir}/start.sh -u 25 -S -n 15 -f 9 -G mail || :
 if [ $1 = 0 ]; then
   rmssys -s milter || :
 fi
-%else
+%else # not aix4.1
 %post -n milter
 #echo "pythonsock has moved to /var/run/milter, update /etc/mail/sendmail.cf"
 /sbin/chkconfig --add milter
@@ -179,13 +179,14 @@ fi
 if [ $1 = 0 ]; then
   /sbin/chkconfig --del spfmilter
 fi
-%endif
+%endif # aix4.1
 
 %files 
 %defattr(-,root,root)
 %config %{libdir}/start.sh
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
+#{libdir}/bms.py?
 %ifos aix4.1
 %defattr(-,smmsp,mail)
 %else
@@ -195,9 +196,6 @@ fi
 %dir /var/log/milter
 %dir /var/log/milter/save
 %config %{libdir}/bms.py
-%if !%{redhat7}
-%{libdir}/bms.py?
-%endif
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt
