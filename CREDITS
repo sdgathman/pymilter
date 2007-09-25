@@ -7,6 +7,8 @@ real, usable Python extension.
 
 Other contributors (in random order):
 
+Dwayne Litzenberger, B.A.Sc.
+  for library_dirs patch to compile on Debian 
 Dave MacQuigg 
   for noticing that smfi_insheader wasn't supported, and creating
   a template to help first time pymilter users create their own milter.

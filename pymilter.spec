@@ -270,6 +270,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1
 - Use %ifarch hack to build milter and milter-spf packages as noarch
+- Remove spf dependency from dsn.py, add dns.py
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
 - move AddrCache, parse_addr, iniplist to Milter package
 - move parse_header to Milter.utils
