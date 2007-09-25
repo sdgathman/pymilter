@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.15  2007/09/24 20:13:26  customdesigned
+# Remove explicit spf dependency.
+#
 # Revision 1.14  2007/03/03 18:19:40  customdesigned
 # Handle DNS error sending DSN.
 #
@@ -89,23 +92,41 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None):
       return (450,'No MX response within %f minutes'%(timeout/60.0))
   return (450,'No MX servers available')	# temp error
 
-def create_msg(q,rcptlist,origmsg=None,template=None):
-  "Create a DSN message from a template.  Template must be '\n' separated."
+class Vars: pass
+
+# NOTE: Caller can pass an object to create_msg that in a typical milter
+# collects things like heloname or sender anyway.
+def create_msg(v,rcptlist=None,origmsg=None,template=None):
+  """Create a DSN message from a template.  Template must be '\n' separated.
+     v - an object whose attributes are used for substitutions.  Must
+       have sender and receiver attributes at a minimum.
+     rcptlist - used to set v.rcpt if given
+     origmsg - used to set v.subject and v.spf_result if given
+     template - a '\n' separated string with python '%(name)s' substitutions.
+  """
   if not template:
     return None
-  heloname = q.h
-  sender = q.s
-  connectip = q.i
-  receiver = q.r
-  sender_domain = q.o
-  result = q.result
-  perm_error = q.perm_error
-  rcpt = '\n\t'.join(rcptlist)
-  try: subject = origmsg['Subject']
-  except: subject = '(none)'
-  try:
-    spf_result = origmsg['Received-SPF']
-  except: spf_result = None
+  if hasattr(v,'perm_error'):
+    # likely to be an spf.query, try translating for backward compatibility
+    q = v
+    v = Vars()
+    try:
+      v.heloname = q.h
+      v.sender = q.s
+      v.connectip = q.i
+      v.receiver = q.r
+      v.sender_domain = q.o
+      v.result = q.result
+      v.perm_error = q.perm_error
+    except: v = q
+  if rcptlist:
+    v.rcpt = '\n\t'.join(rcptlist)
+  if origmsg:
+    try: v.subject = origmsg['Subject']
+    except: v.subject = '(none)'
+    try:
+      v.spf_result = origmsg['Received-SPF']
+    except: v.spf_result = None
 
   msg = Message()
 
@@ -115,13 +136,13 @@ def create_msg(q,rcptlist,origmsg=None,template=None):
   hdrs,body = template.split('\n\n',1)
   for ln in hdrs.splitlines():
     name,val = ln.split(':',1)
-    msg.add_header(name,(val % locals()).strip())
-  msg.set_payload(body % locals())
+    msg.add_header(name,(val % v.__dict__).strip())
+  msg.set_payload(body % v.__dict__)
   # add headers if missing from old template
   if 'to' not in msg:
-    msg.add_header('To',sender)
+    msg.add_header('To',v.sender)
   if 'from' not in msg:
-    msg.add_header('From','postmaster@%s'%receiver)
+    msg.add_header('From','postmaster@%s'%v.receiver)
   if 'auto-submitted' not in msg:
     msg.add_header('Auto-Submitted','auto-generated')
   return msg
