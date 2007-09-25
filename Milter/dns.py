@@ -24,6 +24,23 @@ class Session(object):
   def __init__(self):
     self.cache = {}
 
+  # We have to be careful which additional DNS RRs we cache.  For
+  # instance, PTR records are controlled by the connecting IP, and they
+  # could poison our local cache with bogus A and MX records.  
+
+  SAFE2CACHE = {
+    ('MX','A'): None,
+    ('MX','MX'): None,
+    ('CNAME','A'): None,
+    ('CNAME','CNAME'): None,
+    ('A','A'): None,
+    ('AAAA','AAAA'): None,
+    ('PTR','PTR'): None,
+    ('TXT','TXT'): None,
+    ('SPF','SPF'): None
+  }
+
+
   def dns(self, name, qtype, cnames=None):
     """DNS query.
 
@@ -42,8 +59,8 @@ class Session(object):
     cname = None
 
     if not result:
-        safe2cache = query.SAFE2CACHE
-        for k, v in DNSLookup(name, qtype, self.strict):
+        safe2cache = Session.SAFE2CACHE
+        for k, v in DNSLookup(name, qtype):
             if k == (name, 'CNAME'):
                 cname = v
             if (qtype,k[1]) in safe2cache:
@@ -60,3 +77,12 @@ class Session(object):
             raise DNSError, 'CNAME loop'
         result = self.dns(cname, qtype, cnames=cnames)
     return result
+
+DNS.DiscoverNameServers()
+
+if __name__ == '__main__':
+  import sys
+  s = Session()
+  for n,t in zip(*[iter(sys.argv[1:])]*2):
+    print n,t
+    print s.dns(n,t)
