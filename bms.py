@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.114  2007/10/10 18:07:50  customdesigned
+# Check porn keywords in From header field.
+#
 # Revision 1.113  2007/09/25 16:37:26  customdesigned
 # Tested on RH7
 #
@@ -941,7 +944,7 @@ class bmsMilter(Milter.Milter):
         if policy == 'CBV':
           if self.mailfrom != '<>':
             self.cbv_needed = (q,ores)  # accept, but inform sender via DSN
-	  self.offenses = 3    # ban ip if any bad recipient
+          self.offenses = 3    # ban ip if any bad recipient
         elif policy != 'OK':
           self.log('REJECT: no PTR, HELO or SPF')
           self.setreply('550','5.7.1',
@@ -1092,7 +1095,7 @@ class bmsMilter(Milter.Milter):
           self.log('REJECT: RCPT TO:',to,str)
           if gossip and self.umis:
             gossip_node.feedback(self.umis,1)
-	    self.umis = None
+            self.umis = None
           return self.offense()
         # FIXME: should dspam_exempt be case insensitive?
         if user in block_forward.get(domain,()):
@@ -1430,6 +1433,12 @@ class bmsMilter(Milter.Milter):
             elif not self.internal_connection or dspam_internal:
               if len(txt) > dspam_sizelimit:
                 self.log("Large message:",len(txt))
+                if self.blacklist:
+                  self.log('REJECT: BLACKLISTED')
+                  self.setreply('550','5.7.1',
+                        '%s has been blacklisted.'%self.canon_from)
+                  self.fp = None
+                  return Milter.REJECT
                 return False
               if user == 'honeypot' and Dspam.VERSION >= '1.1.9':
                 keep = False    # keep honeypot mail
@@ -1441,9 +1450,12 @@ class bmsMilter(Milter.Milter):
                     return False
                   if self.spf and self.mailfrom != '<>':
                     # check that sender accepts quarantine DSN
-                    msg = mime.message_from_file(StringIO.StringIO(txt))
-                    rc = self.send_dsn(self.spf,msg,'quarantine')
-                    del msg
+                    if self.spf.result == 'pass':
+                      msg = mime.message_from_file(StringIO.StringIO(txt))
+                      rc = self.send_dsn(self.spf,msg,'quarantine')
+                      del msg
+                    else:
+                      rc = self.send_dsn(self.spf)
                     if rc != Milter.CONTINUE:
                       return rc 
                   ds.check_spam(user,txt,self.recipients,quarantine=True,
@@ -1671,9 +1683,11 @@ class bmsMilter(Milter.Milter):
       except Milter.error:
         self.addheader(name,val)        # older sendmail can't insheader
 
-    # do not send CBV to internal domains (since we'll just get
-    # the "Fraudulent MX" error).
-    if self.cbv_needed and not self.internal_domain:
+    # Do not send CBV to internal domains (since we'll just get
+    # the "Fraudulent MX" error).  Whitelisted senders clearly do not
+    # need CBV.  However, whitelisted domains might (to discover 
+    # bogus localparts).  Need a way to tell the difference.
+    if self.cbv_needed and not self.internal_domain and not self.whitelist:
       q,res = self.cbv_needed
       if res == 'softfail':
         template_name = 'softfail'
@@ -1754,22 +1768,24 @@ class bmsMilter(Milter.Milter):
       out.close()
     return Milter.TEMPFAIL
 
-  def send_dsn(self,q,msg,template_name):
+  def send_dsn(self,q,msg=None,template_name=None):
     sender = q.s
     cached = cbv_cache.has_key(sender)
     if cached:
       self.log('CBV:',sender,'(cached)')
       res = cbv_cache[sender]
     else:
-      fname = template_name+'.txt'
-      try:
-        template = file(template_name+'.txt').read()
-        self.log('CBV:',sender,'Using:',fname)
-      except IOError:
-        template = None
+      m = None
+      if template_name:
+        fname = template_name+'.txt'
+        try:
+          template = file(template_name+'.txt').read()
+          m = dsn.create_msg(q,self.recipients,msg,template)
+          self.log('CBV:',sender,'Using:',fname)
+        except IOError: pass
+      if not m:
         self.log('CBV:',sender,'PLAIN')
-      m = dsn.create_msg(q,self.recipients,msg,template)
-      if m:
+      else:
         if srs:
           # Add SRS coded sender to various headers.  When (incorrectly)
           # replying to our DSN, any of these which are preserved
