@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.113  2007/09/25 16:37:26  customdesigned
+# Tested on RH7
+#
 # Revision 1.112  2007/09/13 14:51:03  customdesigned
 # Report domain on reputation reject.
 #
@@ -1179,7 +1182,14 @@ class bmsMilter(Milter.Milter):
           # original sender (encoded in Message-ID) is blacklisted
 
     elif lname == 'from':
-      name,email = parseaddr(val)
+      fname,email = parseaddr(val)
+      # check for porn keywords
+      lval = fname.lower().strip()
+      for w in porn_words:
+        if lval.find(w) >= 0:
+          self.log('REJECT: %s: %s' % (name,val))
+          self.setreply('550','5.7.1','Watch your language')
+          return Milter.REJECT
       if email.lower().startswith('postmaster@'):
         # Yes, if From header comes last, this might not help much.
         # But this is a heuristic - if MTAs would send proper DSNs in
