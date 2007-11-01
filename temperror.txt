@@ -1,0 +1,33 @@
+To: %(sender)s
+From: postmaster@%(receiver)s
+Subject: Critical DNS configuration error
+Auto-Submitted: auto-generated (configuration error)
+
+This is an automatically generated Delivery Status Notification.
+
+THIS IS A WARNING MESSAGE ONLY.
+
+YOU DO *NOT* NEED TO RESEND YOUR MESSAGE.
+
+Delivery to the following recipients has been delayed.
+
+	%(rcpt)s
+
+Subject: %(subject)s 
+Received-SPF: %(spf_result)s
+
+Your DNS server is not responding to TXT queries.  In other words,
+it is BROKEN.  You need to get somebody to fix it ASAP.  We
+are attempting to do TXT queries to see if you have an SPF record.
+
+See http://openspf.org
+
+We are sending you this message to alert you to the fact that
+you have problems with your DNS.
+
+If you need further assistance, please do not hesitate to
+contact me again.
+
+Kind regards,
+
+postmaster@%(receiver)s

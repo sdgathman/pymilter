@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.115  2007/10/10 18:23:54  customdesigned
+# Send quarantine DSN to SPF pass (official or guessed) only.
+# Reject blacklisted email too big for dspam.
+#
 # Revision 1.114  2007/10/10 18:07:50  customdesigned
 # Check porn keywords in From header field.
 #
@@ -256,6 +260,7 @@ hello_blacklist = ()
 smart_alias = {}
 dspam_dict = None
 dspam_users = {}
+dspam_train = {}
 dspam_userdir = None
 dspam_exempt = {}
 dspam_whitelist = {}
@@ -387,6 +392,7 @@ def read_config(list):
   dspam_users = cp.getaddrdict('dspam','dspam_users')
   dspam_userdir = cp.getdefault('dspam','dspam_userdir')
   dspam_screener = cp.getlist('dspam','dspam_screener')
+  dspam_train = set(cp.getlist('dspam','dspam_train'))
   dspam_reject = cp.getlist('dspam','dspam_reject')
   dspam_internal = cp.getboolean('dspam','dspam_internal')
   if cp.has_option('dspam','dspam_sizelimit'):
@@ -535,6 +541,12 @@ class SPFPolicy(object):
 
   def getPermErrorPolicy(self):
     policy = self.getPolicy('spf-permerror:')
+    if not policy:
+      policy = 'REJECT'
+    return policy
+
+  def getTempErrorPolicy(self):
+    policy = self.getPolicy('spf-temperror:')
     if not policy:
       policy = 'REJECT'
     return policy
@@ -895,8 +907,21 @@ class bmsMilter(Milter.Milter):
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.s)
     # FIXME: try:finally to close policy db, or reuse with lock
+    if res in ('error','temperror'):
+      policy = p.getTempErrorPolicy()
+      if policy == 'CBV':
+        if self.mailfrom != '<>':
+          self.cbv_needed = (q,res)
+      elif policy != 'OK':
+        self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
+        self.setreply(str(code),'4.3.0',txt,
+          'We cannot accept your email until the DNS server for %s' % q.o,
+          'is operational for TXT record queries.'
+        )
+        return Milter.TEMPFAIL
+      res,code,txt = 'none',250,'EXT: ignoring DNS error'
     hres = None
-    if res not in ('pass','error','temperror'):
+    if res != 'pass':
       if self.mailfrom != '<>':
         # check hello name via spf unless spf pass
         h = spf.query(self.connectip,'',self.hello_name,receiver=receiver)
@@ -1012,10 +1037,6 @@ class bmsMilter(Milter.Milter):
           'We cannot accept mail from %s until this is corrected.' % q.o
         )
         return Milter.REJECT
-    if res in ('error','temperror'):
-      self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
-      self.setreply(str(code),'4.3.0',txt)
-      return Milter.TEMPFAIL
     kv = {}
     if hres and q.h != q.o:
       kv['helo_spf'] = hres
@@ -1473,8 +1494,13 @@ class bmsMilter(Milter.Milter):
               elif self.blacklist:
                 txt = ds.check_spam(user,txt,self.recipients,
                         force_result=dspam.DSR_ISSPAM)
-              else:
+              elif user in dspam_train:
                 txt = ds.check_spam(user,txt,self.recipients)
+              else:
+                txt = ds.check_spam(user,txt,self.recipients,classify=True)
+                if txt:
+                  self.add_header("X-DSpam-Score",'%f' % ds.probability)
+                  return False
               if not txt:
                 # DISCARD if quarrantined for any recipient.  It
                 # will be resent to all recipients if they submit
@@ -1697,6 +1723,8 @@ class bmsMilter(Milter.Milter):
         template_name = 'permerror'
       elif res == 'neutral':
         template_name = 'neutral'
+      elif res in ('error','temperror'):
+        template_name = 'temperror'
       else:
         template_name = 'strike3'
       rc = self.send_dsn(q,msg,template_name)
