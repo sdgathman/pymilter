@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.116  2007/11/01 20:09:14  customdesigned
+# Support temperror policy in access.
+#
 # Revision 1.115  2007/10/10 18:23:54  customdesigned
 # Send quarantine DSN to SPF pass (official or guessed) only.
 # Reject blacklisted email too big for dspam.
@@ -740,9 +743,9 @@ class bmsMilter(Milter.Milter):
 
     self.user = self.getsymval('{auth_authen}')
     if self.user:
-      # Very simple SMTP AUTH policy by defaul:
+      # Very simple SMTP AUTH policy by default:
       #   any successful authentication is considered INTERNAL
-      # FIXME: configure allowed MAIL FROM by user
+      # Detailed authorization policy is configured in the access file below.
       self.internal_connection = True
       self.log(
         "SMTP AUTH:",self.user, self.getsymval('{auth_type}'),

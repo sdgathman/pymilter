@@ -1,3 +1,8 @@
+Support CBV to local domains and cache results so that invalid users
+can be rejected without maintaining valid user lists.
+
+Now that we blacklist IPs for too many bad rcpts, delay SPF until RCPT TO.
+
 Convert DSN to REJECT unless sender gets SPF pass or best guess pass.  Make
 configurable by SPF result with NOTSPAM policy (reject or deliver without DSN).
 Maybe policy should be NODSN - still verify sender with CBV.

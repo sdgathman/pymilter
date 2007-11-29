@@ -1,5 +1,9 @@
+# This spec file contains 2 noarch packages in addition to the pymilter
+# module.  To compile all three on 32-bit Intel, use:
+# rpmbuild -ba --target=i386,noarch pymilter.spec
+
 %define version 0.8.9
-%define release 1
+%define release 2
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -28,10 +32,6 @@
 %else
 %define libdir /usr/lib/pymilter
 %endif
-
-# This spec file contains 2 noarch packages in addition to the pymilter
-# module.  To compile all three, use:
-# rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %ifarch noarch
 Name: milter
@@ -112,16 +112,7 @@ find /var/log/milter/save -mtime +7 | xargs $R rm
 EOF
 chmod a+x $RPM_BUILD_ROOT/etc/cron.daily/milter
 
-%ifos aix4.1
-cat >$RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
-#!/bin/sh
-cd /var/log/milter
-# uncomment to enable sgmlop if installed
-#export PYTHONPATH=/usr/local/lib/python2.1/site-packages
-exec /usr/local/bin/python bms.py >>milter.log 2>&1
-EOF
-%else # not aix4.1
-cp start.sh $RPM_BUILD_ROOT%{libdir}
+%ifnos aix4.1
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 cp %{sysvinit} $RPM_BUILD_ROOT/etc/rc.d/init.d/milter
 cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
@@ -141,18 +132,8 @@ python="%{python}"
 w
 q
 EOF
-ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
-/^python=/
-c
-python="%{python}"
-.
-w
-q
-EOF
 %endif	# aix4.1
-chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
-mkdir -p $RPM_BUILD_ROOT/var/run/milter
 mkdir -p $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 cp -p rhsbl.m4 $RPM_BUILD_ROOT/usr/share/sendmail-cf/hack
 
@@ -185,7 +166,6 @@ fi
 
 %files 
 %defattr(-,root,root)
-%config %{libdir}/start.sh
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
 %{libdir}/bms.py?
@@ -254,13 +234,39 @@ env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
 %install
 rm -rf $RPM_BUILD_ROOT
 %{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+mkdir -p $RPM_BUILD_ROOT/var/run/milter
+mkdir -p $RPM_BUILD_ROOT%{libdir}
+%ifos aix4.1
+cat >$RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
+#!/bin/sh
+cd /var/log/milter
+# uncomment to enable sgmlop if installed
+#export PYTHONPATH=/usr/local/lib/python2.1/site-packages
+exec /usr/local/bin/python bms.py >>milter.log 2>&1
+EOF
+%else # not aix4.1
+cp start.sh $RPM_BUILD_ROOT%{libdir}
+ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
+/^python=/
+c
+python="%{python}"
+.
+w
+q
+EOF
+%endif
+chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %if !%{redhat7}
 grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 %endif
 
+# start.sh is used by spfmilter and milter, and could be used by
+# other milters running on redhat
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+%config %{libdir}/start.sh
+%dir /var/run/milter
 
 %endif # noarch
 
