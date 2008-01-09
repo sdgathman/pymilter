@@ -4,6 +4,8 @@ import socket
 import email.Errors
 from fnmatch import fnmatchcase
 from email.Header import decode_header
+#import email.Utils
+import rfc822
 
 ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 
@@ -39,6 +41,25 @@ def iniplist(ipaddr,iplist):
     elif fnmatchcase(ipaddr,pat):
       return True
   return False
+
+def parseaddr(t):
+  """Split email into Fullname and address.
+
+  >>> parseaddr('user@example.com')
+  ('', 'user@example.com')
+  >>> parseaddr('"Full Name" <foo@example.com>')
+  ('Full Name', 'foo@example.com')
+  >>> parseaddr('spam@viagra.com <foo@example.com>')
+  ('spam@viagra.com', 'foo@example.com')
+  """
+  #return email.Utils.parseaddr(t)
+  res = rfc822.parseaddr(t)
+  if not res[0]:
+    pos = t.find('<')
+    if pos > 0:
+      return rfc822.parseaddr('"%s" %s' % (t[:pos].strip(),t[pos:]))
+  return res
+    
 
 def parse_addr(t):
   """Split email into user,domain.

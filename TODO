@@ -1,3 +1,8 @@
+Add parseaddr test case for 'foo@bar.com <baz@barf.biz>'
+
+Check ESMTP NOTIFY before sending real DSNs.  Just use CBV if DSNs are
+not wanted.
+
 Support CBV to local domains and cache results so that invalid users
 can be rejected without maintaining valid user lists.
 

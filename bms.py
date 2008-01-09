@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.117  2007/11/29 14:35:17  customdesigned
+# Packaging tweaks.
+#
 # Revision 1.116  2007/11/01 20:09:14  customdesigned
 # Support temperror policy in access.
 #
@@ -171,11 +174,12 @@ import gc
 import anydbm
 import Milter.dsn as dsn
 from Milter.dynip import is_dynip as dynip
-from Milter.utils import iniplist,parse_addr,parse_header,ip4re,addr2bin
+from Milter.utils import \
+        iniplist,parse_addr,parse_header,ip4re,addr2bin,parseaddr
 from Milter.config import MilterConfigParser
 
 from fnmatch import fnmatchcase
-from email.Utils import getaddresses,parseaddr
+from email.Utils import getaddresses
 
 # Import gossip if available
 try:
@@ -563,7 +567,7 @@ class SPFPolicy(object):
 from Milter.cache import AddrCache
 
 cbv_cache = AddrCache(renew=7)
-auto_whitelist = AddrCache(renew=30)
+auto_whitelist = AddrCache(renew=60)
 blacklist = AddrCache(renew=30)
 
 class bmsMilter(Milter.Milter):
