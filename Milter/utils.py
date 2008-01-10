@@ -51,13 +51,28 @@ def parseaddr(t):
   ('Full Name', 'foo@example.com')
   >>> parseaddr('spam@viagra.com <foo@example.com>')
   ('spam@viagra.com', 'foo@example.com')
+  >>> parseaddr('God@heaven <@hop1.org,@hop2.net:jeff@spec.org>')
+  ('God@heaven', 'jeff@spec.org')
   """
   #return email.Utils.parseaddr(t)
   res = rfc822.parseaddr(t)
+  # dirty fix for some broken cases
   if not res[0]:
     pos = t.find('<')
-    if pos > 0:
-      return rfc822.parseaddr('"%s" %s' % (t[:pos].strip(),t[pos:]))
+    if pos > 0 and t[-1] == '>':
+      addrspec = t[pos+1:-1]
+      pos1 = addrspec.rfind(':')
+      if pos1 > 0:
+        addrspec = addrspec[pos1+1:]
+      return rfc822.parseaddr('"%s" <%s>' % (t[:pos].strip(),addrspec))
+  if not res[1]:
+    pos = t.find('<')
+    if pos > 0 and t[-1] == '>':
+      addrspec = t[pos+1:-1]
+      pos1 = addrspec.rfind(':')
+      if pos1 > 0:
+        addrspec = addrspec[pos1+1:]
+      return rfc822.parseaddr('%s<%s>' % (t[:pos].strip(),addrspec))
   return res
     
 
