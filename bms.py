@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.118  2008/01/09 20:15:49  customdesigned
+# Handle unquoted fullname when parsing email.
+#
 # Revision 1.117  2007/11/29 14:35:17  customdesigned
 # Packaging tweaks.
 #
@@ -835,6 +838,7 @@ class bmsMilter(Milter.Milter):
       else:
         self.dspam = False
         self.log("PROBATION",self.canon_from)
+      self.cbv_needed = None
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
         or domain in blacklist:
       if not self.internal_connection:
@@ -986,7 +990,7 @@ class bmsMilter(Milter.Milter):
     "that contain your IP don't count), an invalid or dynamic HELO, ",
     "and no SPF record."
           )
-          return Milter.REJECT
+          return self.offense() # ban ip if too many bad MFROMs
     if res in ('deny', 'fail'):
       policy = p.getFailPolicy()
       if policy == 'CBV':
@@ -1720,7 +1724,7 @@ class bmsMilter(Milter.Milter):
     # the "Fraudulent MX" error).  Whitelisted senders clearly do not
     # need CBV.  However, whitelisted domains might (to discover 
     # bogus localparts).  Need a way to tell the difference.
-    if self.cbv_needed and not self.internal_domain and not self.whitelist:
+    if self.cbv_needed and not self.internal_domain:
       q,res = self.cbv_needed
       if res == 'softfail':
         template_name = 'softfail'
