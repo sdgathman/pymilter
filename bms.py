@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.119  2008/04/01 00:13:10  customdesigned
+# Do not CBV whitelisted addresses.  We already know they are good.
+#
 # Revision 1.118  2008/01/09 20:15:49  customdesigned
 # Handle unquoted fullname when parsing email.
 #
@@ -838,7 +841,8 @@ class bmsMilter(Milter.Milter):
       else:
         self.dspam = False
         self.log("PROBATION",self.canon_from)
-      self.cbv_needed = None
+      if res not in ('permerror','softfail'):
+        self.cbv_needed = None
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
         or domain in blacklist:
       if not self.internal_connection:

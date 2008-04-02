@@ -90,7 +90,7 @@ cat >$RPM_BUILD_ROOT/etc/logrotate.d/milter <<'EOF'
   compress
 }
 /var/log/milter/banned_ips {
-  rotate 3
+  rotate 7
   daily
   copytruncate
 }
@@ -274,6 +274,13 @@ grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
+- improved parsing into email and fullname
+- implement no-DSN CBV
+- check for porn words in MAIL FROM fullname
+- ban IP for too many bad MAIL FROMs
+- temperror policy in access
+- no CBV for whitelisted MAIL FROM except permerror, softfail
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1
 - Use %ifarch hack to build milter and milter-spf packages as noarch
 - Remove spf dependency from dsn.py, add dns.py
@@ -292,6 +299,7 @@ rm -rf $RPM_BUILD_ROOT
 - SPF moved to pyspf RPM
 - wiretap archive option
 - Do plain CBV if missing template
+- SMTP AUTH policy in access
 * Tue May 23 2006 Stuart Gathman <stuart@bmsi.com> 0.8.6-2
 - Support CBV timeout
 - Support fail template, headers in templates

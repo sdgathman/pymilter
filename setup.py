@@ -16,7 +16,7 @@ if sys.version < '2.2.3':
   DistributionMetadata.download_url = None
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
-setup(name = "pymilter", version = '0.8.9',
+setup(name = "pymilter", version = '0.8.10',
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to
