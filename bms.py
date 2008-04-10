@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.120  2008/04/02 18:59:14  customdesigned
+# Release 0.8.10
+#
 # Revision 1.119  2008/04/01 00:13:10  customdesigned
 # Do not CBV whitelisted addresses.  We already know they are good.
 #
@@ -453,7 +456,7 @@ def read_config(list):
     banned_users = cp.getlist('srs','banned_users')
 
   if gossip:
-    global gossip_node
+    global gossip_node, gossip_ttl
     if cp.has_option('gossip','server'):
       server = cp.get('gossip','server')
       host,port = gossip.splitaddr(server)
@@ -463,6 +466,10 @@ def read_config(list):
       for p in cp.getlist('gossip','peers'):
         host,port = gossip.splitaddr(p)
         gossip_node.peers.append(gossip.server.Peer(host,port))
+    if cp.has_option('gossip','ttl'):
+      gossip_ttl = cp.getint('gossip','ttl')
+    else:
+      gossip_ttl = 1
 
 def findsrs(fp):
   lastln = None
