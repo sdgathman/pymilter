@@ -10,6 +10,11 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.8  2007/09/03 16:18:45  customdesigned
+# Delete unparseable timestamps when loading address cache.  These have
+# arisen because of failure to parse MAIL FROM properly.   Will have to
+# tighten up MAIL FROM parsing to match RFC.
+#
 # Revision 1.7  2007/01/25 22:47:26  customdesigned
 # Persist blacklisting from delayed DSNs.
 #
@@ -89,8 +94,10 @@ class AddrCache(object):
     except IOError:
       lock.unlock()
 
-  def has_key(self,sender):
-    "True if sender is cached and has not expired."
+  def has_precise_key(self,sender):
+    """True if precise sender is cached and has not expired.  Don't
+    try looking up wildcard entries.
+    """
     try:
       lsender = sender and sender.lower()
       ts,res = self.cache[lsender]
@@ -98,16 +105,17 @@ class AddrCache(object):
       if not ts or ts > too_old:
         return True
       del self.cache[lsender]
-      try:
-	user,host = sender.split('@',1)
-	return self.has_key(host)
-      except ValueError:
-        pass
-    except KeyError:
-      try:
-	user,host = sender.split('@',1)
-	return self.has_key(host)
-      except: pass
+    except KeyError: pass
+    return False
+
+  def has_key(self,sender):
+    "True if sender is cached and has not expired."
+    if self.has_precise_key(sender):
+      return True
+    try:
+      user,host = sender.split('@',1)
+      return self.has_precise_key(host)
+    except: pass
     return False
 
   __contains__ = has_key

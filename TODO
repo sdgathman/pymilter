@@ -1,5 +1,3 @@
-Add parseaddr test case for 'foo@bar.com <baz@barf.biz>'
-
 Check ESMTP NOTIFY before sending real DSNs.  Just use CBV if DSNs are
 not wanted.
 
@@ -22,7 +20,8 @@ MTA.  The mail is flagged external, so we don't list example.com in
 internal_domains (or we would get "spam from self").  But, if we try to do a
 CBV, we get "fraudulent MX", because the MX is ourself!  So we need to 
 avoid doing CBV on such domains.  Currently, we try to make sure the SPF
-policies don't do CBV.
+policies don't do CBV.  The real solution is for users to use SMTP AUTH,
+but some of them are stubborn.
 
 We now don't check internal domains for incoming mail if there is an
 SPF record.
@@ -189,6 +188,8 @@ embarrass yourself), and also removing Received headers with hidepath.
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
+
+DONE Add parseaddr test case for 'foo@bar.com <baz@barf.biz>'
 
 DONE Require signed MFROM for all incoming bounces when signing all outgoing
 mail - except from trusted relays.

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.121  2008/04/10 14:59:35  customdesigned
+# Configure gossip TTL.
+#
 # Revision 1.120  2008/04/02 18:59:14  customdesigned
 # Release 0.8.10
 #
@@ -1112,10 +1115,13 @@ class bmsMilter(Milter.Milter):
                 self.setreply('550','5.7.1','Invalid SES signature')
                 return Milter.REJECT
               # reject for certain recipients are delayed until after DATA
-              if srs_reject_spoofed \
-                  and not user.lower() in ('postmaster','abuse'):
-                return self.forged_bounce()
-              self.data_allowed = not srs_reject_spoofed
+	      if auto_whitelist.has_precise_key(self.canon_from):
+		self.log("WHITELIST: DSN from",self.canon_from)
+	      else:
+                if srs_reject_spoofed \
+                  and user.lower() not in ('postmaster','abuse'):
+                  return self.forged_bounce()
+                self.data_allowed = not srs_reject_spoofed
 
         if not self.internal_connection and domain in private_relay:
           self.log('REJECT: RELAY:',to)
