@@ -2,8 +2,8 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
-%define version 0.8.9
-%define release 2
+%define version 0.8.10
+%define release 1
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -278,7 +278,7 @@ rm -rf $RPM_BUILD_ROOT
 - improved parsing into email and fullname
 - implement no-DSN CBV
 - check for porn words in MAIL FROM fullname
-- ban IP for too many bad MAIL FROMs
+- ban IP for too many bad MAIL FROMs or RCPT TOs
 - temperror policy in access
 - no CBV for whitelisted MAIL FROM except permerror, softfail
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.122  2008/05/08 21:35:56  customdesigned
+# Allow explicitly whitelisted email from banned_users.
+#
 # Revision 1.121  2008/04/10 14:59:35  customdesigned
 # Configure gossip TTL.
 #
@@ -496,6 +499,12 @@ def findsrs(fp):
         lastln = ln
         break
 
+def param2dict(str):
+  pairs = [x.split('=',1) for x in str]
+  for e in pairs:
+    if len(e) < 2: e.append(None)
+  return dict([(k.upper(),v) for k,v in pairs])
+
 class SPFPolicy(object):
   "Get SPF policy by result from sendmail style access file."
   def __init__(self,sender):
@@ -721,6 +730,9 @@ class bmsMilter(Milter.Milter):
   # of each message.
   def envfrom(self,f,*str):
     self.log("mail from",f,str)
+    #param = param2dict(str)
+    #self.envid = param.get('ENVID',None)
+    #self.mail_param = param
     self.fp = StringIO.StringIO()
     self.tempname = None
     self.mailfrom = f
@@ -1077,6 +1089,15 @@ class bmsMilter(Milter.Milter):
   # track header mods separately from body mods - so use only
   # in emergencies.
   def envrcpt(self,to,*str):
+    try:
+      param = param2dict(str)
+      self.notify = param.get('NOTIFY','FAILURE,DELAY').upper().split(',')
+      if 'NEVER' in self.notify: self.notify = ()
+      #self.rcpt_param = param
+    except:
+      self.log("REJECT: invalid PARAM:",to,str)
+      self.setreply('550','5.7.1','Invalid SRS signature')
+      return Milter.REJECT
     # mail to MAILER-DAEMON is generally spam that bounced
     if to.startswith('<MAILER-DAEMON@'):
       self.log('REJECT: RCPT TO:',to,str)
