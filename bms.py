@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.123  2008/07/29 21:59:29  customdesigned
+# Parse ESMTP params
+#
 # Revision 1.122  2008/05/08 21:35:56  customdesigned
 # Allow explicitly whitelisted email from banned_users.
 #
@@ -1580,7 +1583,7 @@ class bmsMilter(Milter.Milter):
           ds.check_spam(screener,txt,self.recipients,
                   force_result=dspam.DSR_ISINNOCENT)
           return False
-        if self.reject_spam:
+        if self.reject_spam and self.spf.result != 'pass':
           self.log("DSPAM:",screener,
                 'REJECT: X-DSpam-Score: %f' % ds.probability)
           self.setreply('550','5.7.1','Your Message looks spammy')
@@ -1590,12 +1593,18 @@ class bmsMilter(Milter.Milter):
         if self.spf and self.mailfrom != '<>':
           # check that sender accepts quarantine DSN
           self.fp.seek(0)
-          msg = mime.message_from_file(self.fp)
-          rc = self.send_dsn(self.spf,msg,'quarantine')
+	  if self.spf.result == 'pass' or self.cbv_needed:
+	    msg = mime.message_from_file(self.fp)
+	    if self.spf.result == 'pass':
+	      rc = self.send_dsn(self.spf,msg,'quarantine')
+	    else:
+	      rc = self.do_needed_cbv(msg)
+	    del msg
+	  else:
+	    rc = self.send_dsn(self.spf)
           if rc != Milter.CONTINUE:
             self.fp = None
             return rc
-          del msg
         if not ds.check_spam(screener,txt,self.recipients,classify=True):
           self.fp = None
           return Milter.DISCARD
@@ -1637,6 +1646,25 @@ class bmsMilter(Milter.Milter):
     ds.check_spam(screener,txt,self.recipients,force_result=dspam.DSR_ISSPAM,
         quarantine=False)
     self.log("TRAINSPAM:",screener,'X-Dspam-Score: %f' % ds.probability)
+
+  def do_needed_cbv(self,msg):
+    q,res = self.cbv_needed
+    if res == 'softfail':
+      template_name = 'softfail'
+    elif res in ('fail','deny'):
+      template_name = 'fail'
+    elif res in ('unknown','permerror'):
+      template_name = 'permerror'
+    elif res == 'neutral':
+      #template_name = 'neutral'
+      template_name = None
+    elif res in ('error','temperror'):
+      template_name = 'temperror'
+    else:
+      template_name = 'strike3'
+    rc = self.send_dsn(q,msg,template_name)
+    self.cbv_needed = None
+    return rc
 
   def eom(self):
     if not self.fp:
@@ -1763,21 +1791,7 @@ class bmsMilter(Milter.Milter):
     # need CBV.  However, whitelisted domains might (to discover 
     # bogus localparts).  Need a way to tell the difference.
     if self.cbv_needed and not self.internal_domain:
-      q,res = self.cbv_needed
-      if res == 'softfail':
-        template_name = 'softfail'
-      elif res in ('fail','deny'):
-        template_name = 'fail'
-      elif res in ('unknown','permerror'):
-        template_name = 'permerror'
-      elif res == 'neutral':
-        template_name = 'neutral'
-      elif res in ('error','temperror'):
-        template_name = 'temperror'
-      else:
-        template_name = 'strike3'
-      rc = self.send_dsn(q,msg,template_name)
-      self.cbv_needed = None
+      rc = self.do_needed_cbv(msg)
       if rc == Milter.REJECT:
         # Do not feedback here, because feedback should only occur
         # for messages that have gone to DATA.  Reputation lets us
@@ -1886,7 +1900,10 @@ class bmsMilter(Milter.Milter):
         return Milter.TEMPFAIL
       cbv_cache[sender] = res
       self.log('REJECT:',desc)
-      self.setreply('550','5.7.1',*desc.splitlines())
+      try:
+        self.setreply('550','5.7.1',*desc.splitlines())
+      except TypeError:
+        self.setreply('550','5.7.1',"Callback failure")
       return Milter.REJECT
     cbv_cache[sender] = res
     return Milter.CONTINUE
