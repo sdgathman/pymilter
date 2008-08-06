@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.124  2008/08/05 18:04:06  customdesigned
+# Send quarantine DSN to SPF PASS only.
+#
 # Revision 1.123  2008/07/29 21:59:29  customdesigned
 # Parse ESMTP params
 #
@@ -942,17 +945,13 @@ class bmsMilter(Milter.Milter):
       res,code,txt = q.check()
     q.result = res
     if res in ('unknown','permerror') and q.perm_error and q.perm_error.ext:
-      self.cbv_needed = (q,res) # report SPF syntax error to sender
+      self.cbv_needed = (q,'permerror') # report SPF syntax error to sender
       res,code,txt = q.perm_error.ext   # extended (lax processing) result
       txt = 'EXT: ' + txt
     p = SPFPolicy(q.s)
     # FIXME: try:finally to close policy db, or reuse with lock
     if res in ('error','temperror'):
-      policy = p.getTempErrorPolicy()
-      if policy == 'CBV':
-        if self.mailfrom != '<>':
-          self.cbv_needed = (q,res)
-      elif policy != 'OK':
+      if self.need_cbv(p.getTempErrorPolicy(),q,'temperror'):
         self.log('TEMPFAIL: SPF %s %i %s' % (res,code,txt))
         self.setreply(str(code),'4.3.0',txt,
           'We cannot accept your email until the DNS server for %s' % q.o,
@@ -1006,11 +1005,9 @@ class bmsMilter(Milter.Milter):
                 and hres != 'pass':
         # this bad boy has no credentials whatsoever
         policy = p.getNonePolicy()
-        if policy == 'CBV':
-          if self.mailfrom != '<>':
-            self.cbv_needed = (q,ores)  # accept, but inform sender via DSN
+        if policy in ('CBV','DNS'):
           self.offenses = 3    # ban ip if any bad recipient
-        elif policy != 'OK':
+        if self.need_cbv(policy,q,'strike3'):
           self.log('REJECT: no PTR, HELO or SPF')
           self.setreply('550','5.7.1',
     "You must have a valid HELO or publish SPF: http://www.openspf.org ",
@@ -1021,11 +1018,7 @@ class bmsMilter(Milter.Milter):
           )
           return self.offense() # ban ip if too many bad MFROMs
     if res in ('deny', 'fail'):
-      policy = p.getFailPolicy()
-      if policy == 'CBV':
-        if self.mailfrom != '<>':
-          self.cbv_needed = (q,res)
-      elif policy != 'OK':
+      if self.need_cbv(p.getFailPolicy(),q,'fail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         self.setreply(str(code),'5.7.1',txt)
         # A proper SPF fail error message would read:
@@ -1033,11 +1026,7 @@ class bmsMilter(Milter.Milter):
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
         return Milter.REJECT
     if res == 'softfail':
-      policy = p.getSoftfailPolicy()
-      if policy == 'CBV':
-        if self.mailfrom != '<>':
-          self.cbv_needed = (q,res)
-      elif policy != 'OK':
+      if self.need_cbv(p.getSoftfailPolicy(),q,'softfail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         self.setreply('550','5.7.1',
           'SPF softfail: If you get this Delivery Status Notice, your email',
@@ -1048,12 +1037,7 @@ class bmsMilter(Milter.Milter):
         )
         return Milter.REJECT
     if res == 'neutral':
-      policy = p.getNeutralPolicy()
-      if policy == 'CBV':
-        if self.mailfrom != '<>':
-          self.cbv_needed = (q,res)
-          # FIXME: this makes Received-SPF show wrong result
-      elif policy != 'OK':
+      if self.need_cbv(p.getNeutralPolicy(),q,'neutral'):
         self.log('REJECT: SPF neutral for',q.s)
         self.setreply('550','5.7.1',
           'mail from %s must pass SPF: http://openspf.org/why.html' % q.o,
@@ -1065,11 +1049,7 @@ class bmsMilter(Milter.Milter):
         )
         return Milter.REJECT
     if res in ('unknown','permerror'):
-      policy = p.getPermErrorPolicy()
-      if policy == 'CBV':
-        if self.mailfrom != '<>':
-          self.cbv_needed = (q,res)
-      elif policy != 'OK':
+      if self.need_cbv(p.getPermErrorPolicy(),q,'permerror'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         # latest SPF draft recommends 5.5.2 instead of 5.7.1
         self.setreply(str(code),'5.5.2',txt,
@@ -1648,23 +1628,20 @@ class bmsMilter(Milter.Milter):
     self.log("TRAINSPAM:",screener,'X-Dspam-Score: %f' % ds.probability)
 
   def do_needed_cbv(self,msg):
-    q,res = self.cbv_needed
-    if res == 'softfail':
-      template_name = 'softfail'
-    elif res in ('fail','deny'):
-      template_name = 'fail'
-    elif res in ('unknown','permerror'):
-      template_name = 'permerror'
-    elif res == 'neutral':
-      #template_name = 'neutral'
-      template_name = None
-    elif res in ('error','temperror'):
-      template_name = 'temperror'
-    else:
-      template_name = 'strike3'
+    q,template_name = self.cbv_needed
     rc = self.send_dsn(q,msg,template_name)
     self.cbv_needed = None
     return rc
+
+  def need_cbv(self,policy,q,tname):
+    if policy == 'CBV':
+      if self.mailfrom != '<>' and not self.cbv_needed:
+        self.cbv_needed = (q,None)
+    elif policy == 'DSN':
+      if self.mailfrom != '<>' and not self.cbv_needed:
+        self.cbv_needed = (q,tname)
+    elif policy != 'OK': return True
+    return False
 
   def eom(self):
     if not self.fp:
