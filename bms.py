@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.125  2008/08/06 00:52:38  customdesigned
+# CBV policy sends no DSN.  DSN policy sends DSN.
+#
 # Revision 1.124  2008/08/05 18:04:06  customdesigned
 # Send quarantine DSN to SPF PASS only.
 #
@@ -1124,7 +1127,7 @@ class bmsMilter(Milter.Milter):
 	      else:
                 if srs_reject_spoofed \
                   and user.lower() not in ('postmaster','abuse'):
-                  return self.forged_bounce()
+                  return self.forged_bounce(to)
                 self.data_allowed = not srs_reject_spoofed
 
         if not self.internal_connection and domain in private_relay:
@@ -1266,9 +1269,9 @@ class bmsMilter(Milter.Milter):
         return Milter.REJECT
     return Milter.CONTINUE
 
-  def forged_bounce(self):
+  def forged_bounce(self,rcpt='-'):
     if self.mailfrom != '<>':
-      self.log("REJECT: bogus DSN")
+      self.log("REJECT: bogus DSN",rcpt)
       self.setreply('550','5.7.1',
         "I do not accept normal mail from %s." % self.mailfrom.split('@')[0],
         "All such mail has turned out to be Delivery Status Notifications",
@@ -1276,7 +1279,7 @@ class bmsMilter(Milter.Milter):
         "you need to.  Use another MAIL FROM if you need to send me mail."
       )
     else:
-      self.log('REJECT: bounce with no SRS encoding')
+      self.log('REJECT: bounce with no SRS encoding',rcpt)
       self.setreply('550','5.7.1',
         "I did not send you that message. Please consider implementing SPF",
         "(http://openspf.org) to avoid bouncing mail to spoofed senders.",
