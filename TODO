@@ -6,10 +6,6 @@ can be rejected without maintaining valid user lists.
 
 Now that we blacklist IPs for too many bad rcpts, delay SPF until RCPT TO.
 
-Convert DSN to REJECT unless sender gets SPF pass or best guess pass.  Make
-configurable by SPF result with NOTSPAM policy (reject or deliver without DSN).
-Maybe policy should be NODSN - still verify sender with CBV.
-
 When content filtering is not installed, reject BLACKLISTed MFROM
 immediately.  There is no use waiting until EOM.
 
@@ -86,10 +82,6 @@ Whitelisted senders from trusted relay get PROBATION.  Need to extracted
 SPF result from headers - and in the case of mail internal to relay
 (e.g. bmsi.com), supply 'pass' result.  
 
-For selected domains, check rcpts via CBV before accepting mail.  Cache
-results.  This will kick out dictonary attacks against a mail domain
-behind a gateway sooner.
-
 Add auto-blacklisted senders to blacklist.log with timestamp.
 Add emails blacklisted via CBV so that they are remembered across milter
 restarts.
@@ -105,8 +97,6 @@ e.g. verizon.net).
 
 Allow verified hostnames for trusted_relay.  E.g. HELO name that
 passes SPF.
-
-Table of sendmail macros for documentation.
 
 When do we get two hello calls?  STARTTLS is one reason.
 
@@ -188,6 +178,16 @@ embarrass yourself), and also removing Received headers with hidepath.
 Need a test module to feed sample messages to a milter though a live 
 sendmail and SMTP.  The mockup currently used is probably not very accurate,
 and doesn't test the threading code.
+
+DONE Table of sendmail macros for documentation.  In API docs on milter.org.
+
+DONE For selected domains, check rcpts via CBV before accepting mail.  Cache
+results.  This will kick out dictonary attacks against a mail domain
+behind a gateway sooner.
+
+DONE Convert DSN to REJECT unless sender gets SPF pass or best guess pass.  Make
+configurable by SPF result with NOTSPAM policy (reject or deliver without DSN).
+Maybe policy should be NODSN - still verify sender with CBV.
 
 DONE Add parseaddr test case for 'foo@bar.com <baz@barf.biz>'
 
