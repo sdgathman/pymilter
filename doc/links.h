@@ -11,7 +11,7 @@
 <li><a href="credits.html">CREDITS</a>
 <li><a href="http://sourceforge.net"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=139894&amp;type=1" width="88" height="31" border="0" alt="SourceForge.net Logo" /></a>
 <h3>Links</h3>
-<li><a href="http://www.milter.org/milter_api/api.html">C&nbsp;API</a>
+<li><a href="https://www.milter.org/developers/api/index">C&nbsp;API</a>
 <li><a href="http://www.milter.org/">Milter.Org</a>
 <li><a href="http://www.python.org/">Python.Org</a>
 <li><a href="http://www.sendmail.org/">Sendmail.Org</a>

@@ -31,7 +31,7 @@ See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/sho
 <a href="//www.python.org">
 <img src="python55.gif" align=left alt="A Python"></a>
 <a href="//www.sendmail.org/">Sendmail</a> introduced a
-<a href="http://www.milter.org/milter_api/api.html"> new API</a> beginning with version 8.10 -
+<a href="https://www.milter.org/developers/api/index"> new API</a> beginning with version 8.10 -
 libmilter.  The milter module for <a href="//www.python.org">Python</a>
 provides a python interface to libmilter that exploits all its features.
 <p>
@@ -48,7 +48,7 @@ href="#milter">milters</a>, and the beginnings of a general purpose mail
 filtering system written in Python.
 <p>
 At the lowest level, the 'milter' module provides a thin wrapper around the
-<a href="http://www.milter.org/milter_api/api.html">
+<a href="https://www.milter.org/developers/api/index">
 sendmail libmilter API</a>.  This API lets you register callbacks for 
 a number of events in the
 <a href="http://www.cs.concordia.ca/~group/fig/public/email/relay/milter+ruleset-checks.html">process of sendmail receiving a message via SMTP</a>.  
@@ -121,7 +121,7 @@ copy mail.
 <li> For more ideas, check the <a href="//www.milter.org">Milter Web Page</a>.
 </menu>
 
-<a href="http://www.milter.org/milter_api/api.html">
+<a href="https://www.milter.org/developers/api/index">
 Documentation</a> for the C API is provided with sendmail.  Miltermodule
 provides a thin python wrapper for the C API.  Milter.py provides a simple
 OO wrapper on top of that.
