@@ -261,7 +261,7 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %defattr(-,root,root)
 %doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
 %config %{libdir}/start.sh
-%dir(-,mail,mail) /var/run/milter
+%dir %attr(-,mail,mail) /var/run/milter
 
 %endif # noarch
 
