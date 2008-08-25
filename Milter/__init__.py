@@ -184,8 +184,10 @@ def runmilter(name,socketname,timeout = 0):
     print "Removing %s" % fname
     try:
       os.unlink(fname)
-    except:
-      pass
+    except os.error, x:
+      import errno
+      if x.errno != errno.ENOENT:
+        raise milter.error(x)
 
   # The default flags set include everything
   # milter.set_flags(milter.ADDHDRS)

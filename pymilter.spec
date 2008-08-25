@@ -270,7 +270,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-2
-- /var/run/milter directory owned by mail
+- /var/run/milter directory must be owned by mail
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
 - log rcpt for SRS rejections
 - improved parsing into email and fullname (still 2 self test failures)
