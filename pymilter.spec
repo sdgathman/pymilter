@@ -2,8 +2,9 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
+%define __python python2.4
 %define version 0.8.10
-%define release 1
+%define release 1%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -21,12 +22,6 @@
 %define sysvinit milter.rc
 %endif
 # RH9, other systems (single ps line per process)
-%ifos Linux	# whether to use system default python?
-#define python python
-%define python python2.4
-%else
-%define python python
-%endif
 %ifos aix4.1
 %define libdir /var/log/milter
 %else
@@ -48,7 +43,7 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, pyspf >= 2.0.4, pymilter
+Requires: %{__python} >= 2.4, pyspf >= 2.0.4, pymilter
 %ifos Linux
 Requires: chkconfig
 %endif
@@ -119,7 +114,7 @@ cp spfmilter.rc $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/milter <<'EOF'
 /^python=/
 c
-python="%{python}"
+python="%{__python}"
 .
 w
 q
@@ -127,7 +122,7 @@ EOF
 ed $RPM_BUILD_ROOT/etc/rc.d/init.d/spfmilter <<'EOF'
 /^python=/
 c
-python="%{python}"
+python="%{__python}"
 .
 w
 q
@@ -210,8 +205,8 @@ Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{python} >= 2.4, sendmail >= 8.13
-BuildRequires: %{python}-devel >= 2.4, sendmail-devel >= 8.13
+Requires: %{__python} >= 2.4, sendmail >= 8.13
+BuildRequires: %{__python}-devel >= 2.4, sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
@@ -229,11 +224,11 @@ DSNs, and doing CBV.
 %else # Redhat builds debug packages after 7.3
   LDFLAGS="-g"
 %endif
-env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{python} setup.py build
+env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{__python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%{python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+%{__python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
 mkdir -p $RPM_BUILD_ROOT/var/run/milter
 mkdir -p $RPM_BUILD_ROOT%{libdir}
 %ifos aix4.1
@@ -249,7 +244,7 @@ cp start.sh $RPM_BUILD_ROOT%{libdir}
 ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
 /^python=/
 c
-python="%{python}"
+python="%{__python}"
 .
 w
 q
