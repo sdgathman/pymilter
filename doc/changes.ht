@@ -2,6 +2,47 @@ Title: Recent Changes
 
 <h2> Recent Changes </h2>
 
+<h3> 0.8.10 </h3>
+
+SRS rejections now log the recipient.  
+I have finally implemented plain CBV (no DSN).  The CBV policy
+will do a plain CBV from now on, and the DSN policy is required
+if you want to send a DSN.
+I started checking the MAIL FROM fullname (human readable part
+of an email) for porn keywords.  There is now a banned IP database.
+IPs are banned for too many bad MAIL FROMs or RCPT TOs, and remain banned
+for 7 days.
+
+<h3> 0.8.9 </h3>
+
+I use the <code>%ifarch</code> hack to build milter and milter-spf
+packages as noarch, while pymilter is built as native.
+
+I removed the spf dependency from dsn.py, so pymilter can be used without
+installing pyspf, and added a Milter.dns module to let python milters do
+general DNS lookups without loading pyspf.
+
+<h3> 0.8.8 </h3>
+
+Programs do not belong in the /var/log directory.  I moved the
+milter apps to /usr/lib/pymilter.  Since having the programs and
+data in the same directory is convenient for debugging, it will
+still use an executable present in the datadir.
+
+Several general utility classes and functions are now in the Milter package
+for possible use by other python milters.  In addition to the trivial example
+milter, a simple SPF only milter is included as a realistic example.
+
+The spec file now build 3 RPMs:
+
+<ul>
+<li> pymilter is the milter module and Milter package for use by all python
+     milters.
+<li> milter is the all-singing, all-dancing python milter application, with
+     supporting <code>/etc/init.d</code>, logrotate and other scripts.
+<li> milter-spf is the simple SPF only milter application.
+</ul>
+
 <h3> 0.8.7 </h3>
 
 The spf module has been moved to the 

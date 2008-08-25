@@ -5,7 +5,7 @@ Title: Credits
 <a href="mailto:Jim Niemira <urmane@urmane.org>">Jim Niemira</a>
 wrote the original C module and some quick
 and dirty python to use it.  
-<a href="mailto:Stuart Gathman <stuart@bmsi.com>">Stuart D. Gathman</a>
+<a href="http://gathman.org/vitae">Stuart D. Gathman</a>
 took that kludge and added threading and context objects to it, wrote a proper
 OO wrapper (Milter.py) that handles attachments, did lots of testing, packaged
 it with distutils, and generally transformed it from a quick hack to a

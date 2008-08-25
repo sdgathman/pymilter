@@ -4,8 +4,7 @@ Title: Python Milter Mail Policy
 
 These are the policies implemented by the <code>bms.py</code> milter
 application.  The milter and Milter modules do not implement any policies
-by themselves.  Eventually, I'll get the bms.py milter moved to its
-own package.
+by themselves.  
 
 <h3> Classify connection </h3>
 
@@ -77,161 +76,119 @@ altered accordingly.
 
 <h2> SPF check </h2>
 
-Finally, the MAIL FROM, connect IP, and HELO name are checked against
-any SPF records published via DNS for the alleged sender (MAIL FROM).
-If there is no SPF record, we check for a local substitute under the
-domain defined in the <code>[spf]delegate</code> configuration.
-Further checks depend on the result.
+The MAIL FROM, connect IP, and HELO name are checked against
+any SPF records published via DNS for the alleged sender (MAIL FROM)
+to determine the official SPF policy result.
+The offical SPF result is then logged in the Received-SPF header field,
+but certain results are subjected to further processing to create
+an effective result for policy purposes.
 
-<table border=1>
-<tr><th>NONE</th><td>
-If there is no SPF record (official or delegated), then we 
-initiate a "three strikes and your out" regime, which looks for
-<b>some</b> form of validated identification.
-<ol>
-<li>We try a "best guess" SPF record of "v=spf1 a/24 mx/24 ptr".  If this
-    passes, good.  
-<li> We try to validate the HELO name. First check for an SPF record.
-   Otherwise, check whether the connect IP matches any A record for
-   the HELO name, or any A record for any MX name for the HELO name,
-   or is at least in the same /24 subnet as any of the above.
-   (In other words, a HELO SPF "best guess" of "v=spf1 a/24 mx/24".)
-   If so, good.  We consider the HELO validated.  If the HELO SPF
-   check fails, we reject the email.
-</ol>
+If the official result is 'none', we try to turn it into an effective result of
+'pass' or 'fail'.  First, we check for a local substitute SPF record
+under the domain defined in the <code>[spf]delegate</code> configuration.  
+It is often useful to add local SPF records for correspondents that are
+too clueless to add their own.  If there is no local substitute, we use a "best
+guess" SPF record of "v=spf1 a/24 mx/24 ptr" for MAIL FROM or "v=spf1 a/24
+mx/24" for HELO.  In addition, a HELO that is a subdomain of MAIL FROM and
+resolves to the connect IP results in an effective result of 'pass'.
+
+If there is no local SPF record, and the effective result is still not
+'pass', we check for either a valid HELO name or a valid PTR record for
+the connect IP.  A valid HELO or PTR cannot look like a dynamic name
+as determined by the heuristic in <code>Milter.dynip</code>.
+
+If HELO has an SPF record, and the result is anything but pass, we reject
+the connection:
 <pre>
 2005Jul30 19:45:16 [93991] connect from [221.200.41.54] at ('221.200.41.54', 3581) EXTERNAL DYN
 2005Jul30 19:45:18 [93991] hello from adelphia.net
 2005Jul30 19:45:19 [93991] mail from <wendy.stubbsua@link-it.com> ()
 2005Jul30 19:45:19 [93991] REJECT: hello SPF: fail 550 access denied
 </pre>
-<ol>
-<li> If there is a validated PTR name, and it doesn't look
-   like a dynamic name, good.  We consider the connection validated.
-</ol>
-If any of the above can be validated, we continue on.
-If none of the above can be validated, and the <code>[SPF]reject_noptr</code>
-option is true, we reject the message immediately with the explanation
-that we need some form of valid identification before we accept an email.
-If <code>[SPF]reject_noptr</code> is false, we flag the message as
-needing Call Back Validation.  
-The Call Back Valildation sends a DSN to the purported sender informing
-them of the lack of identification.  If the message is legitimate, the
-sender needs to know that their email setup is broken and should be corrected.
-If the message is forged, the sender is informed of the forgery, 
-and their need to publish an SPF record or at least use a valid HELO name.
-If the purported sender does not accept the DSN,
-then the message is rejected.  The CBV status is cached to avoid
-annoying the purported sender with too many DSNs.  Currently, the DSN
-is repeated to the same sender once per month.
-<p>
-In this example, although 3com.com has no SPF record, we assume that 
-any legitimate mail from them will at least have a valid HELO or PTR.
-<pre>
-2005Jul30 23:52:03 [96777] connect from [222.252.233.200] at ('222.252.233.200', 29934) EXTERNAL DYN
-2005Jul30 23:52:03 [96777] hello from 3mail.3com.com
-2005Jul30 23:52:04 [96777] mail from <etec_nic_family@3mail.3com.com> ()
-2005Jul30 23:52:04 [96777] REJECT: no PTR, HELO or SPF
-</pre>
-</td></tr>
+Note that HELO does not have any forwarding issues like MAIL FROM, and so
+any result other than 'pass' or 'none' should be treated like 'fail'.
 
-<tr><th>PASS</th><td>
-A pass result normally lets the email continue on, but the domain is 
-tracked for reputation (and may be blocked), and may skip content scanning if
-it matches a whitelist.
-<pre>
-2005Jul24 17:44:26 [2104] mail from <gnucash-devel-bounces@gnucash.org> ('SIZE=4410',)
-2005Jul24 17:44:26 [2104] Received-SPF: pass (mail.bmsi.com: domain of gnucash.org
-	designates 204.107.200.65 as permitted sender)
-	client-ip=204.107.200.65; envelope-from=gnucash-devel-bounces@gnucash.org; helo=cvs.gnucash.org;
-</pre>
-</td></tr>
+Only if nothing about the SMTP envelope can be validated does the effective
+result remain 'none.  I call this the "3 strikes" rule.
 
-<tr><th>NEUTRAL</th><td>
-A neutral result normally lets the email continue on, but the domain is not
-tracked for reputation or matched against any whitelists. 
-Highly forged domains listed in <code>[SPF]reject_neutral</code> are
-rejected.
-<pre>
-2005Jul24 17:41:37 [2070] connect from cp500627-a.dbsch1.nb.home.nl at ('84.27.225.3', 3465) EXTERNAL
-2005Jul24 17:41:37 [2070] hello from cp500627-a.dbsch1.nb.home.nl
-2005Jul24 17:41:38 [2070] mail from <nwarjejkw@yahoo.com> ()
-2005Jul24 17:41:38 [2070] REJECT: SPF neutral for nwarjejkw@yahoo.com
-</pre>
-</td></tr>
+If the official result is 'permerror' (a syntax error in the sender's
+policy), we use the 'lax' option in pyspf to try various heuristics to guess 
+what they really meant.  For instance, the invalid mechanism "ip:1.2.3.4" is
+treated as "ip4:1.2.3.4".  The result of lax processing is then used
+as the effective result for policy purposes.
 
-<tr><th>SOFTFAIL</th><td>
-A softfail result normally lets the email continue on, but the domain is not
-tracked for reputation or matched against any whitelists.  Furthermore,
-the message is flagged as needing Call Back Validation,
-and the highly forged domains listed in <code>[SPF]reject_neutral</code> are
-rejected as well.  
-<p>
-At present, we also require a valid HELO or PTR to avoid rejecting 
-a softfail.  But this should probably change to only require a
-successful CBV.
-<p>
-The Call Back Valildation sends a DSN to the purported sender informing
-them of the softfail.  If the message is legitimate, the sender needs
-to know about the softfail so that their email setup can be corrected.
-If the message is forged, the sender is informed of the forgery, confirming
-that SPF is protecting their reputation and encouraging a rapid transition
-to a strict policy.  If the purported sender does not accept the DSN,
-then the message is rejected.  The CBV status is cached to avoid
-annoying the purported sender with too many DSNs.  Currently, the DSN
-is repeated to the same sender once per month.
-<pre>
-2005Jul24 15:41:33 [801] mail from <Aitp@horafeliz.com> ()
-2005Jul24 15:41:33 [801] Received-SPF: softfail (mail.bmsi.com: transitioning domain of horafeliz.com
-	does not designate 221.184.83.185 as permitted sender)
-	client-ip=221.184.83.185; envelope-from=Aitp@horafeliz.com;
-	helo=p8185-ipad30funabasi.chiba.ocn.ne.jp;
-2005Jul24 15:41:33 [801] rcpt to <david@example.com> ()
-2005Jul24 15:41:35 [801] Subject: Microsoft, Adobe, Macromedia, Corel software. Up to 80% discount.
-2005Jul24 15:41:35 [801] X-Mailer: Microsoft Outlook, Build 10.0.2605
-2005Jul24 15:41:35 [801] CBV: Aitp@horafeliz.com
-2005Jul24 15:41:38 [801] REJECT: CBV: 550 <Aitp@horafeliz.com>: User unknown
-</pre>
-</td></tr>
+With an effective SPF result in hand, we consult the sendmail access
+database to find our receiver policy for the sender.  
 
-<tr><th>FAIL</th><td>
-The message is rejected with a reference the SPF why page.
-<pre>
-2005Jul30 19:53:27 [94070] connect from [212.70.52.16] at ('212.70.52.16', 3192) EXTERNAL DYN
-2005Jul30 19:53:27 [94070] hello from winzip.com
-2005Jul30 19:53:27 [94070] mail from <dan@winzip.com> ()
-2005Jul30 19:53:27 [94070] REJECT: SPF fail 550 SPF fail:
-	see http://openspf.com/why.html?sender=dan@winzip.com&ip=212.70.52.16
-</pre>
+<table border=1>
+<tr><th>REJECT</th><td>
+Reject the sender with a 550 5.7.1 SMTP code.  The SMTP rejection
+includes a detailed description of the problem.
 </td></tr>
-
-<tr><th>PERMERROR</th><td>
-Permanent errors were called "unknown", and are still show that way
-in the log.  The message is rejected.  Previously, we enabled "lax" parsing
-of the SPF record, but rejecting is better because it informs the
-sender about their problem.  The next milter version will 
-look for a local substitute SPF record (as for a missing SPF record)
-before rejecting.  This will inform the sender of their problem, but
-also let the receiver install a temporary workaround.
-<pre>
-2005Jul24 18:05:37 [2312] mail from <b-mihdbcgaacaa-becibijh-000-@msg.euxiphipops.com> () 
-2005Jul24 18:05:37 [2312] REJECT: SPF unknown 550 SPF Permanent Error:
-	include mechanism missing domain: include
-</pre>
-The SPF record for msg.euxiphipops.com looked like this at the time of the
-above error:
-<pre>
-msg.euxiphipops.com	TXT "v=spf1 mx ptr a include"
-</pre>
+<tr><th>CBV</th><td>
+Do a Call Back Validation by connecting to an MX of the sender
+and checking that using the sender as the RCPT TO is not rejected.
+We quit the CBV connection before actualling sending a message.
+If the CBV is rejected, our SMTP connection is rejected with the
+same error code and message.  CBV results are cached.
 </td></tr>
-
-<tr><th>TEMPERROR</th><td>
-Temporary errors result in a 451 "Try again later" response.  The sender
-should retry the message at a later time.
-<pre>
-2005Jul24 07:33:13 [29846] mail from <quickenloans@rate.quicken.com> ('SIZE=73775', 'BODY=8BITMIME')
-2005Jul24 07:33:43 [29846] TEMPFAIL: SPF error 450 SPF Temporary Error: DNS Timeout
-</pre>
+<tr><th>DSN</th><td>
+Do a Call Back Validation by connecting to an MX of the sender
+and checking that using the sender as the RCPT TO is not rejected.
+Unlike a CBV, we continue on to data and send a detailed message
+explaining the problem.  This can be useful for reporting PermError
+or SoftFail to the sender.  Keep in mind that for any result other
+than 'pass', the sender could be forged, and your DSN could annoy the
+wrong person.  However, a SoftFail result is requesting such feedback
+for debugging and a PermError result needs to be fixed by the sender ASAP
+whether forged or not.  DSN results are cached so that senders are
+annoyed only weekly.
 </td></tr>
-
+<tr><th>OK</th><td>
+Accept the sender.  The message may still be rejected via reputation
+or content filtering.
+</td></tr>
 </table>
+
+<h3> SPF policy syntax </h3>
+
+First, the full sender is checked:
+<pre>
+SPF-Fail:abeb@adelphia.net     DSN
+</pre>
+This says to accept mail from that adelphia.net user despite the
+SPF fail, but only after annoying them with a DSN about their ISP's broken
+policy. 
+
+If there is no match on the full sender, the domain is checked:
+<pre>
+SPF-Neutral:aol.com     REJECT
+</pre>
+This says to reject mail from AOL with an SPF result of neutral.
+This means AOL users can't use their AOL address with another mail service
+to send us mail.  This is good because the other mail service is 
+likely a badly configured greeting card site or a virus.
+
+Finally, a default policy for the result is checked.  While there are program
+defaults, you should have defaults in the access database for SPF results:
+<pre>
+SPF-Neutral:            CBV
+SPF-Softfail:           DSN
+SPF-PermError:          DSN
+SPF-TempError:          REJECT
+SPF-None:               REJECT
+SPF-Fail:               REJECT
+SPF-Pass:               OK
+</pre>
+
+<h2> Reputation </h2>
+
+If the sender has not been rejected by this point, and if a GOSSiP server is
+configured, we consult GOSSiP for the reputation score of the sender and
+SPF result.  The score is a number from -100 to 100 with a confidence
+percentage from 0 to 100.  A really bad reputation (less than -50 with
+confidence greater than 3) is rejected.  Note that the reputation is tracked
+independently for each SPF result and sender combination.  So aol.com:neutral
+might have a really bad reputation, while aol.com:pass would be ok.
+Furthermore, when a sender finally publishes an SPF policy and starts
+getting SPF pass, their reputation is effectively reset.
