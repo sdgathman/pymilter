@@ -275,12 +275,15 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
+- log rcpt for SRS rejections
 - improved parsing into email and fullname
-- implement no-DSN CBV
+- implement no-DSN CBV, reduce full DSNs
 - check for porn words in MAIL FROM fullname
 - ban IP for too many bad MAIL FROMs or RCPT TOs
 - temperror policy in access
 - no CBV for whitelisted MAIL FROM except permerror, softfail
+- Allow explicitly whitelisted email from banned_users.
+- configure gossip TTL
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1
 - Use %ifarch hack to build milter and milter-spf packages as noarch
 - Remove spf dependency from dsn.py, add dns.py
