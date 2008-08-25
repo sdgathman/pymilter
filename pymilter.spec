@@ -22,8 +22,8 @@
 %endif
 # RH9, other systems (single ps line per process)
 %ifos Linux	# whether to use system default python?
-%define python python
-#define python python2.4
+#define python python
+%define python python2.4
 %else
 %define python python
 %endif
@@ -168,7 +168,6 @@ fi
 %defattr(-,root,root)
 /etc/logrotate.d/milter
 /etc/cron.daily/milter
-%{libdir}/bms.py?
 %ifos aix4.1
 %defattr(-,smmsp,mail)
 %else
@@ -184,6 +183,7 @@ fi
 %config(noreplace) /var/log/milter/neutral.txt
 %config(noreplace) /var/log/milter/quarantine.txt
 %config(noreplace) /var/log/milter/permerror.txt
+%config(noreplace) /var/log/milter/temperror.txt
 %config(noreplace) /etc/mail/pymilter.cfg
 /usr/share/sendmail-cf/hack/rhsbl.m4
 
@@ -257,7 +257,7 @@ EOF
 %endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %if !%{redhat7}
-grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
+#grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 %endif
 
 # start.sh is used by spfmilter and milter, and could be used by
