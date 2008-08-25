@@ -13,7 +13,12 @@ ALT="Viewable With Any Browser" BORDER="0"></A>
 </map>
 </P>
 
-<img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align=left>
+<table rules="none">
+<tr><td>
+<img src="Maxwells.gif" alt="Maxwell's Daemon: pymilter mascot" align="top">
+Mascot by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
+</td>
+<td>
 <h1 align=center>Sendmail Milters in Python</h1>
 <h4 align=center>by <a href="mailto:%75%72%6D%61%6E%65%40%6E%65%75%72%61l%61%63%63%65%73%73%2E%63%6F%6D">Jim Niemira</a>
   and <a href="mailto:%73%74%75%61%72%74%40%62%6D%73%69%2E%63%6F%6D">
@@ -40,6 +45,8 @@ Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
 efficient and secure.  I recommend upgrading.
+</td></tr>
+</table>
 
 <h3><a name=overview>Overview</a></h3>
 
