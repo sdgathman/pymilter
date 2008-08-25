@@ -35,13 +35,13 @@ wish to install pydspam.
 For basic pymilter you'll need:
 
 python-2.4
-milter-0.8.7
+milter-0.8.10
 sendmail-8.13.x	(with milter support enabled)
 
 and for SPF you'll need:
 
-pydns-2.3.0-2.4
-pyspf-2.0.3-2.py24
+pydns-2.3.3-2.4
+pyspf-2.0.5-1.py24
 
 and for SRS you'll need:
 
@@ -65,7 +65,7 @@ Start milter and pysrs with "service milter start", "service pysrs start".
 Tail /var/log/milter/milter.log while SMTP clients connect to your
 sendmail instance.  This should show you what the milter is doing.
 
-By default, milter-0.8.7 rejects on SPF fail.
+By default, milter-0.8.10 rejects on SPF fail.
 
 	Step four.  Tweaking the basic config.
 
