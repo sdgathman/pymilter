@@ -4,7 +4,7 @@
 
 %define __python python2.4
 %define version 0.8.10
-%define release 1%{?dist}.py24
+%define release 2%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -261,7 +261,7 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %defattr(-,root,root)
 %doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
 %config %{libdir}/start.sh
-%dir /var/run/milter
+%dir(-,mail,mail) /var/run/milter
 
 %endif # noarch
 
@@ -269,7 +269,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
+* Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-2
+- /var/run/milter directory owned by mail
+* Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
 - log rcpt for SRS rejections
 - improved parsing into email and fullname (still 2 self test failures)
 - implement no-DSN CBV, reduce full DSNs
