@@ -276,7 +276,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
 - log rcpt for SRS rejections
-- improved parsing into email and fullname
+- improved parsing into email and fullname (still 2 self test failures)
 - implement no-DSN CBV, reduce full DSNs
 - check for porn words in MAIL FROM fullname
 - ban IP for too many bad MAIL FROMs or RCPT TOs

@@ -44,7 +44,7 @@ class TestMilter(bms.bmsMilter):
       self._msg[field] = value
     self.headerschanged = True
 
-  def addheader(self,field,value):
+  def addheader(self,field,value,idx=-1):
     if not self._body:
       raise IOError,"addheader not called from eom()"
     self.log('addheader: %s=%s' % (field,value))

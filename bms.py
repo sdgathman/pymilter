@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.126  2008/08/18 17:47:57  customdesigned
+# Log rcpt for SRS rejections.
+#
 # Revision 1.125  2008/08/06 00:52:38  customdesigned
 # CBV policy sends no DSN.  DSN policy sends DSN.
 #
@@ -210,6 +213,7 @@ try:
   import gossip
   import gossip.client
   import gossip.server
+  gossip_node = None
 except: gossip = None
 
 # Import pysrs if available
@@ -893,7 +897,8 @@ class bmsMilter(Milter.Milter):
     else:
       global gossip
       if gossip and domain and rc == Milter.CONTINUE \
-          and not (self.internal_connection or self.trusted_relay):
+          and not (self.internal_connection or self.trusted_relay) \
+          and gossip_node:
         if self.spf and self.spf.result == 'pass':
           qual = 'SPF'
         elif res == 'pass':
