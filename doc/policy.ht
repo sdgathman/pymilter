@@ -82,7 +82,7 @@ to determine the official SPF policy result.
 The offical SPF result is then logged in the Received-SPF header field,
 but certain results are subjected to further processing to create
 an effective result for policy purposes.
-
+<p>
 If the official result is 'none', we try to turn it into an effective result of
 'pass' or 'fail'.  First, we check for a local substitute SPF record
 under the domain defined in the <code>[spf]delegate</code> configuration.  
@@ -91,12 +91,12 @@ too clueless to add their own.  If there is no local substitute, we use a "best
 guess" SPF record of "v=spf1 a/24 mx/24 ptr" for MAIL FROM or "v=spf1 a/24
 mx/24" for HELO.  In addition, a HELO that is a subdomain of MAIL FROM and
 resolves to the connect IP results in an effective result of 'pass'.
-
+<p>
 If there is no local SPF record, and the effective result is still not
 'pass', we check for either a valid HELO name or a valid PTR record for
 the connect IP.  A valid HELO or PTR cannot look like a dynamic name
 as determined by the heuristic in <code>Milter.dynip</code>.
-
+<p>
 If HELO has an SPF record, and the result is anything but pass, we reject
 the connection:
 <pre>
@@ -107,16 +107,16 @@ the connection:
 </pre>
 Note that HELO does not have any forwarding issues like MAIL FROM, and so
 any result other than 'pass' or 'none' should be treated like 'fail'.
-
+<p>
 Only if nothing about the SMTP envelope can be validated does the effective
 result remain 'none.  I call this the "3 strikes" rule.
-
+<p>
 If the official result is 'permerror' (a syntax error in the sender's
 policy), we use the 'lax' option in pyspf to try various heuristics to guess 
 what they really meant.  For instance, the invalid mechanism "ip:1.2.3.4" is
 treated as "ip4:1.2.3.4".  The result of lax processing is then used
 as the effective result for policy purposes.
-
+<p>
 With an effective SPF result in hand, we consult the sendmail access
 database to find our receiver policy for the sender.  
 
@@ -159,7 +159,7 @@ SPF-Fail:abeb@adelphia.net     DSN
 This says to accept mail from that adelphia.net user despite the
 SPF fail, but only after annoying them with a DSN about their ISP's broken
 policy. 
-
+<p>
 If there is no match on the full sender, the domain is checked:
 <pre>
 SPF-Neutral:aol.com     REJECT
@@ -168,7 +168,7 @@ This says to reject mail from AOL with an SPF result of neutral.
 This means AOL users can't use their AOL address with another mail service
 to send us mail.  This is good because the other mail service is 
 likely a badly configured greeting card site or a virus.
-
+<p>
 Finally, a default policy for the result is checked.  While there are program
 defaults, you should have defaults in the access database for SPF results:
 <pre>
@@ -192,3 +192,58 @@ independently for each SPF result and sender combination.  So aol.com:neutral
 might have a really bad reputation, while aol.com:pass would be ok.
 Furthermore, when a sender finally publishes an SPF policy and starts
 getting SPF pass, their reputation is effectively reset.
+
+<h2> Whitelists and Blacklists </h2>
+
+The administrator can whitelist or blacklist senders and sending domains by
+appending them to <code>${datadir}/auto_whitelist.log</code> or
+<code>${datadir}/blacklist.log</code> respectively.  In addition,
+recipients of internal senders (except for automatic replies like vacation
+messages and return receipts) are automatically whitelisted for 60 days, and
+senders that fail CBV or DSN checks are automatically blacklisted for 30 days.
+Whitelisted and blacklisted senders are used to automatically train the
+bayesian content filter before being delivered or rejected, respectively.
+<p>
+Real Soon Now users will be able to maintain their own whitelist and
+blacklist that applies only when they are the recipient.
+
+<h2> Content Filter </h2>
+
+Most messages have been rejected or delivered by now, but spammers
+are always finding new places to send their junk from.  For instance,
+we get around 10000 emails a day, of which around 500 are first time
+spam senders.  A bayesian filter is trained by the whitelists and
+blacklists, and scores the message.  What is likely spam is either
+rejected or quarantined.  If the sender is an effective SPF pass,
+then they get a DSN notifying them that their message has been
+quarantined.  (A DSN failure gets the sender auto blacklisted.)
+Else, if the reject_spam option is set, the message is rejected.  
+Otherwise, a CBV is done (failure gets the sender auto blacklisted)
+and the message is silently quarantined.
+<p>
+Normally, you don't want email messages to silently disappear into
+a black hole, so you should set the reject_spam option.  However,
+if you don't want your correspondent's email to get rejected, you can
+check your quarantine frequently instead.
+
+<h3> Honeypot </h3>
+
+You can also blacklist recipients by listing them as aliases of the
+'honeypot' dspam user.  These are collectively called
+the honeypot.  Any email to these recipients is used to train the
+spam filter as spam and chalk up a reputation demerit for the sender, then
+discarded.  It might be a good idea to blacklist the sender if it has SPF pass
+as well, but I'm afraid of accidents.
+
+<h3> Reputation </h3>
+
+Reputation is tracked by sending domain and effective SPF result.
+The GOSSiP server tracks the spam/ham status of the last 1024 messages
+for each domain:result combination.  When the server is queried during
+the SMTP envelope phase (MAIL FROM), it also queries any configured
+peers, and the scores are combined.  Domains with a history of spam for
+a given SPF result are rejected at MAIL FROM.  The GOSSiP system has
+a command line utility to reset (delete) a reputation for cases where a
+sender that was infected with malware is repaired.  In addition,
+the confidence score of a reputation decays with time, so a bad sender
+will eventually be able to try again without manual intervention.

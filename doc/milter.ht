@@ -25,7 +25,7 @@ Mascot by <a href="http://alphard.ethz.ch/hafner/lebl.htm">Christian Hafner</a>
   Stuart D. Gathman</a><br>
 This web page is written by Stuart D. Gathman<br>and<br>sponsored by
 <a href="http://www.bmsi.com">Business Management Systems, Inc.</a> <br>
-Last updated Mar 30, 2007</h4>
+Last updated Aug 26, 2008</h4>
 
 See the <a href="faq.html">FAQ</a> | <a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download now</a> |
 <a href="http://bmsi.com/mailman/listinfo/pymilter">Subscribe to mailing list</a> |
@@ -44,7 +44,9 @@ Sendmail 8.12 officially releases libmilter.
 Version 8.12 seems to be more robust, and includes new privilege
 separation features to enhance security.  Even better, sendmail 8.13
 supports socket maps, which makes <a href="pysrs.html">pysrs</a> much more
-efficient and secure.  I recommend upgrading.
+efficient and secure.   Sendmail 8.14 finally supports modifying 
+MAIL FROM via the milter API.  Unfortunately, I haven't gotten around
+to supporting that yet in python milter.
 </td></tr>
 </table>
 
@@ -209,60 +211,8 @@ href="http://www.duh.org/cvsweb.cgi/~checkout~/pmilter/doc/milter-protocol.txt?r
 <h3> Confirmed Installations </h3>
 
 Please <a href="mailto:%73%74%75%61%72%74%40%62%6D%73%69%2E%63%6F%6D">email</a>
-me if you successfully install milter on a system not mentioned below.
-<p>
-<table>
-<tr>
-<th>Operating System</th> <th>Compiler</th> <th>Python</th> <th>Sendmail</th>
-<th>milter</th>
-<tr>
-<td>Mandrake 8.0</td><td>gcc-3.0.1</td><td>2.1.1</td><td>8.12.0</td>
-<td>0.3.3</td><tr>
-<td>Mandrake 8.0</td><td>gcc-2.96</td><td>2.0</td><td>8.11.2</td>
-<td>0.3.6</td><tr>
-<td>RedHat 6.2</td><td>egcs-1.1.2</td><td>2.2.2</td><td>8.11.6</td>
-<td>0.5.4</td><tr>
-<td>RedHat 7.1</td><td>gcc-2.96</td><td>?</td><td>8.12.1</td>
-<td>0.3.5</td><tr>
-<td>RedHat 7.3</td><td>gcc-2.96</td><td>2.2.2</td><td>8.11.6</td>
-<td>0.5.5</td><tr>
-<td>RedHat 7.3</td><td>gcc-2.96</td><td>2.3.3</td><td>8.13.1</td>
-<td>0.7.2</td><tr>
-<td>RedHat 7.3</td><td>gcc-2.96</td><td>2.4.1</td><td>8.13.5</td>
-<td>0.8.4</td><tr>
-<td>RedHat 8.0</td><td>gcc-3.2</td><td>2.2.1</td><td>8.12.6</td>
-<td>0.5.2</td><tr>
-<td>RedHat 9.0</td><td>gcc-3.2.2</td><td>2.4.1</td><td>8.13.1</td>
-<td>0.8.2</td><tr>
-<td>RedHat EL3</td><td>gcc-3.2.3</td><td>2.4.1</td><td>8.13.5</td>
-<td>0.8.4</td><tr>
-<td>Debian Linux</td><td>gcc-2.95.2</td><td>2.1.1</td><td>8.12.0</td>
-<td>0.3.7</td><tr>
-<td>Debian Linux</td><td>gcc-3.2.2</td><td>2.2.2</td><td>8.12.7</td>
-<td>0.5.4</td><tr>
-<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.1.1</td><td>8.11.5</td>
-<td>0.3.3</td><tr>
-<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.1.1</td><td>8.12.1</td>
-<td>0.3.4</td><tr>
-<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.1.3</td><td>8.12.3</td>
-<td>0.4.2</td><tr>
-<td>AIX-4.1.5</td><td>gcc-2.95.2</td><td>2.4.1</td><td>8.13.1</td>
-<td>0.8.4</td><tr>
-<td>Slackware 7.1</td><td>?</td><td>?</td><td>8.12.1</td>
-<td>0.3.8</td><tr>
-<td>Slackware 9.0</td><td>gcc-3.2.2</td><td>2.2.3</td><td>8.12.9</td>
-<td>0.5.4</td><tr>
-<td>OpenBSD</td><td>?</td><td>2.3.3?</td><td>8.13.1?</td>
-<td>0.7.2</td><tr>
-<td>SuSE 7.3</td><td>gcc-2.95.3</td><td>2.1.1</td><td>8.12.2</td>
-<td>0.3.9</td><tr>
-<td>FreeBSD</td><td>gcc-2.95.3</td><td>2.2.1</td><td>8.12.3</td>
-<td>0.4.0</td><tr>
-<td>FreeBSD</td><td>gcc-2.95.3</td><td>2.2.2</td><td>?</td>
-<td>0.5.5</td><tr>
-<td>FreeBSD 4.4</td><td>gcc-2.95.3</td><td>?</td><td>8.12.10</td>
-<td>0.6.6</td>
-</table>
+me if you do <i>not</i> successfully install milter.  The confirmed
+installations are too numerous to list at this point.
 
 <h2> Enough Already! </h2>
 
