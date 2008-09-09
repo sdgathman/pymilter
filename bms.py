@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.127  2008/08/25 18:32:22  customdesigned
+# Handle missing gossip_node so self tests pass.
+#
 # Revision 1.126  2008/08/18 17:47:57  customdesigned
 # Log rcpt for SRS rejections.
 #
@@ -1012,6 +1015,7 @@ class bmsMilter(Milter.Milter):
       if self.missing_ptr and ores == 'none' and res != 'pass' \
                 and hres != 'pass':
         # this bad boy has no credentials whatsoever
+        res = 'none'
         policy = p.getNonePolicy()
         if policy in ('CBV','DNS'):
           self.offenses = 3    # ban ip if any bad recipient
@@ -1915,6 +1919,7 @@ def main():
       return
   try:
     from glob import glob
+    global banned_ips
     banned_ips = set(addr2bin(ip) 
         for fn in glob('banned_ips*')
         for ip in open(fn))
