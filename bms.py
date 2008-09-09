@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.128  2008/09/09 23:08:16  customdesigned
+# Wasn't reading banned_ips
+#
 # Revision 1.127  2008/08/25 18:32:22  customdesigned
 # Handle missing gossip_node so self tests pass.
 #
@@ -732,7 +735,7 @@ class bmsMilter(Milter.Milter):
 
   def offense(self,inc=1):
     self.offenses += inc
-    if self.offenses > 3:
+    if self.offenses > 3 and not self.trusted_relay:
       try:
         ip = addr2bin(self.connectip)
         if ip not in banned_ips:
