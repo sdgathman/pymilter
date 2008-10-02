@@ -1,3 +1,5 @@
+When policy is OK, do not use cbv_cache for blacklist.
+
 Add postmaster option or general rcpt list to dsn.  Can send dsn to
 user and postmaster on the same connection.
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.129  2008/09/09 23:24:56  customdesigned
+# Never ban a trusted relay.
+#
 # Revision 1.128  2008/09/09 23:08:16  customdesigned
 # Wasn't reading banned_ips
 #
@@ -863,6 +866,7 @@ class bmsMilter(Milter.Milter):
       return Milter.REJECT
     self.umis = None
     self.spf = None
+    self.policy = None
     if not (self.internal_connection or self.trusted_relay)     \
         and self.connectip and spf:
       rc = self.check_spf()
@@ -886,6 +890,7 @@ class bmsMilter(Milter.Milter):
         self.cbv_needed = None
     elif cbv_cache.has_key(self.canon_from) and cbv_cache[self.canon_from] \
         or domain in blacklist:
+      # FIXME: don't use cbv_cache for blacklist if policy is 'OK'
       if not self.internal_connection:
         self.offense()
         if not dspam_userdir:
@@ -901,6 +906,17 @@ class bmsMilter(Milter.Milter):
         self.blacklist = True
         self.log("BLACKLIST",self.canon_from)
     else:
+      # REJECT delayed until after checking whitelist
+      if self.policy == 'REJECT':
+          self.log('REJECT: no PTR, HELO or SPF')
+          self.setreply('550','5.7.1',
+    "You must have a valid HELO or publish SPF: http://www.openspf.org ",
+    "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
+    "severely misconfigured.  It has no PTR record (dynamic PTR records ",
+    "that contain your IP don't count), an invalid or dynamic HELO, ",
+    "and no SPF record."
+          )
+          return self.offense() # ban ip if too many bad MFROMs
       global gossip
       if gossip and domain and rc == Milter.CONTINUE \
           and not (self.internal_connection or self.trusted_relay) \
@@ -1020,18 +1036,9 @@ class bmsMilter(Milter.Milter):
         # this bad boy has no credentials whatsoever
         res = 'none'
         policy = p.getNonePolicy()
-        if policy in ('CBV','DNS'):
+        if policy in ('CBV','DSN'):
           self.offenses = 3    # ban ip if any bad recipient
-        if self.need_cbv(policy,q,'strike3'):
-          self.log('REJECT: no PTR, HELO or SPF')
-          self.setreply('550','5.7.1',
-    "You must have a valid HELO or publish SPF: http://www.openspf.org ",
-    "Contact your mail administrator IMMEDIATELY!  Your mail server is ",
-    "severely misconfigured.  It has no PTR record (dynamic PTR records ",
-    "that contain your IP don't count), an invalid or dynamic HELO, ",
-    "and no SPF record."
-          )
-          return self.offense() # ban ip if too many bad MFROMs
+        self.need_cbv(policy,q,'strike3')
     if res in ('deny', 'fail'):
       if self.need_cbv(p.getFailPolicy(),q,'fail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
@@ -1312,9 +1319,10 @@ class bmsMilter(Milter.Milter):
         if gossip and self.umis:
           gossip_node.feedback(self.umis,1)
         return rc
-    elif self.whitelist_sender and lname == 'subject':
-        # check for AutoReplys
-        if reautoreply.match(val):
+    elif self.whitelist_sender:
+      # check for AutoReplys
+      if (lname == 'subject' and reautoreply.match(val)) \
+	or (lname == 'user-agent' and val.lower().startswith('vacation')):
           self.whitelist_sender = False
           self.log('AUTOREPLY: not whitelisted')
 
@@ -1649,6 +1657,7 @@ class bmsMilter(Milter.Milter):
     return rc
 
   def need_cbv(self,policy,q,tname):
+    self.policy = policy
     if policy == 'CBV':
       if self.mailfrom != '<>' and not self.cbv_needed:
         self.cbv_needed = (q,None)
