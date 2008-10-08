@@ -1,3 +1,9 @@
+The recent feature to let a REJECT policy for SPF None be overridden
+by whitelisting is working for CSI and CMS.  However, there could be
+a sender that we want to REJECT even when whitelisted - because they
+normally get a guessed PASS.  Need another policy name - or else just
+add them to local SPF so they won't ever get 'None'.
+
 When policy is OK, do not use cbv_cache for blacklist.
 
 Add postmaster option or general rcpt list to dsn.  Can send dsn to

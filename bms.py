@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.130  2008/10/02 03:19:00  customdesigned
+# Delay strike3 REJECT and don't reject if whitelisted.
+# Recognize vacation messages as autoreplies.
+#
 # Revision 1.129  2008/09/09 23:24:56  customdesigned
 # Never ban a trusted relay.
 #
@@ -213,6 +217,7 @@ from Milter.dynip import is_dynip as dynip
 from Milter.utils import \
         iniplist,parse_addr,parse_header,ip4re,addr2bin,parseaddr
 from Milter.config import MilterConfigParser
+from Milter.greylist import Greylist
 
 from fnmatch import fnmatchcase
 from email.Utils import getaddresses
@@ -326,6 +331,7 @@ supply_sender = False
 access_file = None
 timeout = 600
 banned_ips = set()
+greylist = None
 
 logging.basicConfig(
         stream=sys.stdout,
@@ -498,6 +504,21 @@ def read_config(list):
       gossip_ttl = cp.getint('gossip','ttl')
     else:
       gossip_ttl = 1
+
+  # greylist section
+  if cp.has_option('greylist','dbfile'):
+    global greylist
+    grey_db = cp.getdefault('greylist','dbfile')
+    grey_days = 36
+    if cp.has_option('greylist','retain'):
+      grey_days = cp.getint('greylist','retain')
+    grey_expire = 4
+    if cp.has_option('greylist','expire'):
+      grey_expire = cp.getint('greylist','expire')
+    grey_time = 10
+    if cp.has_option('greylist','time'):
+      grey_time = cp.getint('greylist','expire')
+    greylist = Greylist(grey_db,grey_time,grey_expire,grey_days)
 
 def findsrs(fp):
   lastln = None
@@ -765,6 +786,7 @@ class bmsMilter(Milter.Milter):
     self.dspam = True
     self.whitelist = False
     self.blacklist = False
+    self.greylist = False
     self.reject_spam = True
     self.data_allowed = True
     self.delayed_failure = None
@@ -873,6 +895,7 @@ class bmsMilter(Milter.Milter):
       if rc != Milter.CONTINUE:
         if rc != Milter.TEMPFAIL: self.offense()
         return rc
+      self.greylist = True
     else:
       rc = Milter.CONTINUE
     # FIXME: parse Received-SPF from trusted_relay for SPF result
@@ -880,6 +903,7 @@ class bmsMilter(Milter.Milter):
     hres = self.spf and self.spf_helo
     # Check whitelist and blacklist
     if auto_whitelist.has_key(self.canon_from):
+      self.greylist = False
       if res == 'pass' or self.trusted_relay:
         self.whitelist = True
         self.log("WHITELIST",self.canon_from)
@@ -1197,8 +1221,18 @@ class bmsMilter(Milter.Milter):
     except:
       self.log("rcpt to",to,str)
       raise
-    self.log("rcpt to",to,str)
+    if self.greylist and greylist:
+      # no policy for trusted or internal
+      rc = greylist.check(self.connectip,self.canon_from,canon_to)
+      if rc == 0:
+        self.log("GREYLIST:",self.connectip,self.canon_from,canon_to)
+        self.setreply('451','4.7.1',
+          'Greylisted: http://projects.puremagic.com/greylisting/',
+          'Please retry in %.1f minutes'%(greylist.greylist_time/60.0))
+        return Milter.TEMPFAIL
+      self.log("GREYLISTED: %d"%rc)
       
+    self.log("rcpt to",to,str)
     self.smart_alias(to)
     # get recipient after virtusertable aliasing
     #rcpt = self.getsymval("{rcpt_addr}")
@@ -1876,7 +1910,7 @@ class bmsMilter(Milter.Milter):
           self.log('CBV:',sender,'Using:',fname)
         except IOError: pass
       if not m:
-        self.log('CBV:',sender,'PLAIN')
+        self.log('CBV:',sender,'PLAIN (%s)'%q.result)
       else:
         if srs:
           # Add SRS coded sender to various headers.  When (incorrectly)
