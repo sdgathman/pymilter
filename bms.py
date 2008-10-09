@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.132  2008/10/09 00:55:13  customdesigned
+# Don't reset greylist timer on early retries.
+#
 # Revision 1.131  2008/10/08 04:57:28  customdesigned
 # Greylisting
 #
@@ -931,6 +934,7 @@ class bmsMilter(Milter.Milter):
             self.log('REJECT:',desc)
             self.setreply('550','5.7.1',*desc.splitlines())
           return Milter.REJECT
+        self.greylist = False   # don't delay - use spam for training
         self.blacklist = True
         self.log("BLACKLIST",self.canon_from)
     else:
@@ -980,6 +984,8 @@ class bmsMilter(Milter.Milter):
               self.setreply('550','5.7.1',
                 'Your domain has been sending nothing but spam')
               return Milter.REJECT
+            if self.reputation > 40 and self.confidence > 1:
+              self.greylist = False
         except:
           gossip = None
           raise
