@@ -1,0 +1,35 @@
+To: %(sender)s
+From: postmaster@%(receiver)s
+Subject: SPF fail (EMAIL FORGERY)
+Auto-Submitted: auto-generated (configuration error)
+
+This is an automatically generated Delivery Status Notification.
+
+*** WARNING! YOU ARE SENDING FROM AN UNAUTHORIZED LOCATION ***
+
+The email administrator for '%(sender_domain)' (YOUR administrator)
+has FORBIDDEN you to send email from this location.  IMMEDIATELY contact your
+email administrator and follow his instructions to properly send mail.
+
+THIS IS A WARNING MESSAGE ONLY.
+
+YOU DO *NOT* NEED TO RESEND YOUR MESSAGE.
+
+Delivery to the following recipients has been delayed.
+
+       %(rcpt)s
+
+Subject: %(subject)s
+Received-SPF: %(spf_result)s
+
+Your sender policy indicated that the above email was forged.
+Because we believe your policy is in error, we have accepted the
+email anyway.  Please ask your email administrator to review
+your SPF policy.  You may also have neglected to follow your
+postmaster's instructions for configuring outgoing email.
+
+If you need further assistance, please do not hesitate to contact me.
+
+Kind regards,
+Stuart D Gathman
+postmaster@%(receiver)s
