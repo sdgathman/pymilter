@@ -2,9 +2,9 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
-%define __python python2.4
-%define version 0.8.10
-%define release 2%{?dist}.py24
+%define __python python
+%define version 0.8.11
+%define release 1%{?dist}
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -25,7 +25,7 @@
 %ifos aix4.1
 %define libdir /var/log/milter
 %else
-%define libdir /usr/lib/pymilter
+%define libdir %{_libdir}/pymilter
 %endif
 
 %ifarch noarch
@@ -39,9 +39,7 @@ Source: pymilter-%{version}.tar.gz
 License: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
-Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
-Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{__python} >= 2.4, pyspf >= 2.0.4, pymilter
 %ifos Linux
@@ -49,21 +47,23 @@ Requires: chkconfig
 %endif
 
 %description -n milter
-A complex but effective spam filtering, SPF checking, and reputation tracking
-mail application.  It uses pydspam if installed for bayesian filtering.
+A complex but effective spam filtering, SPF checking, greylisting,
+and reputation tracking mail application.  It uses pydspam if installed for
+bayesian filtering.
 
 %package spf
 Group: Applications/System
 Summary:  BMS spam and reputation milter
 Requires: pyspf >= 2.0.4, pymilter
-Obsoletes: pymilter-spf
+Obsoletes: pymilter-spf < 0.8.10
 
 %description spf
 A simple mail filter to add Received-SPF headers and reject forged mail.
-Rejection policy is configured via sendmail access file.
+Rejection policy is configured via sendmail access file and can be
+tailored by domain.
 
 %prep
-%setup -n pymilter-%{version}
+%setup -q -n pymilter-%{version}
 #patch -p0 -b .bms
 
 %install
@@ -201,9 +201,7 @@ Source: %{name}-%{version}.tar.gz
 License: GPL
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
-Prefix: %{_prefix}
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
-Packager: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{__python} >= 2.4, sendmail >= 8.13
 BuildRequires: %{__python}-devel >= 2.4, sendmail-devel >= 8.13
@@ -215,7 +213,7 @@ modules provide for navigating and modifying MIME parts, sending
 DSNs, and doing CBV.
 
 %prep
-%setup
+%setup -q
 #patch -p0 -b .bms
 
 %build
@@ -235,8 +233,6 @@ mkdir -p $RPM_BUILD_ROOT%{libdir}
 cat >$RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
 #!/bin/sh
 cd /var/log/milter
-# uncomment to enable sgmlop if installed
-#export PYTHONPATH=/usr/local/lib/python2.1/site-packages
 exec /usr/local/bin/python bms.py >>milter.log 2>&1
 EOF
 %else # not aix4.1
@@ -252,7 +248,7 @@ EOF
 %endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %if !%{redhat7}
-#grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
+grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 %endif
 
 # start.sh is used by spfmilter and milter, and could be used by
@@ -282,7 +278,7 @@ rm -rf $RPM_BUILD_ROOT
 - Allow explicitly whitelisted email from banned_users.
 - configure gossip TTL
 * Mon Sep 24 2007 Stuart Gathman <stuart@bmsi.com> 0.8.9-1
-- Use %ifarch hack to build milter and milter-spf packages as noarch
+- Use ifarch hack to build milter and milter-spf packages as noarch
 - Remove spf dependency from dsn.py, add dns.py
 * Fri Jan 05 2007 Stuart Gathman <stuart@bmsi.com> 0.8.8-1
 - move AddrCache, parse_addr, iniplist to Milter package
