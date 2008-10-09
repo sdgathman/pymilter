@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.131  2008/10/08 04:57:28  customdesigned
+# Greylisting
+#
 # Revision 1.130  2008/10/02 03:19:00  customdesigned
 # Delay strike3 REJECT and don't reject if whitelisted.
 # Recognize vacation messages as autoreplies.
@@ -765,6 +768,7 @@ class bmsMilter(Milter.Milter):
         if ip not in banned_ips:
           banned_ips.add(ip)
           print >>open('banned_ips','a'),self.connectip
+          self.log("BANNED IP:",self.connectip)
       except: pass
     return Milter.REJECT
 
@@ -916,7 +920,7 @@ class bmsMilter(Milter.Milter):
         or domain in blacklist:
       # FIXME: don't use cbv_cache for blacklist if policy is 'OK'
       if not self.internal_connection:
-        self.offense()
+        self.offense(inc=2)
         if not dspam_userdir:
           if domain in blacklist:
             self.log('REJECT: BLACKLIST',self.canon_from)

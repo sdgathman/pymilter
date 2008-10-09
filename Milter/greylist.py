@@ -52,8 +52,9 @@ class Greylist(object):
           r = Record()
         elif now < r.firstseen + self.greylist_time:
           # still greylisted
-          log.debug('Reset greylist: %s',key)
-          r = Record()
+          log.debug('Early greylist: %s',key)
+          #r = Record()
+          r.lastseen = now
         elif r.cnt or now < r.firstseen + self.greylist_expire:
           # in greylist window or active
           r.lastseen = now
