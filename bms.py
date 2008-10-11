@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.133  2008/10/09 18:44:54  customdesigned
+# Skip greylisting for good reputation.
+#
 # Revision 1.132  2008/10/09 00:55:13  customdesigned
 # Don't reset greylist timer on early retries.
 #
@@ -1163,6 +1166,7 @@ class bmsMilter(Milter.Milter):
               self.log("srs rcpt:",newaddr)
             self.dspam = False    # verified as reply to mail we sent
             self.blacklist = False
+            self.greylist = False
             self.delayed_failure = False
           except:
             if not (self.internal_connection or self.trusted_relay):
@@ -1231,7 +1235,7 @@ class bmsMilter(Milter.Milter):
     except:
       self.log("rcpt to",to,str)
       raise
-    if self.greylist and greylist:
+    if self.greylist and greylist and self.canon_from:
       # no policy for trusted or internal
       rc = greylist.check(self.connectip,self.canon_from,canon_to)
       if rc == 0:
