@@ -249,7 +249,7 @@ EOF
 %endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %if !%{redhat7}
-grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
+#grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 %endif
 
 # start.sh is used by spfmilter and milter, and could be used by
