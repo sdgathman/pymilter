@@ -2,9 +2,9 @@
 # module.  To compile all three on 32-bit Intel, use:
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
-%define __python python
+%define __python python2.4
 %define version 0.8.11
-%define release 1%{?dist}
+%define release 1%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
 
@@ -73,7 +73,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/mail
 mkdir $RPM_BUILD_ROOT/var/log/milter/save
 mkdir -p $RPM_BUILD_ROOT%{libdir}
 cp *.txt $RPM_BUILD_ROOT/var/log/milter
-cp bms.py spfmilter.py $RPM_BUILD_ROOT%{libdir}
+cp -p bms.py spfmilter.py ban2zone.py $RPM_BUILD_ROOT%{libdir}
 cp milter.cfg $RPM_BUILD_ROOT/etc/mail/pymilter.cfg
 cp spfmilter.cfg $RPM_BUILD_ROOT/etc/mail
 
@@ -172,6 +172,7 @@ fi
 %dir /var/log/milter
 %dir /var/log/milter/save
 %config %{libdir}/bms.py
+%config %{libdir}/ban2zone.py
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt

@@ -16,6 +16,7 @@ include bms.py
 include spf.py
 include cid2spf.py
 include spfquery.py
+include ban2zone.py
 include test.py
 include sample.py
 include milter-template.py
