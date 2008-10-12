@@ -36,7 +36,7 @@ Version: %{version}
 Release: %{release}
 Source: pymilter-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
-License: GPL
+License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
@@ -171,8 +171,8 @@ fi
 %endif
 %dir /var/log/milter
 %dir /var/log/milter/save
-%config %{libdir}/bms.py
-%config %{libdir}/ban2zone.py
+%{libdir}/bms.py
+%{libdir}/ban2zone.py
 %config(noreplace) /var/log/milter/strike3.txt
 %config(noreplace) /var/log/milter/softfail.txt
 %config(noreplace) /var/log/milter/fail.txt
@@ -199,7 +199,7 @@ Version: %{version}
 Release: %{release}
 Source: %{name}-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
-License: GPL
+License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
@@ -266,6 +266,11 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sat Oct 11 2008 Stuart Gathman <stuart@bmsi.com> 0.8.11-1
+- Support greylisting
+- Recognize vacation messages as autoreplies.
+- Never ban a trusted relay.
+- Missing global reading banned_ips
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-2
 - /var/run/milter directory must be owned by mail
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-1

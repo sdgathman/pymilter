@@ -36,6 +36,8 @@ class Session(object):
     ('A','A'): None,
     ('AAAA','AAAA'): None,
     ('PTR','PTR'): None,
+    ('NS','NS'): None,
+    ('NS','A'): None,
     ('TXT','TXT'): None,
     ('SPF','SPF'): None
   }
