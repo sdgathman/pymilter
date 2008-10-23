@@ -2,7 +2,6 @@
 
 import socket
 import sys
-from glob import glob
 
 banned_ips = set(socket.inet_aton(ip) 
     for fn in sys.argv[1:]

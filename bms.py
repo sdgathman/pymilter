@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.134  2008/10/11 15:45:46  customdesigned
+# Don't greylist DSNs.
+#
 # Revision 1.133  2008/10/09 18:44:54  customdesigned
 # Skip greylisting for good reputation.
 #
@@ -355,15 +358,12 @@ def read_config(list):
     'tempdir': "/var/log/milter/save",
     'datadir': "/var/log/milter",
     'socket': "/var/run/milter/pythonsock",
-    'timeout': '600',
     'scan_html': 'no',
     'scan_rfc822': 'yes',
     'scan_zip': 'no',
     'block_chinese': 'no',
     'log_headers': 'no',
     'blind_wiretap': 'yes',
-    'maxage': '8',
-    'hashlength': '8',
     'reject_spoofed': 'no',
     'reject_noptr': 'no',
     'supply_sender': 'no',
@@ -382,7 +382,7 @@ def read_config(list):
   global internal_connect, internal_domains, trusted_relay, hello_blacklist
   global case_sensitive_localpart, private_relay
   socketname = cp.get('milter','socket')
-  timeout = cp.getint('milter','timeout')
+  timeout = cp.getintdefault('milter','timeout',600)
   check_user = cp.getaddrset('milter','check_user')
   log_headers = cp.getboolean('milter','log_headers')
   internal_connect = cp.getlist('milter','internal_connect')
@@ -478,8 +478,8 @@ def read_config(list):
     global ses,srs,srs_reject_spoofed,srs_domain,banned_users
     database = cp.getdefault('srs','database')
     srs_reject_spoofed = cp.getboolean('srs','reject_spoofed')
-    maxage = cp.getint('srs','maxage')
-    hashlength = cp.getint('srs','hashlength')
+    maxage = cp.getintdefault('srs','maxage',8)
+    hashlength = cp.getintdefault('srs','hashlength',8)
     separator = cp.getdefault('srs','separator','=')
     if database:
       import SRS.DB
@@ -509,24 +509,15 @@ def read_config(list):
       for p in cp.getlist('gossip','peers'):
         host,port = gossip.splitaddr(p)
         gossip_node.peers.append(gossip.server.Peer(host,port))
-    if cp.has_option('gossip','ttl'):
-      gossip_ttl = cp.getint('gossip','ttl')
-    else:
-      gossip_ttl = 1
+    gossip_ttl = cp.getintdefault('gossip','ttl',1)
 
   # greylist section
   if cp.has_option('greylist','dbfile'):
     global greylist
     grey_db = cp.getdefault('greylist','dbfile')
-    grey_days = 36
-    if cp.has_option('greylist','retain'):
-      grey_days = cp.getint('greylist','retain')
-    grey_expire = 4
-    if cp.has_option('greylist','expire'):
-      grey_expire = cp.getint('greylist','expire')
-    grey_time = 10
-    if cp.has_option('greylist','time'):
-      grey_time = cp.getint('greylist','expire')
+    grey_days = cp.getintdefault('greylist','retain',36)
+    grey_expire = cp.getintdefault('greylist','expire',6)
+    grey_time = cp.getintdefault('greylist','time',5)
     greylist = Greylist(grey_db,grey_time,grey_expire,grey_days)
 
 def findsrs(fp):

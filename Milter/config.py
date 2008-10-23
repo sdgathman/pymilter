@@ -57,3 +57,8 @@ class MilterConfigParser(ConfigParser):
     if self.has_option(sect,opt):
       return self.get(sect,opt)
     return default
+
+  def getintdefault(self,sect,opt,default=None):
+    if self.has_option(sect,opt):
+      return self.getint(sect,opt)
+    return default
