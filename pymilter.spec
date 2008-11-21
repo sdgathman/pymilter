@@ -3,7 +3,7 @@
 # rpmbuild -ba --target=i386,noarch pymilter.spec
 
 %define __python python2.4
-%define version 0.8.11
+%define version 0.8.12
 %define release 1%{?dist}.py24
 # what version of RH are we building for?
 %define redhat7 0
@@ -266,6 +266,8 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Fri Nov 12 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-1
+- Support chgfrom and addrcpt_par
 * Sat Oct 11 2008 Stuart Gathman <stuart@bmsi.com> 0.8.11-1
 - Support greylisting
 - Recognize vacation messages as autoreplies.

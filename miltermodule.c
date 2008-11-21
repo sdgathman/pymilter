@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.11  2007/09/25 02:26:29  customdesigned
+ * Update license.
+ *
  * Revision 1.10  2006/02/12 02:00:42  customdesigned
  * Resolve FIXME for wrap_close.
  *
@@ -339,6 +342,7 @@ static char milter_set_flags__doc__[] =
 Set flags for filter capabilities; OR of one or more of:\n\
 ADDHDRS - filter may add headers\n\
 CHGBODY - filter may replace body\n\
+CHGFROM - filter may replace body\n\
 ADDRCPT - filter may add recipients\n\
 DELRCPT - filter may delete recipients\n\
 CHGHDRS - filter may change/delete headers";
@@ -1013,6 +1017,30 @@ milter_addheader(PyObject *self, PyObject *args) {
 #endif
 }
 
+#ifdef SMFIF_CHGFROM
+static char milter_chgfrom__doc__[] =
+"chgfrom(sender,params) -> None\n\
+Change the envelope sender (MAIL From) of the current message.\n\
+A filter which calls smfi_chgfrom must have set the CHGFROM flag\n\
+in set_flags() before calling register.\n\
+This function can only be called from the EOM callback.";
+static PyObject *
+milter_chgfrom(PyObject *self, PyObject *args) {
+  char *sender;
+  char *params;
+  SMFICTX *ctx;
+  PyThreadState *t;
+  
+  if (!PyArg_ParseTuple(args, "sz:chgfrom", &sender, &params))
+    return NULL;
+  ctx = _find_context(self);
+  if (ctx == NULL) return NULL;
+  t = PyEval_SaveThread();
+  return _thread_return(t,smfi_chgfrom(ctx, sender, params),
+			 "cannot change sender");
+}
+#endif
+
 static char milter_chgheader__doc__[] =
 "chgheader(field, int, value) -> None\n\
 Change/delete a header in the message. \n\
@@ -1042,22 +1070,33 @@ milter_chgheader(PyObject *self, PyObject *args) {
 }
 
 static char milter_addrcpt__doc__[] =
-"addrcpt(string) -> None\n\
+"addrcpt(string,params=None) -> None\n\
 Add a recipient to the envelope.  It must be in the same format\n\
 as is passed to the envrcpt callback in the first tuple element.\n\
+If params is used, you must pass ADDRCPT_PAR to set_flags().\n\
 This function can only be called from the EOM callback.";
 
 static PyObject *
 milter_addrcpt(PyObject *self, PyObject *args) {
   char *rcpt;
+  char *params = 0;
   SMFICTX *ctx;
   PyThreadState *t;
+  int rc;
   
-  if (!PyArg_ParseTuple(args, "s:addrcpt", &rcpt)) return NULL;
+  if (!PyArg_ParseTuple(args, "s|z:addrcpt", &rcpt)) return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
-  return _thread_return(t,smfi_addrcpt(ctx, rcpt), "cannot add recipient");
+  if (params)
+#ifdef SMFIF_ADDRCPT_PAR
+    rc = smfi_addrcpt_par(ctx,rcpt,params);
+#else
+    rc = MI_FAILURE;
+#endif
+  else
+    rc = smfi_addrcpt(ctx,rcpt);
+  return _thread_return(t,rc, "cannot add recipient");
 }
 
 static char milter_delrcpt__doc__[] =
@@ -1199,6 +1238,9 @@ static PyMethodDef context_methods[] = {
 #ifdef SMFIR_PROGRESS
   { "progress",  milter_progress,  METH_VARARGS, milter_progress__doc__},
 #endif
+#ifdef SMFIF_CHGFROM
+  { "chgfrom",  milter_chgfrom,  METH_VARARGS, milter_chgfrom__doc__},
+#endif
   { NULL, NULL }
 };
 
@@ -1299,6 +1341,9 @@ initmilter(void) {
    setitem(d,"CHGBODY",  SMFIF_CHGBODY);
    setitem(d,"MODBODY",  SMFIF_MODBODY);
    setitem(d,"ADDRCPT",  SMFIF_ADDRCPT);
+#ifdef SMFIF_ADDRCPT_PAR
+   setitem(d,"ADDRCPT_PAR",  SMFIF_ADDRCPT_PAR);
+#endif
    setitem(d,"DELRCPT",  SMFIF_DELRCPT);
    setitem(d,"CHGHDRS",  SMFIF_CHGHDRS);
    setitem(d,"V1_ACTS",  SMFI_V1_ACTS);
@@ -1306,6 +1351,9 @@ initmilter(void) {
    setitem(d,"CURR_ACTS",  SMFI_CURR_ACTS);
 #ifdef SMFIF_QUARANTINE
    setitem(d,"QUARANTINE",SMFIF_QUARANTINE);
+#endif
+#ifdef SMFIF_CHGFROM
+   setitem(d,"CHGFROM",SMFIF_CHGFROM);
 #endif
    setitem(d,"CONTINUE",  SMFIS_CONTINUE);
    setitem(d,"REJECT",  SMFIS_REJECT);
