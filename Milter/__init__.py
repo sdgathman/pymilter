@@ -112,14 +112,17 @@ class Milter:
   def chgheader(self,field,idx,value):
     return self.__ctx.chgheader(field,idx,value)
 
-  def addrcpt(self,rcpt):
-    return self.__ctx.addrcpt(rcpt)
+  def addrcpt(self,rcpt,params=None):
+    return self.__ctx.addrcpt(rcpt,params)
 
   def delrcpt(self,rcpt):
     return self.__ctx.delrcpt(rcpt)
 
   def replacebody(self,body):
     return self.__ctx.replacebody(body)
+
+  def chgfrom(self,sender,params=None):
+    return self.__ctx.chgfrom(sender,params)
 
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.

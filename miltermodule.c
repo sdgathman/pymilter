@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.12  2008/11/21 20:42:52  customdesigned
+ * Support smfi_chgfrom and smfi_addrcpt_par.
+ *
  * Revision 1.11  2007/09/25 02:26:29  customdesigned
  * Update license.
  *
@@ -1031,7 +1034,7 @@ milter_chgfrom(PyObject *self, PyObject *args) {
   SMFICTX *ctx;
   PyThreadState *t;
   
-  if (!PyArg_ParseTuple(args, "sz:chgfrom", &sender, &params))
+  if (!PyArg_ParseTuple(args, "s|z:chgfrom", &sender, &params))
     return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
