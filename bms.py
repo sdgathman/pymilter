@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.135  2008/10/23 19:58:06  customdesigned
+# Example config had different names than actual code :-)
+#
 # Revision 1.134  2008/10/11 15:45:46  customdesigned
 # Don't greylist DSNs.
 #
@@ -730,6 +733,8 @@ class bmsMilter(Milter.Milter):
       self.log("cbv_cache:",len(cbv_cache),' entries')
       self.setreply('550','5.7.1','%d unreachable objects'%n)
       return Milter.REJECT
+    # HELO not allowed after MAIL FROM
+    if self.mailfrom: self.offense(inc=2)
     return Milter.CONTINUE
 
   def smart_alias(self,to):
@@ -1075,7 +1080,7 @@ class bmsMilter(Milter.Milter):
         # forger.biz [1.2.3.4] is not allowed to send mail with the domain
         # "forged.org" in the sender address.  Contact <postmaster@forged.org>.
         return Milter.REJECT
-    if res == 'softfail':
+    elif res == 'softfail':
       if self.need_cbv(p.getSoftfailPolicy(),q,'softfail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         self.setreply('550','5.7.1',
@@ -1086,7 +1091,7 @@ class bmsMilter(Milter.Milter):
           'notify your administrator of the problem immediately.'
         )
         return Milter.REJECT
-    if res == 'neutral':
+    elif res == 'neutral':
       if self.need_cbv(p.getNeutralPolicy(),q,'neutral'):
         self.log('REJECT: SPF neutral for',q.s)
         self.setreply('550','5.7.1',
@@ -1098,7 +1103,16 @@ class bmsMilter(Milter.Milter):
           'servers for %s should accomplish this.' % q.o
         )
         return Milter.REJECT
-    if res in ('unknown','permerror'):
+    elif res == 'pass':
+      if self.need_cbv(p.getPassPolicy(),q,'pass'):
+        self.log('REJECT: SPF pass for',q.s)
+        self.setreply('550','5.7.1',
+          "We don't accept mail from %s" %q.o,
+          "Your email from %s comes from an authorized server, however"%q.o,
+          "we still don't want it - we just don't like %s."%q.o
+        )
+        return Milter.REJECT
+    elif res in ('unknown','permerror'):
       if self.need_cbv(p.getPermErrorPolicy(),q,'permerror'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
         # latest SPF draft recommends 5.5.2 instead of 5.7.1

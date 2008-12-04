@@ -266,13 +266,19 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Fri Nov 12 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-1
+* Mon Nov 24 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-1
 - Support chgfrom and addrcpt_par
+- 2 demerits for HELO after MAIL FROM
+- Support NS records in Milter.dns
+- Make initscript use pid file.
+- Fix greylist config
+- SPF Pass policy
 * Sat Oct 11 2008 Stuart Gathman <stuart@bmsi.com> 0.8.11-1
 - Support greylisting
 - Recognize vacation messages as autoreplies.
 - Never ban a trusted relay.
 - Missing global reading banned_ips
+- ban2zone.py
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-2
 - /var/run/milter directory must be owned by mail
 * Mon Aug 25 2008 Stuart Gathman <stuart@bmsi.com> 0.8.10-1
