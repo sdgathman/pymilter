@@ -4,6 +4,7 @@
 <li><a href="changes.html">Changes</a>
 <li><a href="requirements.html">Requirements</a>
 <li><a href="http://sourceforge.net/project/showfiles.php?group_id=139894">Download</a>
+<li><a href="RPM-GPG-KEY-bms">GPG-KEY</a>
 <li><a href="faq.html">FAQ</a>
 <li><a href="policy.html">Policies</a>
 <li><a href="logmsgs.html">Log&nbsp;Messages</a>

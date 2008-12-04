@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.13  2008/11/23 03:06:47  customdesigned
+ * Milter support for chgfrom.
+ *
  * Revision 1.12  2008/11/21 20:42:52  customdesigned
  * Support smfi_chgfrom and smfi_addrcpt_par.
  *
@@ -255,10 +258,10 @@ typedef struct {
   PyThreadState *t;	/* python thread state */
 } milter_ContextObject;
 
-/* Return a borrowed reference to the python Context.  Create a
-   new Context if needed.  The new Python Context is owned by
-   the SMFICTX. The python interpreter is locked on successful
-   return, otherwise not. */
+/* Return a borrowed reference to the python Context.  Called by callbacks
+   invoked by libmilter.  Create a new Context if needed.  The new
+   Python Context is owned by the SMFICTX. The python interpreter is locked on
+   successful return, otherwise not. */
 static milter_ContextObject *
 _get_context(SMFICTX *ctx) {
   milter_ContextObject *self = smfi_getpriv(ctx);
@@ -292,7 +295,8 @@ _get_context(SMFICTX *ctx) {
   return self;
 }
 
-/* Find the SMFICTX from a Python Context. The interpreter must be locked. */
+/* Find the SMFICTX from a Python Context.  Called by context methods invoked
+   from python.  The interpreter must be locked. */ 
 static SMFICTX *
 _find_context(PyObject *c) {
   SMFICTX *ctx = NULL;
