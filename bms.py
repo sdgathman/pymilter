@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # A simple milter that has grown quite a bit.
 # $Log$
+# Revision 1.136  2008/12/04 19:42:46  customdesigned
+# SPF Pass policy
+#
 # Revision 1.135  2008/10/23 19:58:06  customdesigned
 # Example config had different names than actual code :-)
 #
@@ -1072,6 +1075,7 @@ class bmsMilter(Milter.Milter):
         if policy in ('CBV','DSN'):
           self.offenses = 3    # ban ip if any bad recipient
         self.need_cbv(policy,q,'strike3')
+        # REJECT delayed until after checking whitelist
     if res in ('deny', 'fail'):
       if self.need_cbv(p.getFailPolicy(),q,'fail'):
         self.log('REJECT: SPF %s %i %s' % (res,code,txt))
@@ -1143,11 +1147,12 @@ class bmsMilter(Milter.Milter):
       #self.rcpt_param = param
     except:
       self.log("REJECT: invalid PARAM:",to,str)
-      self.setreply('550','5.7.1','Invalid SRS signature')
+      self.setreply('550','5.7.1','Invalid RCPT PARAM')
       return Milter.REJECT
     # mail to MAILER-DAEMON is generally spam that bounced
     if to.startswith('<MAILER-DAEMON@'):
       self.log('REJECT: RCPT TO:',to,str)
+      self.setreply('550','5.7.1','MAILER-DAEMON does not accept mail')
       return Milter.REJECT
     try:
       t = parse_addr(to)
@@ -1717,7 +1722,8 @@ class bmsMilter(Milter.Milter):
     elif policy == 'DSN':
       if self.mailfrom != '<>' and not self.cbv_needed:
         self.cbv_needed = (q,tname)
-    elif policy != 'OK': return True
+    elif policy != 'OK':
+      return True
     return False
 
   def eom(self):
