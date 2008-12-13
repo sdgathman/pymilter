@@ -12,25 +12,8 @@ import StringIO
 import time
 import email
 from socket import AF_INET, AF_INET6
+from Milter import parse_addr
 
-def parse_addr(t):
-  """Split email into user,domain.
-
-  >>> parse_addr('user@example.com')
-  ['user', 'example.com']
-  >>> parse_addr('"user@example.com"')
-  ['user@example.com']
-  >>> parse_addr('"user@bar"@example.com')
-  ['user@bar', 'example.com']
-  >>> parse_addr('foo')
-  ['foo']
-  """
-  if t.startswith('<') and t.endswith('>'): t = t[1:-1]
-  if t.startswith('"'):
-    if t.endswith('"'): return [t[1:-1]]
-    pos = t.find('"@')
-    if pos > 0: return [t[1:pos],t[pos+2:]]
-  return t.split('@')
 
 class myMilter(Milter.Milter):
 

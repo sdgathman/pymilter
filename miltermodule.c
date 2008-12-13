@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.14  2008/12/04 19:43:00  customdesigned
+ * Doc updates.
+ *
  * Revision 1.13  2008/11/23 03:06:47  customdesigned
  * Milter support for chgfrom.
  *
@@ -188,10 +191,10 @@ $ python setup.py help
 #endif
 #define _FFR_MULTILINE (MAX_ML_REPLY > 1)
 
-#include <pthread.h>
-#include <netinet/in.h>
-#include <Python.h>
-#include <libmilter/mfapi.h>
+//#include <pthread.h>	// shouldn't be needed - use Python API
+#include <Python.h>		// Python C API
+#include <libmilter/mfapi.h>	// libmilter API
+#include <netinet/in.h>		// socket API
 
 
 /* See if we have IPv4 and/or IPv6 support in this OS and in
