@@ -68,7 +68,7 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 # other milters running on redhat
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README HOWTO ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+%doc README ChangeLog NEWS TODO CREDITS sample.py milter-template.py
 %config %{libdir}/start.sh
 %dir %attr(0755,mail,mail) /var/run/milter
 
