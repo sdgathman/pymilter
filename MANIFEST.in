@@ -9,8 +9,6 @@ include MANIFEST.in
 include testsample.py
 include testmime.py
 include testutils.py
-include rejects.py
-include report.py
 include test.py
 include sample.py
 include milter-template.py
