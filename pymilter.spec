@@ -1,6 +1,6 @@
 %define __python python2.4
-%define version 0.8.12
-%define release 1%{?dist}.py24
+%define version 0.9.0
+%define release 1.el4
 %define libdir %{_libdir}/pymilter
 %define name pymilter
 %define redhat7 0
@@ -76,7 +76,7 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Mon Nov 24 2008 Stuart Gathman <stuart@bmsi.com> 0.8.12-1
+* Mon Nov 24 2008 Stuart Gathman <stuart@bmsi.com> 0.9.0-1
 - Split pymilter into its own CVS module
 - Support chgfrom and addrcpt_par
 - Support NS records in Milter.dns
