@@ -1,0 +1,154 @@
+On Sun, 11 Feb 2007, Rick Saul wrote:
+
+> Stuart I was planning to move to centos4.4 in a couple of weeks anyway... 
+> Your advice of where to go from here. 
+
+Oh - you are asking for a howto.
+
+	Step one.  Which DSPAM is right for you?
+
+The DSPAM project makes dspam part of the LDA (Local Delivery Agent).
+Pydspam puts dspam into the MTA (Mail Transfer Agent - sendmail with pymilter).
+
+The advantage of doing dspam in the LDA is that any aliasing has already been
+resolved.  You need only configure mailboxes.
+
+The advantage of doing dspam in the MTA is it can screen an entire 
+company as a gateway with multiple domains.  Unfortunately, this
+means you have to tell it about all the aliases that comprise each
+account.  (Also, pydspam is still uses dspam-2.6.5.2 - the Dspam API
+has changed for newer versions.)
+
+If the LDA is right for you, you'll want to use the official Dspam 
+package.  http://www.nuclearelephant.com/projects/dspam/
+
+If the MTA approach is what you want, then pydspam is what you want.
+
+In either case, you will still want pymilter to block forgeries, Windows 
+executables, etc.
+
+So, lets assume you want to install pymilter, and may or may not
+wish to install pydspam.
+
+	Step two.  Obtaining RPMS.
+
+For basic pymilter you'll need:
+
+python-2.4
+milter-0.8.10
+sendmail-8.13.x	(with milter support enabled)
+
+and for SPF you'll need:
+
+pydns-2.3.3-2.4
+pyspf-2.0.5-1.py24
+
+and for SRS you'll need:
+
+pysrs-0.30.11-1.py24
+
+I'm pretty sure you will want to have SPF and SRS available.
+
+	Step three.  Activate basic milter.
+
+Activate the basic milter and pysrs by editing /etc/mail/sendmail.mc and adding:
+
+define(`NO_SRS_FILE',`/etc/mail/no-srs-mailers')dnl
+dnl define(`NO_SRS_FROM_LOCAL')dnl
+HACK(`pysrs',`/var/run/milter/pysrs')dnl
+INPUT_MAIL_FILTER(`pythonfilter', `S=local:/var/run/milter/pythonsock, F=T, T=C:5m;S:20s;R:5m;E:5m')
+
+You can then "make sendmail.cf" and restart sendmail.
+
+Start milter and pysrs with "service milter start", "service pysrs start".
+
+Tail /var/log/milter/milter.log while SMTP clients connect to your
+sendmail instance.  This should show you what the milter is doing.
+
+By default, milter-0.8.10 rejects on SPF fail.
+
+	Step four.  Tweaking the basic config.
+
+Most pymilter configuration is in /etc/mail/pymilter.cfg.  To activate
+changes, "service milter restart".
+
+By default, milter scans attachments for executable extensions.  You can
+turn this off by setting banned_exts to the empty list.  There are options
+to scan ZIP attachments and rfc822 attachments.  When it finds a banned
+file type, milter saves the original message in /var/log/milter/save,
+and replaces the attachment with a plain text warning message.
+
+Configure hello_blacklist with your own helo name and domains - which
+you know cannot legitimately be used by external MTAs.
+
+Configure trusted_relay with your secondary MX servers, if any.  These
+should also run pymilter with similar policies.  (But this isn't
+needed for initial testing.)
+
+Configure internal_connect with subnets of your internal SMTP clients.
+Internal connections skip SPF testing and other policies.  You will
+likely need to set this to allow outgoing mail if you have
+an SPF policy already.
+
+Configure internal_domains with domains used by your internal SMTP clients.
+If they attempt to use any other domain, the attempt is blocked and the
+client is logged as a "zombie".  Conversely, any attempt by an external
+MTA to use one of your internal domains is treated as a forgery and
+blocked (a simplified form of local SPF).
+
+Adjust porn_words and spam_words - these block emails with a Subject
+containing the listed strings.  They can be empty to disable Subject
+string blocking.
+
+	Advanced SPF configuration.
+
+The sendmail access file, or another readonly database with that
+format, can be used for detail spf policy.  SPF access policy
+record are tagged with "SPF-{Result}:".  Results are
+Pass, Neutral, Softfail, Fail, PermError.  Currently supported
+policy keywords are OK, CBV, REJECT.  Currently, TempError always
+results in TEMPFAIL.
+
+The default policies are set in pymilter.cfg.  The defaults
+if none of the config options are set are as follows:
+
+SPF-Fail:	REJECT
+SPF-Softfail:	CBV
+SPF-Neutral:	OK
+SPF-PermError:	REJECT
+SPF-Pass:	OK
+
+The tag may be followed by a specific domain.  For instance, to
+require a Pass from aol.com:
+
+SPF-Neutral:aol.com	REJECT
+SPF-Softfail:aol.com	REJECT
+
+The CBV policy requires a valid HELO name.  If the EHLO name is 
+RFC2822 compliant, then a DSN is sent to the alleged sender.  The 
+template for the DSN is selected according to the SPF result:
+
+Fail:		fail.txt
+SoftFail:	softfail.txt
+Neutral:	neutral.txt
+PermError:	permerror.txt
+None:		strike3.txt
+
+An SPF-Pass is always accepted by the milter.  Domains can be blacklisted 
+via sendmail in the access file or via a RHS DNS blacklist.
+
+	To be continued.
+
+Forthcoming topics:
+
+SRS config
+
+
+pydspam config
+wiretap config
+
+-- 
+	      Stuart D. Gathman <stuart@bmsi.com>
+    Business Management Systems Inc.  Phone: 703 591-0911 Fax: 703 591-6154
+"Confutatis maledictis, flammis acribus addictis" - background song for
+a Microsoft sponsored "Where do you want to go from here?" commercial.

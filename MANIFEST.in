@@ -12,8 +12,6 @@ include test.py
 include sample.py
 include milter-template.py
 include test/*
-include doc/*
 include Milter/*.py
 include *.spec
-include *.html
 include start.sh
