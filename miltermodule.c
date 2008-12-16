@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.15  2008/12/13 20:29:56  customdesigned
+ * Split off milter applications.
+ *
  * Revision 1.14  2008/12/04 19:43:00  customdesigned
  * Doc updates.
  *
@@ -1146,8 +1149,8 @@ milter_replacebody(PyObject *self, PyObject *args) {
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
-  return _thread_return(t,smfi_replacebody(ctx, bodyp, bodylen),
-			 "cannot replace message body");
+  return _thread_return(t,smfi_replacebody(ctx,
+	(unsigned char *)bodyp, bodylen), "cannot replace message body");
 }
 
 static char milter_setpriv__doc__[] =

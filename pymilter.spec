@@ -1,6 +1,7 @@
-%define __python python2.4
+%define __python python
+#define __python python2.4
 %define version 0.9.0
-%define release 1.el4
+%define release 1%{dist}
 %define libdir %{_libdir}/pymilter
 %define name pymilter
 %define redhat7 0
@@ -9,11 +10,11 @@ Summary: Python interface to sendmail milter API
 Name: %{name}
 Version: %{version}
 Release: %{release}
-Source: %{name}-%{version}.tar.gz
+Source: http://downloads.sf.net/pymilter/%{name}-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPLv2+
 Group: Development/Libraries
-BuildRoot: %{_tmppath}/%{name}-buildroot
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{__python} >= 2.4, sendmail >= 8.13
@@ -61,7 +62,7 @@ EOF
 %endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %if !%{redhat7}
-#grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
+grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 %endif
 
 # start.sh is used by spfmilter and milter, and could be used by
