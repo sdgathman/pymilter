@@ -1,24 +1,21 @@
 %define __python python
 #define __python python2.4
-%define version 0.9.0
-%define release 1%{dist}
 %define libdir %{_libdir}/pymilter
-%define name pymilter
-%define redhat7 0
+%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 
 Summary: Python interface to sendmail milter API
-Name: %{name}
-Version: %{version}
-Release: %{release}
-Source: http://downloads.sf.net/pymilter/%{name}-%{version}.tar.gz
+Name: pymilter
+Version: 0.9.0
+Release: 2%{dist}
+Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
 #Patch: %{name}-%{version}.patch
 License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Vendor: Stuart D. Gathman <stuart@bmsi.com>
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{__python} >= 2.4, sendmail >= 8.13
-BuildRequires: %{__python}-devel >= 2.4, sendmail-devel >= 8.13
+BuildRequires: ed, %{__python}-devel >= 2.4, sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
@@ -31,25 +28,13 @@ DSNs, and doing CBV.
 #patch -p0 -b .bms
 
 %build
-%if %{redhat7} 
-  LDFLAGS="-s"
-%else # Redhat builds debug packages after 7.3
-  LDFLAGS="-g"
-%endif
-env CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="$LDFLAGS" %{__python} setup.py build
+env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
 
 %install
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
 mkdir -p $RPM_BUILD_ROOT/var/run/milter
 mkdir -p $RPM_BUILD_ROOT%{libdir}
-%ifos aix4.1
-cat >$RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
-#!/bin/sh
-cd /var/log/milter
-exec /usr/local/bin/python bms.py >>milter.log 2>&1
-EOF
-%else # not aix4.1
 cp start.sh $RPM_BUILD_ROOT%{libdir}
 ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
 /^python=/
@@ -59,17 +44,16 @@ python="%{__python}"
 w
 q
 EOF
-%endif
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
-%if !%{redhat7}
 grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
-%endif
 
 # start.sh is used by spfmilter and milter, and could be used by
 # other milters running on redhat
 %files -f INSTALLED_FILES
-%defattr(-,root,root)
+%defattr(-,root,root,-)
 %doc README ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+%dir %{python_sitelib}/Milter
+%dir %{libdir}
 %config %{libdir}/start.sh
 %dir %attr(0755,mail,mail) /var/run/milter
 
@@ -77,6 +61,8 @@ grep '.pyc$' INSTALLED_FILES | sed -e 's/c$/o/' >>INSTALLED_FILES
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Wed Jan 07 2009 Stuart Gathman <stuart@bmsi.com> 0.9.0-2
+- Changes to meet Fedora standards
 * Mon Nov 24 2008 Stuart Gathman <stuart@bmsi.com> 0.9.0-1
 - Split pymilter into its own CVS module
 - Support chgfrom and addrcpt_par
