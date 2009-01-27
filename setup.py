@@ -2,10 +2,11 @@ import os
 import sys
 from distutils.core import setup, Extension
 
-# FIXME: on some versions of sendmail, smutil is renamed to sm
-# on slackware and debian, leave it out entirely.  It depends
+# FIXME: on some versions of sendmail, smutil is renamed to sm.
+# On slackware and debian, leave it out entirely.  It depends
 # on how libmilter was built by the sendmail package.
-libs = ["milter", "smutil"]
+#libs = ["milter", "smutil"]
+libs = ["milter"]
 libdirs = ["/usr/lib/libmilter"]    # needed for Debian
 
 # patch distutils if it can't cope with the "classifiers" or
