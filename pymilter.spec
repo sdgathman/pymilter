@@ -1,5 +1,3 @@
-# EL 3,4,5 supported, set to 0 for Fedora
-
 %if 0%{?el3} || 0%{?el4}
 %define __python python2.4
 %endif
@@ -86,6 +84,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu Feb 05 2009 Stuart Gathman <stuart@bmsi.com> 0.9.1-1
+- Fix missing address of optional param to addrcpt
+
 * Wed Jan 07 2009 Stuart Gathman <stuart@bmsi.com> 0.9.0-4
 - Stop using INSTALLED_FILES to make Fedora happy
 - Remove config flag from start.sh glue
