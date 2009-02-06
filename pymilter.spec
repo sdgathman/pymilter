@@ -1,19 +1,17 @@
 # EL 3,4,5 supported, set to 0 for Fedora
-%define RHEL 0
 
-%if %{RHEL} > 0 && %{RHEL} < 5
+%if 0%{?el3} || 0%{?el4}
 %define __python python2.4
 %endif
 
 %define libdir %{_libdir}/pymilter
-%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 %define pythonbase %(basename %{__python})
 
 Summary: Python interface to sendmail milter API
 Name: pymilter
 Version: 0.9.0
-Release: 4%{dist}
+Release: 5%{dist}
 Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
 Patch: %{name}-smutil.patch
 Patch1: %{name}-start.patch
@@ -21,13 +19,15 @@ License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Url: http://www.bmsi.com/python/milter.html
-%if %{RHEL} > 0
 Requires: %{pythonbase} >= 2.4, sendmail >= 8.13
-BuildRequires: ed, %{pythonbase}-devel >= 2.4, sendmail-devel >= 8.13
+%if 0%{?el3} || 0%{?el4}
+# Need python2.4 specific pydns, not the version for system python
+Requires: pydns
 %else
-Requires: %{pythonbase}, sendmail
-BuildRequires: ed, %{pythonbase}-devel, sendmail-devel
+# Needed for callbacks, not a core function but highly useful for milters
+Requires: python-pydns
 %endif
+BuildRequires: ed, %{pythonbase}-devel >= 2.4, sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
@@ -90,7 +90,7 @@ rm -rf $RPM_BUILD_ROOT
 - Stop using INSTALLED_FILES to make Fedora happy
 - Remove config flag from start.sh glue
 - Own /var/log/milter
-- Use %{_localstatedir}
+- Use _localstatedir
 
 * Wed Jan 07 2009 Stuart Gathman <stuart@bmsi.com> 0.9.0-2
 - Changes to meet Fedora standards
