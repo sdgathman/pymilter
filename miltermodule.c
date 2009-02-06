@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.16  2008/12/16 04:21:05  customdesigned
+ * Fedora release
+ *
  * Revision 1.15  2008/12/13 20:29:56  customdesigned
  * Split off milter applications.
  *
@@ -1097,7 +1100,7 @@ milter_addrcpt(PyObject *self, PyObject *args) {
   PyThreadState *t;
   int rc;
   
-  if (!PyArg_ParseTuple(args, "s|z:addrcpt", &rcpt)) return NULL;
+  if (!PyArg_ParseTuple(args, "s|z:addrcpt", &rcpt, &params)) return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();

@@ -142,8 +142,10 @@ def connectcallback(ctx,hostname,family,hostaddr):
 def closecallback(ctx):
   m = ctx.getpriv()
   if not m: return CONTINUE
-  rc = m.close()
-  m._setctx(None)	# release milterContext
+  try:
+    rc = m.close()
+  finally:
+    m._setctx(None)	# release milterContext
   return rc
 
 def dictfromlist(args):
