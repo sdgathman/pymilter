@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.16  2007/09/25 01:24:59  customdesigned
+# Allow arbitrary object, not just spf.query like, to provide data for create_msg
+#
 # Revision 1.15  2007/09/24 20:13:26  customdesigned
 # Remove explicit spf dependency.
 #
@@ -31,7 +34,7 @@ import Milter
 import time
 import dns
 
-def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None):
+def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
   """Send DSN.  If msg is None, do callback verification.
      Mailfrom is original sender we are sending DSN or CBV to.
      Receiver is the MTA sending the DSN.
@@ -62,14 +65,14 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None):
 	raise smtplib.SMTPHeloError(code, resp)
       if msg:
         try:
-	  smtp.sendmail('<>',mailfrom,msg)
+	  smtp.sendmail('<%s>'%ourfrom,mailfrom,msg)
 	except smtplib.SMTPSenderRefused:
 	  # does not accept DSN, try postmaster (at the risk of mail loops)
 	  smtp.sendmail('<postmaster@%s>'%receiver,mailfrom,msg)
       else:	# CBV
-	code,resp = smtp.docmd('MAIL FROM: <>')
+	code,resp = smtp.docmd('MAIL FROM: <%s>'%ourfrom)
 	if code != 250:
-	  raise smtplib.SMTPSenderRefused(code, resp, '<>')
+	  raise smtplib.SMTPSenderRefused(code, resp, '<%s>'%ourfrom)
 	code,resp = smtp.rcpt(mailfrom)
 	if code not in (250,251):
 	  return (code,resp)		# permanent error
