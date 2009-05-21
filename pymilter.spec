@@ -1,3 +1,6 @@
+# EL 3,4,5 supported, set to 0 for Fedora
+%define el4 1
+%define dist .el4
 %if 0%{?el3} || 0%{?el4}
 %define __python python2.4
 %endif
@@ -11,8 +14,6 @@ Name: pymilter
 Version: 0.9.1
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
-Patch: %{name}-smutil.patch
-Patch1: %{name}-start.patch
 License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -35,8 +36,6 @@ DSNs, and doing CBV.
 
 %prep
 %setup -q
-%patch -p0 -b .smutil
-%patch1 -p0 -b .start
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
@@ -70,7 +69,7 @@ q
 EOF
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
-# start.sh is used by spfmilter and milter, and could be used by
+# start.sh is used by spfmilter, srsmilter, and milter, and could be used by
 # other milters using pymilter.
 %files
 %defattr(-,root,root,-)

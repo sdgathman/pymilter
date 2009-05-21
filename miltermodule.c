@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.17  2009/02/06 04:28:08  customdesigned
+ * Oops!  Missing options argument pointer for addrcpt.
+ *
  * Revision 1.16  2008/12/16 04:21:05  customdesigned
  * Fedora release
  *
@@ -381,7 +384,7 @@ generic_set_callback(PyObject *args,char *t,PyObject **cb) {
     callback = 0;
   else {
     if (!PyCallable_Check(callback)) {
-      PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+      PyErr_SetString(PyExc_TypeError, "callback parameter must be callable");
         return NULL;
     }
     Py_INCREF(callback);
@@ -783,6 +786,87 @@ milter_wrap_abort(SMFICTX *ctx) {
   return generic_noarg_wrapper(ctx,abort_callback);
 }
 
+#ifdef SMFIS_ALL_OPTS
+static PyObject *unknown_callback = NULL;
+static PyObject *data_callback    = NULL;
+static PyObject *negotiate_callback = NULL;
+
+static int
+milter_wrap_unknown(SMFICTX *ctx, const char *cmd) {
+   PyObject *arglist;
+   milter_ContextObject *c;
+
+   if (unknown_callback == NULL) return SMFIS_CONTINUE;
+   c = _get_context(ctx);
+   if (!c) return SMFIS_TEMPFAIL;
+   arglist = Py_BuildValue("(Os)", c, cmd);
+   return _generic_wrapper(c, unknown_callback, arglist);
+}
+
+static int
+milter_wrap_data(SMFICTX *ctx) {
+  return generic_noarg_wrapper(ctx,data_callback);
+}   
+
+static int
+milter_wrap_negotiate(SMFICTX *ctx,
+	unsigned long f0,
+	unsigned long f1,
+	unsigned long f2,
+	unsigned long f3,
+	unsigned long *pf0,
+	unsigned long *pf1,
+	unsigned long *pf2,
+	unsigned long *pf3) {
+  PyObject *arglist, *optlist;
+  milter_ContextObject *c;
+  int rc;
+
+  if (negotiate_callback == NULL) return SMFIS_ALL_OPTS;
+  c = _get_context(ctx);
+  if (!c)
+    return SMFIS_REJECT; // do not contact us again for current connection
+  optlist = Py_BuildValue("[kkkk]",f0,f1,f2,f3);
+  if (optlist == NULL)
+    arglist = NULL;
+  else
+    arglist = Py_BuildValue("(OO)", c, optlist);
+  PyThreadState *t = c->t;
+  c->t = 0;	// do not release thread in _generic_wrapper
+  rc = _generic_wrapper(c, helo_callback, arglist);
+  c->t = t;
+  if (rc == SMFIS_CONTINUE) {
+#if 0	// PyArgs_Parse deprecated and going away
+    if (!PyArgs_Parse(optlist,"[kkkk]",pf0,pf1,pf2,pf3)) {
+      PyErr_Print();
+      PyErr_Clear();	/* must clear since not returning to python */
+      rc = SMFIS_REJECT;
+    }
+#else
+    unsigned long *pa[4] = { pf0,pf1,pf2,pf3 };
+    unsigned long fa[4] = { f0,f1,f2,f3 };
+    int len = PyList_Size(optlist);
+    int i;
+    for (i = 0; i < 4; ++i) {
+      *pa[i] = (i <= len)
+      	? PyInt_AsUnsignedLongMask(PyList_GET_ITEM(optlist,i))
+	: fa[i];
+    }
+    if (PyErr_Occurred()) {
+      PyErr_Print();
+      PyErr_Clear();
+      rc = SMFIS_REJECT;
+    }
+#endif
+  }
+  else if (rc != SMFIS_ALL_OPTS)
+    rc = SMFIS_REJECT;
+  Py_DECREF(optlist);
+  _release_thread(t);
+  return rc;
+}
+#endif
+
 static int
 milter_wrap_close(SMFICTX *ctx) {
   /* xxfi_close can be called out of order - even before connect.  
@@ -814,15 +898,61 @@ milter_wrap_close(SMFICTX *ctx) {
 }
 
 static char milter_register__doc__[] =
-"register(name) -> None\n\
+"register(name,unknown=,data=,negotiate=) -> None\n\
 Registers the milter name with current callbacks, and flags.\n\
 Required before main() is called.";
 
 static PyObject *
-milter_register(PyObject *self, PyObject *args) {
-   if (!PyArg_ParseTuple(args, "s:register", &description.xxfi_name))
+milter_register(PyObject *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = { "name","unknown","data","negotiate" }; 
+  static PyObject** const cbp[3] =
+    { &unknown_callback, &data_callback, &negotiate_callback };
+  PyObject *cb[3] = { NULL, NULL, NULL };
+  int i;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|OOO:register", kwlist,
+  	&description.xxfi_name, &cb[0],&cb[1],&cb[2]))
+     return NULL;
+  for (i = 0; i < 3; ++i) {
+    PyObject *callback = cb[i];
+    if (callback != NULL && callback != Py_None) {
+      if (!PyCallable_Check(callback)) {
+	char err[80];
+	sprintf(err,"%s parameter must be callable",kwlist[i]);
+	PyErr_SetString(PyExc_TypeError, err);
+	return NULL;
+      }
+    }
+  }
+  for (i = 0; i < 3; ++i) {
+    PyObject *callback = cb[i];
+    if (callback != NULL) {	// if keyword specified
+      if (callback == Py_None) {
+	callback = NULL;
+      }
+      else {
+	Py_INCREF(callback);
+      }
+      PyObject *oldval = *cbp[i];
+      *cbp[i] = callback;
+      if (oldval) {
+	Py_DECREF(oldval);
+      }
+    }
+  }
+  return _generic_return(smfi_register(description), "cannot register");
+}
+
+static char milter_opensocket__doc__[] =
+"opensocket(rmsock) -> None\n\
+Attempts to create and open the socket provided with setconn.\n\
+Removes the socket first if rmsock is True.";
+
+static PyObject *
+milter_opensocket(PyObject *self, PyObject *args) {
+   char rmsock = 0;
+   if (!PyArg_ParseTuple(args, "b:opensocket", &rmsock))
       return NULL;
-   return _generic_return(smfi_register(description), "cannot register");
+   return _generic_return(smfi_opensocket(rmsock), "cannot opensocket");
 }
 
 static char milter_main__doc__[] =
@@ -1130,8 +1260,7 @@ milter_delrcpt(PyObject *self, PyObject *args) {
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
-  return _thread_return(t,smfi_delrcpt(ctx, rcpt),
-			 "cannot delete recipient");
+  return _thread_return(t,smfi_delrcpt(ctx, rcpt), "cannot delete recipient");
 }
 
 static char milter_replacebody__doc__[] =
@@ -1278,7 +1407,12 @@ static struct smfiDesc description = {  /* Set some reasonable defaults */
   milter_wrap_body,
   milter_wrap_eom,
   milter_wrap_abort,
-  milter_wrap_close
+  milter_wrap_close,
+#ifdef SMFIS_ALL_OPTS
+  milter_wrap_unknown,
+  milter_wrap_data,
+  milter_wrap_negotiate
+#endif
 };
 
 static PyMethodDef milter_methods[] = {
@@ -1293,9 +1427,9 @@ static PyMethodDef milter_methods[] = {
    { "set_eom_callback",     milter_set_eom_callback,     METH_VARARGS, milter_set_eom_callback__doc__},
    { "set_abort_callback",   milter_set_abort_callback,   METH_VARARGS, milter_set_abort_callback__doc__},
    { "set_close_callback",   milter_set_close_callback,   METH_VARARGS, milter_set_close_callback__doc__},
-   { "set_exception_policy",   milter_set_exception_policy,METH_VARARGS, milter_set_exception_policy__doc__},
-   { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
-   { "register",             milter_register,             METH_VARARGS, milter_register__doc__},
+   { "set_exception_policy", milter_set_exception_policy, METH_VARARGS, milter_set_exception_policy__doc__},
+   { "register",             (PyCFunction)milter_register,METH_VARARGS|METH_KEYWORDS, milter_register__doc__},
+   { "opensocket",           milter_opensocket,           METH_VARARGS, milter_opensocket__doc__},
    { "main",                 milter_main,                 METH_VARARGS, milter_main__doc__},
    { "setdbg",               milter_setdbg,               METH_VARARGS, milter_setdbg__doc__},
    { "settimeout",           milter_settimeout,           METH_VARARGS, milter_settimeout__doc__},
@@ -1370,6 +1504,9 @@ initmilter(void) {
 #endif
 #ifdef SMFIF_CHGFROM
    setitem(d,"CHGFROM",SMFIF_CHGFROM);
+#endif
+#ifdef SMFIF_ALL_OPTS
+   setitem(d,"ALL_OPTS",SMFIF_ALL_OPTS);
 #endif
    setitem(d,"CONTINUE",  SMFIS_CONTINUE);
    setitem(d,"REJECT",  SMFIS_REJECT);
