@@ -8,15 +8,9 @@ import os
 import milter
 import thread
 
-from milter import ACCEPT,CONTINUE,REJECT,DISCARD,TEMPFAIL,	\
-  set_flags, setdbg, setbacklog, settimeout, error,	\
-  ADDHDRS, CHGBODY, ADDRCPT, DELRCPT, CHGHDRS,	\
-  V1_ACTS, V2_ACTS, CURR_ACTS
+from milter import *
 
-try: from milter import QUARANTINE
-except: pass
-
-__version__ = '0.8.5'
+__version__ = '0.9.2'
 
 _seq_lock = thread.allocate_lock()
 _seq = 0
@@ -40,7 +34,12 @@ def noreply(func):
 class DisabledAction(RuntimeError):
   pass
 
+# A do nothing Milter base class from which python milters should derive
+# unless they are using the milter C module directly.
+
 class Base(object):
+  "The core class interface to the milter module."
+
   def __init__(self):
     self.__actions = CURR_ACTS         # all actions enabled
   def _setctx(self,ctx):
@@ -145,26 +144,30 @@ class Base(object):
   def progress(self):
     return self.__ctx.progress()
   
-class Milter(Base):
-  """A simple class interface to the milter module.
-  """
+# A logging but otherwise do nothing Milter base class included
+# for compatibility with previous versions of pymilter.
 
-  # user replaceable callbacks
+class Milter(Base):
+  "A simple class interface to the milter module."
+
   def log(self,*msg):
     print 'Milter:',
     for i in msg: print i,
     print
 
+  @noreply
   def connect(self,hostname,family,hostaddr):
     "Called for each connection to sendmail."
     self.log("connect from %s at %s" % (hostname,hostaddr))
     return CONTINUE
 
+  @noreply
   def hello(self,hostname):
     "Called after the HELO command."
     self.log("hello from %s" % hostname)
     return CONTINUE
 
+  @noreply
   def envfrom(self,f,*str):
     """Called to begin each message.
     f -> string		message sender
@@ -173,25 +176,25 @@ class Milter(Base):
     self.log("mail from",f,str)
     return CONTINUE
 
+  @noreply
   def envrcpt(self,to,*str):
     "Called for each message recipient."
     self.log("rcpt to",to,str)
     return CONTINUE
 
+  @noreply
   def header(self,field,value):
     "Called for each message header."
     self.log("%s: %s" % (field,value))
     return CONTINUE
 
+  @noreply
   def eoh(self):
     "Called after all headers are processed."
     self.log("eoh")
     return CONTINUE
 
-  def body(self,unused):
-    "Called to transfer the message body."
-    return CONTINUE
-
+  @noreply
   def eom(self):
     "Called at the end of message."
     self.log("eom")
