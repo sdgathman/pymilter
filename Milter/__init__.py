@@ -29,14 +29,125 @@ def uniqueID():
   seqno = _seq = _seq + 1
   _seq_lock.release()
   return seqno
-  
-class Milter:
-  """A simple class interface to the milter module.
-  """
+
+def nocallback(func):
+  func.milter_protocol = 'NO'
+  return func
+def noreply(func):
+  func.milter_protocol = 'NR'
+  return func
+
+class DisabledAction(RuntimeError):
+  pass
+
+class Base(object):
+  def __init__(self):
+    self.__actions = CURR_ACTS         # all actions enabled
   def _setctx(self,ctx):
     self.__ctx = ctx
     if ctx:
       ctx.setpriv(self)
+  @nocallback
+  def connect(self,hostname,family,hostaddr): return CONTINUE
+  @nocallback
+  def hello(self,hostname): return CONTINUE
+  @nocallback
+  def envfrom(self,f,*str): return CONTINUE
+  @nocallback
+  def envrcpt(self,to,*str): return CONTINUE
+  @nocallback
+  def data(self): return CONTINUE
+  @nocallback
+  def header(self,field,value): return CONTINUE
+  @nocallback
+  def eoh(self): return CONTINUE
+  @nocallback
+  def body(self,unused): return CONTINUE
+  @nocallback
+  def eom(self): return CONTINUE
+  @nocallback
+  def abort(self): return CONTINUE
+  @nocallback
+  def unknown(self,cmd): return CONTINUE
+  @nocallback
+  def close(self): return CONTINUE
+  def negotiate(self,opts):
+    try:
+      self.__actions,p,f1,f2 = opts
+      for func,nr,nc in (
+        (self.connect,P_NR_CONN,P_NOCONNECT),
+        (self.hello,P_NR_HELO,P_NOHELO),
+        (self.envfrom,P_NR_MAIL,P_NOMAIL),
+        (self.envrcpt,P_NR_RCPT,P_NORCPT),
+        (self.data,P_NR_DATA,P_NODATA),
+        (self.unknown,P_NR_UNKN,P_NOUNKNOWN),
+        (self.eoh,P_NR_EOH,P_NOEOH),
+        (self.body,P_NR_BODY,P_NOBODY),
+        (self.header,P_NR_HDR,P_NOHDRS)
+      ):
+        ca = getattr(func,'milter_protocol',None)
+        if ca != 'NR': p &= ~nr
+        elif p & nr: print func.__name__,'NOREPLY'
+        if ca != 'NO': p &= ~nc
+        elif p & nc: print func.__name__,'NOCALLBACK'
+      p[1] = p & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+    except:
+      # don't change anything if something went wrong
+      return ALL_OPTS 
+    return CONTINUE
+
+  # Milter methods which can be invoked from callbacks
+  def getsymval(self,sym):
+    return self.__ctx.getsymval(sym)
+
+  # If sendmail does not support setmlreply, then only the
+  # first msg line is used.
+  def setreply(self,rcode,xcode=None,msg=None,*ml):
+    return self.__ctx.setreply(rcode,xcode,msg,*ml)
+
+  def setsmlist(self,stage,macros):
+    if not self.__actions & SETSMLIST: raise DisabledAction("SETSMLIST")
+    if type(macros) in (list,tuple):
+      macros = ' '.join(macros)
+    return self.__ctx.setsmlist(stage,macros)
+
+  # Milter methods which can only be called from eom callback.
+  def addheader(self,field,value,idx=-1):
+    if not self.__actions & ADDHDRS: raise DisabledAction("ADDHDRS")
+    return self.__ctx.addheader(field,value,idx)
+
+  def chgheader(self,field,idx,value):
+    if not self.__actions & CHGHDRS: raise DisabledAction("CHGHDRS")
+    return self.__ctx.chgheader(field,idx,value)
+
+  def addrcpt(self,rcpt,params=None):
+    if not self.__actions & ADDRCPT: raise DisabledAction("ADDRCPT")
+    return self.__ctx.addrcpt(rcpt,params)
+
+  def delrcpt(self,rcpt):
+    if not self.__actions & DELRCPT: raise DisabledAction("DELRCPT")
+    return self.__ctx.delrcpt(rcpt)
+
+  def replacebody(self,body):
+    if not self.__actions & MODBODY: raise DisabledAction("MODBODY")
+    return self.__ctx.replacebody(body)
+
+  def chgfrom(self,sender,params=None):
+    if not self.__actions & CHGFROM: raise DisabledAction("CHGFROM")
+    return self.__ctx.chgfrom(sender,params)
+
+  # When quarantined, a message goes into the mailq as if to be delivered,
+  # but delivery is deferred until the message is unquarantined.
+  def quarantine(self,reason):
+    if not self.__actions & QUARANTINE: raise DisabledAction("QUARANTINE")
+    return self.__ctx.quarantine(reason)
+
+  def progress(self):
+    return self.__ctx.progress()
+  
+class Milter(Base):
+  """A simple class interface to the milter module.
+  """
 
   # user replaceable callbacks
   def log(self,*msg):
@@ -95,42 +206,6 @@ class Milter:
     "Called at the end of connection, even if aborted."
     self.log("close")
     return CONTINUE
-
-  # Milter methods which can be invoked from callbacks
-  def getsymval(self,sym):
-    return self.__ctx.getsymval(sym)
-
-  # If sendmail does not support setmlreply, then only the
-  # first msg line is used.
-  def setreply(self,rcode,xcode=None,msg=None,*ml):
-    return self.__ctx.setreply(rcode,xcode,msg,*ml)
-
-  # Milter methods which can only be called from eom callback.
-  def addheader(self,field,value,idx=-1):
-    return self.__ctx.addheader(field,value,idx)
-
-  def chgheader(self,field,idx,value):
-    return self.__ctx.chgheader(field,idx,value)
-
-  def addrcpt(self,rcpt,params=None):
-    return self.__ctx.addrcpt(rcpt,params)
-
-  def delrcpt(self,rcpt):
-    return self.__ctx.delrcpt(rcpt)
-
-  def replacebody(self,body):
-    return self.__ctx.replacebody(body)
-
-  def chgfrom(self,sender,params=None):
-    return self.__ctx.chgfrom(sender,params)
-
-  # When quarantined, a message goes into the mailq as if to be delivered,
-  # but delivery is deferred until the message is unquarantined.
-  def quarantine(self,reason):
-    return self.__ctx.quarantine(reason)
-
-  def progress(self):
-    return self.__ctx.progress()
 
 factory = Milter
 
@@ -214,7 +289,11 @@ def runmilter(name,socketname,timeout = 0):
   milter.setconn(socketname)
   if timeout > 0: milter.settimeout(timeout)
   # The name *must* match the X line in sendmail.cf (supposedly)
-  milter.register(name)
+  milter.register(name,
+        data=lambda ctx: ctx.getpriv().data(),
+        unknown=lambda ctx,cmd: ctx.getpriv().unknown(cmd),
+        negotiate=lambda ctx,opt: ctx.getpriv().negotiate(opt)
+  )
   start_seq = _seq
   try:
     milter.main()

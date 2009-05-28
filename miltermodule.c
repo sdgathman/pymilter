@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.18  2009/05/21 21:53:05  customdesigned
+ * First cut at support unknown, data, negotiate callbacks.
+ *
  * Revision 1.17  2009/02/06 04:28:08  customdesigned
  * Oops!  Missing options argument pointer for addrcpt.
  *
@@ -1367,6 +1370,27 @@ milter_progress(PyObject *self, PyObject *args) {
 }
 #endif
 
+#ifdef SMFIF_SETSMLIST
+static char milter_setsmlist__doc__[] =
+"setsmlist(stage,macrolist) -> None\n\
+Tell the MTA which macro values we are interested in for a given stage";
+
+static PyObject *
+milter_setsmlist(PyObject *self, PyObject *args) {
+  SMFICTX *ctx;
+  PyThreadState *t;
+  int stage = 0;
+  char *smlist = 0;
+
+  if (!PyArg_ParseTuple(args, "is:setsmlist",&stage, &smlist)) return NULL;
+  ctx = _find_context(self);
+  if (ctx == NULL) return NULL;
+  t = PyEval_SaveThread();
+  return _thread_return(t,smfi_setsmlist(ctx,stage,smlist),
+        "cannot set macro list");
+}
+#endif
+
 static PyMethodDef context_methods[] = {
   { "getsymval",   milter_getsymval,   METH_VARARGS, milter_getsymval__doc__},
   { "setreply",    milter_setreply,    METH_VARARGS, milter_setreply__doc__},
@@ -1385,6 +1409,9 @@ static PyMethodDef context_methods[] = {
 #endif
 #ifdef SMFIF_CHGFROM
   { "chgfrom",  milter_chgfrom,  METH_VARARGS, milter_chgfrom__doc__},
+#endif
+#ifdef SMFIF_SETSMLIST
+  { "setsmlist",  milter_setsmlist,  METH_VARARGS, milter_setsmlist__doc__},
 #endif
   { NULL, NULL }
 };
@@ -1505,8 +1532,34 @@ initmilter(void) {
 #ifdef SMFIF_CHGFROM
    setitem(d,"CHGFROM",SMFIF_CHGFROM);
 #endif
+#ifdef SMFIF_SETSMLIST
+   setitem(d,"SETSMLIST",SMFIF_SETSMLIST);
+#endif
 #ifdef SMFIF_ALL_OPTS
+   setitem(d,"P_RCPT_REJ",SMFIP_RCPT_REJ);
+   setitem(d,"P_NR_CONN",SMFIP_NR_CONN);
+   setitem(d,"P_NR_HELO",SMFIP_NR_HELO);
+   setitem(d,"P_NR_MAIL",SMFIP_NR_MAIL);
+   setitem(d,"P_NR_RCPT",SMFIP_NR_RCPT);
+   setitem(d,"P_NR_DATA",SMFIP_NR_DATA);
+   setitem(d,"P_NR_UNKN",SMFIP_NR_UNKN);
+   setitem(d,"P_NR_EOH",SMFIP_NR_EOH);
+   setitem(d,"P_NR_BODY",SMFIP_NR_BODY);
+   setitem(d,"P_NR_HDR",SMFIP_NR_HDR);
+   setitem(d,"P_NOCONNECT",SMFIP_NR_CONN);
+   setitem(d,"P_NOHELO",SMFIP_NR_HELO);
+   setitem(d,"P_NOMAIL",SMFIP_NR_MAIL);
+   setitem(d,"P_NORCPT",SMFIP_NR_RCPT);
+   setitem(d,"P_NODATA",SMFIP_NR_DATA);
+   setitem(d,"P_NOUNKNOWN",SMFIP_NR_UNKN);
+   setitem(d,"P_NOEOH",SMFIP_NR_EOH);
+   setitem(d,"P_NOBODY",SMFIP_NR_BODY);
+   setitem(d,"P_NOHDRS",SMFIP_NR_HDR);
+   setitem(d,"P_HDR_LEADSPC",SMFIP_HDR_LEADSPC);
+   setitem(d,"P_SKIP",SMFIP_SKIP);
    setitem(d,"ALL_OPTS",SMFIF_ALL_OPTS);
+   setitem(d,"SKIP",SMFIS_SKIP);
+   setitem(d,"NOREPLY",SMFIS_NOREPLY);
 #endif
    setitem(d,"CONTINUE",  SMFIS_CONTINUE);
    setitem(d,"REJECT",  SMFIS_REJECT);
