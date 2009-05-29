@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.19  2009/05/28 18:36:42  customdesigned
+ * Support new callbacks, including negotiate
+ *
  * Revision 1.18  2009/05/21 21:53:05  customdesigned
  * First cut at support unknown, data, negotiate callbacks.
  *
@@ -907,7 +910,7 @@ Required before main() is called.";
 
 static PyObject *
 milter_register(PyObject *self, PyObject *args, PyObject *kwds) {
-  static char *kwlist[] = { "name","unknown","data","negotiate" }; 
+  static char *kwlist[] = { "name","unknown","data","negotiate", NULL }; 
   static PyObject** const cbp[3] =
     { &unknown_callback, &data_callback, &negotiate_callback };
   PyObject *cb[3] = { NULL, NULL, NULL };
