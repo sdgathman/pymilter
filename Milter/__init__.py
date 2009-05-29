@@ -89,7 +89,9 @@ class Base(object):
         elif p & nr: print func.__name__,'NOREPLY'
         if ca != 'NO': p &= ~nc
         elif p & nc: print func.__name__,'NOCALLBACK'
-      p[1] = p & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+      opts[1] = p & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+      opts[2] = 0
+      opts[3] = 0
     except:
       # don't change anything if something went wrong
       return ALL_OPTS 
