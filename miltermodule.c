@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.22  2009/05/29 19:53:36  customdesigned
+ * Typo SMFIS_ALL_OPTS
+ *
  * Revision 1.21  2009/05/29 19:49:40  customdesigned
  * Typo calling helo instead of negotiate.
  *
@@ -1555,15 +1558,15 @@ initmilter(void) {
    setitem(d,"P_NR_EOH",SMFIP_NR_EOH);
    setitem(d,"P_NR_BODY",SMFIP_NR_BODY);
    setitem(d,"P_NR_HDR",SMFIP_NR_HDR);
-   setitem(d,"P_NOCONNECT",SMFIP_NR_CONN);
-   setitem(d,"P_NOHELO",SMFIP_NR_HELO);
-   setitem(d,"P_NOMAIL",SMFIP_NR_MAIL);
-   setitem(d,"P_NORCPT",SMFIP_NR_RCPT);
-   setitem(d,"P_NODATA",SMFIP_NR_DATA);
-   setitem(d,"P_NOUNKNOWN",SMFIP_NR_UNKN);
-   setitem(d,"P_NOEOH",SMFIP_NR_EOH);
-   setitem(d,"P_NOBODY",SMFIP_NR_BODY);
-   setitem(d,"P_NOHDRS",SMFIP_NR_HDR);
+   setitem(d,"P_NOCONNECT",SMFIP_NOCONNECT);
+   setitem(d,"P_NOHELO",SMFIP_NOHELO);
+   setitem(d,"P_NOMAIL",SMFIP_NOMAIL);
+   setitem(d,"P_NORCPT",SMFIP_NORCPT);
+   setitem(d,"P_NODATA",SMFIP_NODATA);
+   setitem(d,"P_NOUNKNOWN",SMFIP_NOUNKNOWN);
+   setitem(d,"P_NOEOH",SMFIP_NOEOH);
+   setitem(d,"P_NOBODY",SMFIP_NOBODY);
+   setitem(d,"P_NOHDRS",SMFIP_NOHDRS);
    setitem(d,"P_HDR_LEADSPC",SMFIP_HDR_LEADSPC);
    setitem(d,"P_SKIP",SMFIP_SKIP);
    setitem(d,"ALL_OPTS",SMFIS_ALL_OPTS);
