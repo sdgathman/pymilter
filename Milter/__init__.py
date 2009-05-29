@@ -213,10 +213,15 @@ class Milter(Base):
 
 factory = Milter
 
+def getpriv(ctx):
+  m = ctx.getpriv()
+  if not m:     # if not already created 
+    m = factory()
+    m._setctx(ctx)
+  return m
+
 def connectcallback(ctx,hostname,family,hostaddr):
-  m = factory()
-  m._setctx(ctx)
-  return m.connect(hostname,family,hostaddr)
+  return getpriv(ctx).connect(hostname,family,hostaddr)
 
 def closecallback(ctx):
   m = ctx.getpriv()
@@ -275,7 +280,7 @@ def runmilter(name,socketname,timeout = 0):
 
   # The default flags set include everything
   # milter.set_flags(milter.ADDHDRS)
-  milter.set_connect_callback(connectcallback)
+  milter.set_connect_callback(lambda ctx,h,f,i: getpriv(ctx).connect(h,f,i))
   milter.set_helo_callback(lambda ctx, host: ctx.getpriv().hello(host))
   # For envfrom and envrcpt, we would like to convert ESMTP parms to keyword
   # parms, but then all existing users would have to include **kw to accept
@@ -296,7 +301,7 @@ def runmilter(name,socketname,timeout = 0):
   milter.register(name,
         data=lambda ctx: ctx.getpriv().data(),
         unknown=lambda ctx,cmd: ctx.getpriv().unknown(cmd),
-        negotiate=lambda ctx,opt: ctx.getpriv().negotiate(opt)
+        negotiate=lambda ctx,opt: getpriv(ctx).negotiate(opt)
   )
   start_seq = _seq
   try:
