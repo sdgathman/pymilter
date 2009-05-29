@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.21  2009/05/29 19:49:40  customdesigned
+ * Typo calling helo instead of negotiate.
+ *
  * Revision 1.20  2009/05/29 18:25:59  customdesigned
  * Null terminate keyword list.
  *
@@ -1541,7 +1544,7 @@ initmilter(void) {
 #ifdef SMFIF_SETSMLIST
    setitem(d,"SETSMLIST",SMFIF_SETSMLIST);
 #endif
-#ifdef SMFIF_ALL_OPTS
+#ifdef SMFIS_ALL_OPTS
    setitem(d,"P_RCPT_REJ",SMFIP_RCPT_REJ);
    setitem(d,"P_NR_CONN",SMFIP_NR_CONN);
    setitem(d,"P_NR_HELO",SMFIP_NR_HELO);
@@ -1563,7 +1566,7 @@ initmilter(void) {
    setitem(d,"P_NOHDRS",SMFIP_NR_HDR);
    setitem(d,"P_HDR_LEADSPC",SMFIP_HDR_LEADSPC);
    setitem(d,"P_SKIP",SMFIP_SKIP);
-   setitem(d,"ALL_OPTS",SMFIF_ALL_OPTS);
+   setitem(d,"ALL_OPTS",SMFIS_ALL_OPTS);
    setitem(d,"SKIP",SMFIS_SKIP);
    setitem(d,"NOREPLY",SMFIS_NOREPLY);
 #endif
