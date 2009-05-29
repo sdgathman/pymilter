@@ -95,7 +95,7 @@ class Base(object):
       return ALL_OPTS 
     return CONTINUE
 
-  # Milter methods which can be invoked from callbacks
+  # Milter methods which can be invoked from most callbacks
   def getsymval(self,sym):
     return self.__ctx.getsymval(sym)
 
@@ -104,6 +104,7 @@ class Base(object):
   def setreply(self,rcode,xcode=None,msg=None,*ml):
     return self.__ctx.setreply(rcode,xcode,msg,*ml)
 
+  # may only be called from negotiate callback
   def setsmlist(self,stage,macros):
     if not self.__actions & SETSMLIST: raise DisabledAction("SETSMLIST")
     if type(macros) in (list,tuple):

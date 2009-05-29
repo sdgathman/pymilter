@@ -83,6 +83,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu May 28 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-1
+- Add new callback support: data,negotiate,unknown
+
 * Thu Feb 05 2009 Stuart Gathman <stuart@bmsi.com> 0.9.1-1
 - Fix missing address of optional param to addrcpt
 
