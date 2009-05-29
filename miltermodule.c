@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.20  2009/05/29 18:25:59  customdesigned
+ * Null terminate keyword list.
+ *
  * Revision 1.19  2009/05/28 18:36:42  customdesigned
  * Support new callbacks, including negotiate
  *
@@ -839,7 +842,7 @@ milter_wrap_negotiate(SMFICTX *ctx,
     arglist = Py_BuildValue("(OO)", c, optlist);
   PyThreadState *t = c->t;
   c->t = 0;	// do not release thread in _generic_wrapper
-  rc = _generic_wrapper(c, helo_callback, arglist);
+  rc = _generic_wrapper(c, negotiate_callback, arglist);
   c->t = t;
   if (rc == SMFIS_CONTINUE) {
 #if 0	// PyArgs_Parse deprecated and going away
