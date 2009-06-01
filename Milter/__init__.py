@@ -24,10 +24,18 @@ def uniqueID():
   _seq_lock.release()
   return seqno
 
+OPTIONAL_CALLBACKS = frozenset((
+  'connect','hello','envfrom','envrcpt','data','header','eoh','body','unknown'))
 def nocallback(func):
+  if not func.__name__ in OPTIONAL_CALLBACKS:
+    raise ValueError(
+      '@nocallback applied to non-optional method: '+func.__name__)
   func.milter_protocol = 'NO'
   return func
 def noreply(func):
+  if not func.__name__ in OPTIONAL_CALLBACKS:
+    raise ValueError(
+      '@noreply applied to non-optional method: '+func.__name__)
   func.milter_protocol = 'NR'
   return func
 
@@ -40,12 +48,12 @@ class DisabledAction(RuntimeError):
 class Base(object):
   "The core class interface to the milter module."
 
-  def __init__(self):
-    self.__actions = CURR_ACTS         # all actions enabled
   def _setctx(self,ctx):
     self.__ctx = ctx
+    self.__actions = CURR_ACTS         # all actions enabled by default
     if ctx:
       ctx.setpriv(self)
+  def log(self,*msg): pass
   @nocallback
   def connect(self,hostname,family,hostaddr): return CONTINUE
   @nocallback
@@ -63,13 +71,13 @@ class Base(object):
   @nocallback
   def body(self,unused): return CONTINUE
   @nocallback
-  def eom(self): return CONTINUE
-  @nocallback
-  def abort(self): return CONTINUE
-  @nocallback
   def unknown(self,cmd): return CONTINUE
-  @nocallback
+  def eom(self): return CONTINUE
+  def abort(self): return CONTINUE
   def close(self): return CONTINUE
+
+  # Default negotiation sets P_NO* and P_NR* for callbacks
+  # marked @nocallback and @noreply respectively
   def negotiate(self,opts):
     try:
       self.__actions,p,f1,f2 = opts
@@ -85,13 +93,18 @@ class Base(object):
         (self.header,P_NR_HDR,P_NOHDRS)
       ):
         ca = getattr(func,'milter_protocol',None)
-        if ca != 'NR': p &= ~nr
-        elif p & nr: print func.__name__,'NOREPLY'
-        if ca != 'NO': p &= ~nc
-        elif p & nc: print func.__name__,'NOCALLBACK'
+        if ca != 'NR':
+	  p &= ~nr
+        #elif p & nr:
+	#  self.log(func.__name__,'NOREPLY')
+        if ca != 'NO':
+	  p &= ~nc
+        #elif p & nc:
+	#  self.log(func.__name__,'NOCALLBACK')
       opts[1] = p & ~P_RCPT_REJ & ~P_HDR_LEADSPC
       opts[2] = 0
       opts[3] = 0
+      self.log("Negotiated:",opts)
     except:
       # don't change anything if something went wrong
       return ALL_OPTS 
@@ -197,7 +210,6 @@ class Milter(Base):
     self.log("eoh")
     return CONTINUE
 
-  @noreply
   def eom(self):
     "Called at the end of message."
     self.log("eom")
