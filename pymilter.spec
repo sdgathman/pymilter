@@ -83,6 +83,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Tue Jun 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-2
+- Cache callback negotiation
+
 * Thu May 28 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-1
 - Add new callback support: data,negotiate,unknown
 - Auto-negotiate protocol steps 

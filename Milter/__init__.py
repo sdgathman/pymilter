@@ -101,8 +101,8 @@ class Base(object):
         ca = getattr(func,'milter_protocol',0)
         #print func,hex(nr),hex(nc),hex(ca)
         p |= (nr|nc) & ~ca
-    klass._protocol_mask = p
-    return p
+      klass._protocol_mask = p
+      return p
     
   # Default negotiation sets P_NO* and P_NR* for callbacks
   # marked @nocallback and @noreply respectively

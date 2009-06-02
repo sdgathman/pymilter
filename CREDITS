@@ -7,6 +7,10 @@ real, usable Python extension.
 
 Other contributors (in random order):
 
+arkanes@irc.freenode.net
+  for suggesting a class method to compute and cache protocol masks
+habnabit@habnabit.org
+  for suggesting function attributes and decorators for protocol negotiation
 Dwayne Litzenberger, B.A.Sc.
   for library_dirs patch to compile on Debian 
 Dave MacQuigg 
