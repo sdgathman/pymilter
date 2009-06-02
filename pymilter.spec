@@ -12,7 +12,7 @@
 Summary: Python interface to sendmail milter API
 Name: pymilter
 Version: 0.9.2
-Release: 1%{dist}
+Release: 2%{dist}
 Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
 License: GPLv2+
 Group: Development/Libraries
@@ -85,6 +85,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Thu May 28 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-1
 - Add new callback support: data,negotiate,unknown
+- Auto-negotiate protocol steps 
 
 * Thu Feb 05 2009 Stuart Gathman <stuart@bmsi.com> 0.9.1-1
 - Fix missing address of optional param to addrcpt

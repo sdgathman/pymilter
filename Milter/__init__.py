@@ -4,13 +4,13 @@
 
 # A thin OO wrapper for the milter module
 
+__version__ = '0.9.2'
+
 import os
 import milter
 import thread
 
 from milter import *
-
-__version__ = '0.9.2'
 
 _seq_lock = thread.allocate_lock()
 _seq = 0
@@ -24,19 +24,32 @@ def uniqueID():
   _seq_lock.release()
   return seqno
 
-OPTIONAL_CALLBACKS = frozenset((
-  'connect','hello','envfrom','envrcpt','data','header','eoh','body','unknown'))
+OPTIONAL_CALLBACKS = {
+  'connect':(P_NR_CONN,P_NOCONNECT),
+  'hello':(P_NR_HELO,P_NOHELO),
+  'envfrom':(P_NR_MAIL,P_NOMAIL),
+  'envrcpt':(P_NR_RCPT,P_NORCPT),
+  'data':(P_NR_DATA,P_NODATA),
+  'unknown':(P_NR_UNKN,P_NOUNKNOWN),
+  'eoh':(P_NR_EOH,P_NOEOH),
+  'body':(P_NR_BODY,P_NOBODY),
+  'header':(P_NR_HDR,P_NOHDRS)
+}
+
 def nocallback(func):
-  if not func.__name__ in OPTIONAL_CALLBACKS:
+  try:
+    func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][1]
+  except KeyError:
     raise ValueError(
       '@nocallback applied to non-optional method: '+func.__name__)
-  func.milter_protocol = 'NO'
   return func
+
 def noreply(func):
-  if not func.__name__ in OPTIONAL_CALLBACKS:
+  try:
+    func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][0]
+  except KeyErro:
     raise ValueError(
       '@noreply applied to non-optional method: '+func.__name__)
-  func.milter_protocol = 'NR'
   return func
 
 class DisabledAction(RuntimeError):
@@ -49,8 +62,8 @@ class Base(object):
   "The core class interface to the milter module."
 
   def _setctx(self,ctx):
-    self.__ctx = ctx
-    self.__actions = CURR_ACTS         # all actions enabled by default
+    self._ctx = ctx
+    self._actions = CURR_ACTS         # all actions enabled by default
     if ctx:
       ctx.setpriv(self)
   def log(self,*msg): pass
@@ -76,32 +89,27 @@ class Base(object):
   def abort(self): return CONTINUE
   def close(self): return CONTINUE
 
+  # Return mask of SMFIP_N.. protocol bits to clear for this class
+  @classmethod
+  def protocol_mask(klass):
+    try:
+      return klass._protocol_mask
+    except AttributeError:
+      p = 0
+      for func,(nr,nc) in OPTIONAL_CALLBACKS.items():
+        func = getattr(klass,func)
+        ca = getattr(func,'milter_protocol',0)
+        #print func,hex(nr),hex(nc),hex(ca)
+        p |= (nr|nc) & ~ca
+    klass._protocol_mask = p
+    return p
+    
   # Default negotiation sets P_NO* and P_NR* for callbacks
   # marked @nocallback and @noreply respectively
   def negotiate(self,opts):
     try:
-      self.__actions,p,f1,f2 = opts
-      for func,nr,nc in (
-        (self.connect,P_NR_CONN,P_NOCONNECT),
-        (self.hello,P_NR_HELO,P_NOHELO),
-        (self.envfrom,P_NR_MAIL,P_NOMAIL),
-        (self.envrcpt,P_NR_RCPT,P_NORCPT),
-        (self.data,P_NR_DATA,P_NODATA),
-        (self.unknown,P_NR_UNKN,P_NOUNKNOWN),
-        (self.eoh,P_NR_EOH,P_NOEOH),
-        (self.body,P_NR_BODY,P_NOBODY),
-        (self.header,P_NR_HDR,P_NOHDRS)
-      ):
-        ca = getattr(func,'milter_protocol',None)
-        if ca != 'NR':
-	  p &= ~nr
-        #elif p & nr:
-	#  self.log(func.__name__,'NOREPLY')
-        if ca != 'NO':
-	  p &= ~nc
-        #elif p & nc:
-	#  self.log(func.__name__,'NOCALLBACK')
-      opts[1] = p & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+      self._actions,p,f1,f2 = opts
+      opts[1] = p & ~self.protocol_mask() & ~P_RCPT_REJ & ~P_HDR_LEADSPC
       opts[2] = 0
       opts[3] = 0
       self.log("Negotiated:",opts)
@@ -112,53 +120,53 @@ class Base(object):
 
   # Milter methods which can be invoked from most callbacks
   def getsymval(self,sym):
-    return self.__ctx.getsymval(sym)
+    return self._ctx.getsymval(sym)
 
   # If sendmail does not support setmlreply, then only the
   # first msg line is used.
   def setreply(self,rcode,xcode=None,msg=None,*ml):
-    return self.__ctx.setreply(rcode,xcode,msg,*ml)
+    return self._ctx.setreply(rcode,xcode,msg,*ml)
 
   # may only be called from negotiate callback
   def setsmlist(self,stage,macros):
-    if not self.__actions & SETSMLIST: raise DisabledAction("SETSMLIST")
+    if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")
     if type(macros) in (list,tuple):
       macros = ' '.join(macros)
-    return self.__ctx.setsmlist(stage,macros)
+    return self._ctx.setsmlist(stage,macros)
 
   # Milter methods which can only be called from eom callback.
   def addheader(self,field,value,idx=-1):
-    if not self.__actions & ADDHDRS: raise DisabledAction("ADDHDRS")
-    return self.__ctx.addheader(field,value,idx)
+    if not self._actions & ADDHDRS: raise DisabledAction("ADDHDRS")
+    return self._ctx.addheader(field,value,idx)
 
   def chgheader(self,field,idx,value):
-    if not self.__actions & CHGHDRS: raise DisabledAction("CHGHDRS")
-    return self.__ctx.chgheader(field,idx,value)
+    if not self._actions & CHGHDRS: raise DisabledAction("CHGHDRS")
+    return self._ctx.chgheader(field,idx,value)
 
   def addrcpt(self,rcpt,params=None):
-    if not self.__actions & ADDRCPT: raise DisabledAction("ADDRCPT")
-    return self.__ctx.addrcpt(rcpt,params)
+    if not self._actions & ADDRCPT: raise DisabledAction("ADDRCPT")
+    return self._ctx.addrcpt(rcpt,params)
 
   def delrcpt(self,rcpt):
-    if not self.__actions & DELRCPT: raise DisabledAction("DELRCPT")
-    return self.__ctx.delrcpt(rcpt)
+    if not self._actions & DELRCPT: raise DisabledAction("DELRCPT")
+    return self._ctx.delrcpt(rcpt)
 
   def replacebody(self,body):
-    if not self.__actions & MODBODY: raise DisabledAction("MODBODY")
-    return self.__ctx.replacebody(body)
+    if not self._actions & MODBODY: raise DisabledAction("MODBODY")
+    return self._ctx.replacebody(body)
 
   def chgfrom(self,sender,params=None):
-    if not self.__actions & CHGFROM: raise DisabledAction("CHGFROM")
-    return self.__ctx.chgfrom(sender,params)
+    if not self._actions & CHGFROM: raise DisabledAction("CHGFROM")
+    return self._ctx.chgfrom(sender,params)
 
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.
   def quarantine(self,reason):
-    if not self.__actions & QUARANTINE: raise DisabledAction("QUARANTINE")
-    return self.__ctx.quarantine(reason)
+    if not self._actions & QUARANTINE: raise DisabledAction("QUARANTINE")
+    return self._ctx.quarantine(reason)
 
   def progress(self):
-    return self.__ctx.progress()
+    return self._ctx.progress()
   
 # A logging but otherwise do nothing Milter base class included
 # for compatibility with previous versions of pymilter.
