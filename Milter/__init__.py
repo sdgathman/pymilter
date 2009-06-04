@@ -119,7 +119,7 @@ class Base(object):
               p & ~self.protocol_mask() & ~P_RCPT_REJ & ~P_HDR_LEADSPC
       opts[2] = 0
       opts[3] = 0
-      self.log("Negotiated:",opts)
+      #self.log("Negotiated:",opts)
     except:
       # don't change anything if something went wrong
       return ALL_OPTS 
@@ -242,17 +242,21 @@ class Milter(Base):
 
 factory = Milter
 
-def getpriv(ctx):
+def negotiate_callback(ctx,opts):
+  m = factory()
+  m._setctx(ctx)
+  return m.negotiate(opts)
+
+def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   m = ctx.getpriv()
-  if not m:     # if not already created 
+  if not m:     
+    # If not already created (because the current MTA doesn't support
+    # xmfi_negotiate), create the connection object.
     m = factory()
     m._setctx(ctx)
-  return m
+  return m.connect(hostname,family,hostaddr)
 
-def connectcallback(ctx,hostname,family,hostaddr):
-  return getpriv(ctx).connect(hostname,family,hostaddr)
-
-def closecallback(ctx):
+def close_callback(ctx):
   m = ctx.getpriv()
   if not m: return CONTINUE
   try:
@@ -309,7 +313,7 @@ def runmilter(name,socketname,timeout = 0):
 
   # The default flags set include everything
   # milter.set_flags(milter.ADDHDRS)
-  milter.set_connect_callback(lambda ctx,h,f,i: getpriv(ctx).connect(h,f,i))
+  milter.set_connect_callback(connect_callback)
   milter.set_helo_callback(lambda ctx, host: ctx.getpriv().hello(host))
   # For envfrom and envrcpt, we would like to convert ESMTP parms to keyword
   # parms, but then all existing users would have to include **kw to accept
@@ -322,7 +326,7 @@ def runmilter(name,socketname,timeout = 0):
   milter.set_body_callback(lambda ctx,chunk: ctx.getpriv().body(chunk))
   milter.set_eom_callback(lambda ctx: ctx.getpriv().eom())
   milter.set_abort_callback(lambda ctx: ctx.getpriv().abort())
-  milter.set_close_callback(closecallback)
+  milter.set_close_callback(close_callback)
 
   milter.setconn(socketname)
   if timeout > 0: milter.settimeout(timeout)
@@ -330,7 +334,7 @@ def runmilter(name,socketname,timeout = 0):
   milter.register(name,
         data=lambda ctx: ctx.getpriv().data(),
         unknown=lambda ctx,cmd: ctx.getpriv().unknown(cmd),
-        negotiate=lambda ctx,opt: getpriv(ctx).negotiate(opt)
+        negotiate=negotiate_callback
   )
   start_seq = _seq
   try:
