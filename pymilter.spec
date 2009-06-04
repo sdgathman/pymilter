@@ -83,6 +83,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Tue Jun 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-3
+- Change result of @noreply callbacks to NOREPLY when so negotiated.
+
 * Tue Jun 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-2
 - Cache callback negotiation
 
