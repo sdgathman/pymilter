@@ -46,7 +46,7 @@ def nocallback(func):
 
 def noreply(func):
   try:
-    nr_mask = func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][0]
+    nr_mask = OPTIONAL_CALLBACKS[func.__name__][0]
   except KeyErro:
     raise ValueError(
       '@noreply applied to non-optional method: '+func.__name__)
@@ -54,6 +54,7 @@ def noreply(func):
     rc = func(self,*args)
     if self._protocol & nr_mask: return NOREPLY
     return rc
+  wrapper.milter_protocol = nr_mask
   return wrapper
 
 class DisabledAction(RuntimeError):
