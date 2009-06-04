@@ -46,11 +46,15 @@ def nocallback(func):
 
 def noreply(func):
   try:
-    func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][0]
+    nr_mask = func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][0]
   except KeyErro:
     raise ValueError(
       '@noreply applied to non-optional method: '+func.__name__)
-  return func
+  def wrapper(self,*args):
+    rc = func(self,*args)
+    if self._protocol & nr_mask: return NOREPLY
+    return rc
+  return wrapper
 
 class DisabledAction(RuntimeError):
   pass
@@ -64,6 +68,7 @@ class Base(object):
   def _setctx(self,ctx):
     self._ctx = ctx
     self._actions = CURR_ACTS         # all actions enabled by default
+    self._protocol = 0                # no protocol options by default
     if ctx:
       ctx.setpriv(self)
   def log(self,*msg): pass
@@ -89,7 +94,7 @@ class Base(object):
   def abort(self): return CONTINUE
   def close(self): return CONTINUE
 
-  # Return mask of SMFIP_N.. protocol bits to clear for this class
+  # Return mask of SMFIP_N.. protocol option bits to clear for this class
   @classmethod
   def protocol_mask(klass):
     try:
@@ -109,7 +114,8 @@ class Base(object):
   def negotiate(self,opts):
     try:
       self._actions,p,f1,f2 = opts
-      opts[1] = p & ~self.protocol_mask() & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+      opts[1] = self._protocol = \
+              p & ~self.protocol_mask() & ~P_RCPT_REJ & ~P_HDR_LEADSPC
       opts[2] = 0
       opts[3] = 0
       self.log("Negotiated:",opts)
