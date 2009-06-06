@@ -15,7 +15,7 @@ from socket import AF_INET, AF_INET6
 from Milter import parse_addr
 
 
-class myMilter(Milter.Milter):
+class myMilter(Milter.Base):
 
   def __init__(self):  # A new instance with each new connection.
     self.id = Milter.uniqueID()  # Integer incremented with each call.
@@ -23,6 +23,7 @@ class myMilter(Milter.Milter):
   # each connection runs in its own thread and has its own myMilter
   # instance.  Python code must be thread safe.  This is trivial if only stuff
   # in myMilter instances is referenced.
+  @noreply
   def connect(self, IPname, family, hostaddr):
     # (self, 'ip068.subnet71.example.com', AF_INET, ('215.183.71.68', 4720) )
     # (self, 'ip6.mxout.example.com', AF_INET6,
@@ -70,6 +71,7 @@ class myMilter(Milter.Milter):
 
 
   ##  def envrcpt(self, to, *str):
+  @noreply
   def envrcpt(self, recipient, *str):
     rcptinfo = to,Milter.dictfromlist(str)
     self.R.append(rcptinfo)
@@ -77,20 +79,20 @@ class myMilter(Milter.Milter):
     return Milter.CONTINUE
 
 
+  @noreply
   def header(self, name, hval):
     self.fp.write("%s: %s\n" % (name,hval))	# add header to buffer
     return Milter.CONTINUE
 
-
+  @noreply
   def eoh(self):
     self.fp.write("\n")				# terminate headers
     return Milter.CONTINUE
 
-
+  @noreply
   def body(self, chunk):
     self.fp.write(chunk)
     return Milter.CONTINUE
-
 
   def eom(self):
     self.fp.seek(0)

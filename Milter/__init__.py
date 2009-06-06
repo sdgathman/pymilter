@@ -1,8 +1,12 @@
-# Author: Stuart D. Gathman <stuart@bmsi.com>
-# Copyright 2001 Business Management Systems, Inc.
+## @package Milter
+# A thin OO wrapper for the milter module.
+#
+# Clients generally subclass Milter.Base and define callback
+# methods.
+#
+# author Stuart D. Gathman <stuart@bmsi.com>
+# Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
-
-# A thin OO wrapper for the milter module
 
 __version__ = '0.9.2'
 
@@ -36,6 +40,14 @@ OPTIONAL_CALLBACKS = {
   'header':(P_NR_HDR,P_NOHDRS)
 }
 
+## Function decorator to disable callback methods.
+# If the MTA supports it, tells the MTA not to call this callback,
+# increasing efficiency.  All the callbacks (except negotiate)
+# are disabled in Milter.Base, and overriding them reenables the
+# callback.  An application may need to use @@callback when it extends
+# another milter and wants to disable a callback again.
+# The disabled method should still return Milter.CONTINUE, in case the MTA does
+# not support protocol negotiation.
 def nocallback(func):
   try:
     func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][1]
@@ -44,6 +56,12 @@ def nocallback(func):
       '@nocallback applied to non-optional method: '+func.__name__)
   return func
 
+## Function decorator to disable callback reply.
+# If the MTA supports it, tells the MTA not to wait for a reply from
+# this callback, and assume CONTINUE.  The method should still return
+# CONTINUE in case the MTA does not support protocol negotiation.
+# The decorator arranges to change the return code to NOREPLY 
+# when supported by the MTA.
 def noreply(func):
   try:
     nr_mask = OPTIONAL_CALLBACKS[func.__name__][0]
@@ -57,12 +75,20 @@ def noreply(func):
   wrapper.milter_protocol = nr_mask
   return wrapper
 
+## Disabled action exception.
+# set_flags() can tell the MTA that this application will not use certain
+# features (such as CHGFROM).  This can also be negotiated for each
+# connection in the negotiate callback.  If the application then calls
+# the feature anyway via an instance method, this exception is
+# thrown.
 class DisabledAction(RuntimeError):
   pass
 
-# A do nothing Milter base class from which python milters should derive
-# unless they are using the milter C module directly.
-
+## A do nothing Milter base class.
+# Python milters should derive from this class
+# unless they are using the low lever milter module directly.  
+# All optional callbacks are disabled, and automatically
+# reenabled when overridden.
 class Base(object):
   "The core class interface to the milter module."
 
@@ -72,30 +98,54 @@ class Base(object):
     self._protocol = 0                # no protocol options by default
     if ctx:
       ctx.setpriv(self)
+  ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
+  ## Called for each connection to the MTA.
   @nocallback
   def connect(self,hostname,family,hostaddr): return CONTINUE
+  ## Called when the SMTP client says HELO.
+  # Returning REJECT prevents progress until a valid HELO is provided;
+  # this almost always results in terminating the connection.
   @nocallback
   def hello(self,hostname): return CONTINUE
+  ## Called when the SMTP client says MAIL FROM.
+  # Returning REJECT rejects the message, but not the connection.
   @nocallback
   def envfrom(self,f,*str): return CONTINUE
+  ## Called when the SMTP client says RCPT TO.
+  # Returning REJECT rejects the current recipient, not the entire message.
   @nocallback
   def envrcpt(self,to,*str): return CONTINUE
+  ## Called when the SMTP client says DATA.
+  # Returning REJECT rejects the message without wasting bandwidth
+  # on the unwanted message.
   @nocallback
   def data(self): return CONTINUE
+  ## Called for each header field in the message body.
   @nocallback
   def header(self,field,value): return CONTINUE
+  ## Called at the blank line that terminates the header fields.
   @nocallback
   def eoh(self): return CONTINUE
+  ## Called to copy the body of the message by chunks.
+  # @param blk a block of message bytes
   @nocallback
-  def body(self,unused): return CONTINUE
+  def body(self,blk): return CONTINUE
+  ## Called when the SMTP client issues an unknown command.
+  # @param cmd the unknown command
   @nocallback
   def unknown(self,cmd): return CONTINUE
+  ## Called at the end of the message body.
+  # Most of the message manipulation actions can only take place from
+  # the eom callback.
   def eom(self): return CONTINUE
+  ## Called when the connection is abnormally terminated.
+  # The close callback is still called also.
   def abort(self): return CONTINUE
+  ## Called when the connection is closed.
   def close(self): return CONTINUE
 
-  # Return mask of SMFIP_N.. protocol option bits to clear for this class
+  ## Return mask of SMFIP_N.. protocol option bits to clear for this class
   @classmethod
   def protocol_mask(klass):
     try:
@@ -110,8 +160,10 @@ class Base(object):
       klass._protocol_mask = p
       return p
     
+  ## Negotiate milter protocol options.
   # Default negotiation sets P_NO* and P_NR* for callbacks
-  # marked @nocallback and @noreply respectively
+  # marked @@nocallback and @@noreply respectively, leaves all
+  # actions enabled, and enables Milter.SKIP.
   def negotiate(self,opts):
     try:
       self._actions,p,f1,f2 = opts
@@ -126,15 +178,22 @@ class Base(object):
     return CONTINUE
 
   # Milter methods which can be invoked from most callbacks
+
+  ## Return the value of an MTA macro.  Sendmail macro names
+  # are either single chars (e.g. "j") or multiple chars enclosed
+  # in braces (e.g. "{auth_type}").  Macro names are MTA dependent.
+  # @param sym the macro name
   def getsymval(self,sym):
     return self._ctx.getsymval(sym)
 
-  # If sendmail does not support setmlreply, then only the
+  ## Set the SMTP reply code and message.
+  # If the MTA does not support setmlreply, then only the
   # first msg line is used.
   def setreply(self,rcode,xcode=None,msg=None,*ml):
     return self._ctx.setreply(rcode,xcode,msg,*ml)
 
-  # may only be called from negotiate callback
+  ## Tell the MTA which macro names will be used.
+  # May only be called from negotiate callback.
   def setsmlist(self,stage,macros):
     if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")
     if type(macros) in (list,tuple):
@@ -142,22 +201,43 @@ class Base(object):
     return self._ctx.setsmlist(stage,macros)
 
   # Milter methods which can only be called from eom callback.
+
+  ## Add a mail header field.
+  # @param field        the header field name
+  # @param value        the header field value
+  # @param idx header field index from the top of the message to insert at
   def addheader(self,field,value,idx=-1):
     if not self._actions & ADDHDRS: raise DisabledAction("ADDHDRS")
     return self._ctx.addheader(field,value,idx)
 
+  ## Change the value of a mail header field.
+  # @param field the name of the field to change
+  # @param idx index of the field to change when there are multiple instances
+  # @param value the new value of the field
   def chgheader(self,field,idx,value):
     if not self._actions & CHGHDRS: raise DisabledAction("CHGHDRS")
     return self._ctx.chgheader(field,idx,value)
 
+  ## Add a recipient to the message.
+  # If no corresponding mail header is added, this is like a Bcc.
+  # The syntax of the recipient is the same as used in the SMTP
+  # RCPT TO command (and as delivered to the envrcpt callback), for example
+  # "self.addrcpt('<foo@example.com>')".  
+  # @param rcpt the message recipient 
   def addrcpt(self,rcpt,params=None):
     if not self._actions & ADDRCPT: raise DisabledAction("ADDRCPT")
     return self._ctx.addrcpt(rcpt,params)
-
+  ## Delete a recipient from the message.
+  # The recipient should match one passed to the envrcpt callback.
+  # @param rcpt the message recipient to delete
   def delrcpt(self,rcpt):
     if not self._actions & DELRCPT: raise DisabledAction("DELRCPT")
     return self._ctx.delrcpt(rcpt)
 
+  ## Replace the message body.
+  # The entire message body must be replaced.  
+  # Call repeatedly with blocks of data until the entire body is transferred.
+  # @param body a chunk of body data
   def replacebody(self,body):
     if not self._actions & MODBODY: raise DisabledAction("MODBODY")
     return self._ctx.replacebody(body)
@@ -166,18 +246,23 @@ class Base(object):
     if not self._actions & CHGFROM: raise DisabledAction("CHGFROM")
     return self._ctx.chgfrom(sender,params)
 
+  ## Quarantine the message.
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.
+  # Called from eom callback only.
+  # @param reason a string describing the reason for quarantine
   def quarantine(self,reason):
     if not self._actions & QUARANTINE: raise DisabledAction("QUARANTINE")
     return self._ctx.quarantine(reason)
 
+  ## Tell the MTA to wait a bit longer.
+  # Resets timeouts in the MTA that detect a "hung" milter.
   def progress(self):
     return self._ctx.progress()
   
-# A logging but otherwise do nothing Milter base class included
-# for compatibility with previous versions of pymilter.
-
+## A logging but otherwise do nothing Milter base class.
+# This is included for compatibility with previous versions of pymilter.
+# The logging callbacks are marked @@noreply.
 class Milter(Base):
   "A simple class interface to the milter module."
 
@@ -348,3 +433,6 @@ __all__ = globals().copy()
 for priv in ('os','milter','thread','factory','_seq','_seq_lock','__version__'):
   del __all__[priv]
 __all__ = __all__.keys()
+
+## @example milter-template.py
+#
