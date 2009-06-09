@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.23  2009/05/29 20:44:58  customdesigned
+ * Typo SMFIP_NO constants.
+ *
  * Revision 1.22  2009/05/29 19:53:36  customdesigned
  * Typo SMFIS_ALL_OPTS
  *
@@ -1188,7 +1191,7 @@ This function can only be called from the EOM callback.";
 static PyObject *
 milter_chgfrom(PyObject *self, PyObject *args) {
   char *sender;
-  char *params;
+  char *params = NULL;
   SMFICTX *ctx;
   PyThreadState *t;
   
