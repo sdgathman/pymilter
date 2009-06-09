@@ -4,7 +4,7 @@
 # Clients generally subclass Milter.Base and define callback
 # methods.
 #
-# author Stuart D. Gathman <stuart@bmsi.com>
+# @author Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
@@ -224,6 +224,7 @@ class Base(object):
   # RCPT TO command (and as delivered to the envrcpt callback), for example
   # "self.addrcpt('<foo@example.com>')".  
   # @param rcpt the message recipient 
+  # @param params an optional list of ESMTP parameters
   def addrcpt(self,rcpt,params=None):
     if not self._actions & ADDRCPT: raise DisabledAction("ADDRCPT")
     return self._ctx.addrcpt(rcpt,params)
@@ -242,6 +243,12 @@ class Base(object):
     if not self._actions & MODBODY: raise DisabledAction("MODBODY")
     return self._ctx.replacebody(body)
 
+  ## Change the SMTP envelope sender address.
+  # The syntax of the sender is that same as used in the SMTP
+  # MAIL FROM command (and as delivered to the envfrom callback),
+  # for example <code>self.chgfrom('<bar@example.com>')</code>.
+  # @param sender the new sender address
+  # @param params an optional list of ESMTP parameters
   def chgfrom(self,sender,params=None):
     if not self._actions & CHGFROM: raise DisabledAction("CHGFROM")
     return self._ctx.chgfrom(sender,params)
@@ -325,13 +332,19 @@ class Milter(Base):
     self.log("close")
     return CONTINUE
 
+## The milter connection factory
+# This factory method is called for each connection to create the
+# python object that tracks the connection.  It should return
+# an object derived from Milter.Base.
 factory = Milter
 
+## @private
 def negotiate_callback(ctx,opts):
   m = factory()
   m._setctx(ctx)
   return m.negotiate(opts)
 
+## @private
 def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   m = ctx.getpriv()
   if not m:     
@@ -341,6 +354,7 @@ def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
     m._setctx(ctx)
   return m.connect(hostname,family,hostaddr)
 
+## @private
 def close_callback(ctx):
   m = ctx.getpriv()
   if not m: return CONTINUE
@@ -350,8 +364,10 @@ def close_callback(ctx):
     m._setctx(None)	# release milterContext
   return rc
 
+## Convert ESMTP parameters with values to a keyword dictionary.
+# @deprecated You probably want Milter.param2dict instead.
 def dictfromlist(args):
-  "Convert ESMTP parm list to keyword dictionary."
+  "Convert ESMTP parms with values to keyword dictionary."
   kw = {}
   for s in args:
     pos = s.find('=')
@@ -359,6 +375,16 @@ def dictfromlist(args):
       kw[s[:pos].upper()] = s[pos+1:]
   return kw
 
+## Convert ESMTP parm list to keyword dictionary.
+# Params with no value are set to None in the dictionary.
+# @param str list of param strings of the form "NAME" or "NAME=VALUE"
+def param2dict(str): 
+  "Convert ESMTP parm list to keyword dictionary."
+  pairs = [x.split('=',1) for x in str]
+  for e in pairs:
+    if len(e) < 2: e.append(None)
+  return dict([(k.upper(),v) for k,v in pairs])
+  
 def envcallback(c,args):
   """Call function c with ESMTP parms converted to keyword parameters.
   Can be used in the envfrom and/or envrcpt callbacks to process
@@ -373,6 +399,22 @@ def envcallback(c,args):
       pargs.append(s)
   return c(*pargs,**kw)
 
+## Run the milter.
+# The MTA can communicate with the milter by means of a
+# unix, inet, or inet6 socket. By default, a unix domain socket
+# is used.  It must not exist,
+# and sendmail will throw warnings if, eg, the file is under a
+# group or world writable directory.
+# <pre>
+# setconn('unix:/var/run/pythonfilter')
+# setconn('inet:8800') 			# listen on ANY interface
+# setconn('inet:7871@@publichost')	# listen on a specific interface
+# setconn('inet6:8020')
+# </pre>
+# @param name the name of the milter known by the MTA
+# @param socketname the descriptor of the unix socket 
+# @param timeout the time in secs the MTA should wait for a response before 
+#	considering this milter dead
 def runmilter(name,socketname,timeout = 0):
   # This bit is here on the assumption that you will be starting this filter
   # before sendmail.  If sendmail is not running and the socket already exists,

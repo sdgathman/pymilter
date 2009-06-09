@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.5  2005/07/20 14:49:43  customdesigned
+# Handle corrupt and empty ZIP files.
+#
 # Revision 1.4  2005/06/17 01:49:39  customdesigned
 # Handle zip within zip.
 #
@@ -70,8 +73,12 @@
 # with old milter code.
 #
 
-# This module provides a "defang" function to replace naughty attachments
-# with a warning message.
+## @package mime
+# This module provides a "defang" function to replace naughty attachments.
+# 
+# We also provide workarounds for bugs in the email module that comes 
+# with python.  The "bugs" fixed mostly come up only with malformed
+# messages - but that is what you have when dealing with spam.
 
 # Author: Stuart D. Gathman <stuart@bmsi.com>
 # Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
@@ -93,6 +100,8 @@ from email import Errors
 
 from types import ListType,StringType
 
+## Return a list of filenames in a zip file.
+# Embedded zip files are recursively expanded.
 def zipnames(txt):
   fp =  StringIO.StringIO(txt)
   zipf = zipfile.ZipFile(fp,'r')
@@ -103,6 +112,8 @@ def zipnames(txt):
       names += zipnames(zipf.read(nm))
   return names
 
+## Fix multipart handling in email.Generator.
+#
 class MimeGenerator(Generator):
     def _dispatch(self, msg):
         # Get the Content-Type: for the message, then try to dispatch to
@@ -142,11 +153,8 @@ def _unquotevalue(value):
 
 from email.Message import _parseparam
 
-# Enhance email.Message 
-# - Provide a headerchange event for integration with Milter
-#   Headerchange attribute can be assigned a function to be called when
-#   changing headers.  The signature is:
-#	headerchange(msg,name,value) -> None
+## Enhance email.Message 
+#
 # - Track modifications to headers of body or any part independently
 
 class MimeMessage(Message):
@@ -157,6 +165,12 @@ class MimeMessage(Message):
     self.headerchange = None
     self.submsg = None
     self.modified = False
+
+  ## @var headerchange
+  # Provide a headerchange event for integration with Milter.
+  #   The headerchange attribute can be assigned a function to be called when
+  #   changing headers.  The signature is:
+  #   headerchange(msg,name,value) -> None
 
   def get_param(self, param, failobj=None, header='content-type', unquote=True):
     val = Message.get_param(self,param,failobj,header,unquote)
