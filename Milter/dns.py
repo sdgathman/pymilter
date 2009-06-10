@@ -1,12 +1,22 @@
-# provide a higher level interface to pydns
+## @package Milter.dns
+# Provide a higher level interface to pydns.
 
 import DNS
 from DNS import DNSError
 
 MAX_CNAME = 10
 
+## Lookup DNS records by label and RR type.
+# The response can include records of other types that the DNS
+# server thinks we might need.
+# @param name the DNS label to lookup
+# @param qtype the name of the DNS RR type to lookup
+# @return a list of ((name,type),data) tuples
 def DNSLookup(name, qtype):
     try:
+	# To be thread safe, we create a fresh DnsRequest with
+	# each call.  It would be more efficient to reuse
+	# a req object stored in a Session.
         req = DNS.DnsRequest(name, qtype=qtype)
         resp = req.req()
         #resp.show()
@@ -24,25 +34,28 @@ class Session(object):
   def __init__(self):
     self.cache = {}
 
+  ## Additional DNS RRs we can safely cache.
   # We have to be careful which additional DNS RRs we cache.  For
   # instance, PTR records are controlled by the connecting IP, and they
   # could poison our local cache with bogus A and MX records.  
+  # Each entry is a tuple of (query_type,rr_type).  So for instance,
+  # the entry ('MX','A') says it is safe (for milter purposes) to cache
+  # any 'A' RRs found in an 'MX' query.
+  SAFE2CACHE = frozenset((
+    ('MX','MX'), ('MX','A'),
+    ('CNAME','CNAME'), ('CNAME','A'),
+    ('A','A'),
+    ('AAAA','AAAA'),
+    ('PTR','PTR'),
+    ('NS','NS'), ('NS','A'),
+    ('TXT','TXT'),
+    ('SPF','SPF')
+  ))
 
-  SAFE2CACHE = {
-    ('MX','A'): None,
-    ('MX','MX'): None,
-    ('CNAME','A'): None,
-    ('CNAME','CNAME'): None,
-    ('A','A'): None,
-    ('AAAA','AAAA'): None,
-    ('PTR','PTR'): None,
-    ('NS','NS'): None,
-    ('NS','A'): None,
-    ('TXT','TXT'): None,
-    ('SPF','SPF'): None
-  }
-
-
+  ## Cached DNS lookup.
+  # @param name the DNS label to query
+  # @param qtype the query type, e.g. 'A'
+  # @param cnames tracks CNAMES already followed in recursive calls
   def dns(self, name, qtype, cnames=None):
     """DNS query.
 

@@ -146,6 +146,14 @@ class Base(object):
   def close(self): return CONTINUE
 
   ## Return mask of SMFIP_N.. protocol option bits to clear for this class
+  # The @@nocallback and @@noreply decorators set the
+  # <code>milter_protocol</code> function attribute to the protocol mask bit to
+  # pass to libmilter, causing that callback or its reply to be skipped.
+  # Overriding a method creates a new function object, so that 
+  # <code>milter_protocol</code> defaults to 0.
+  # Libmilter passes the protocol bits that the current MTA knows
+  # how to skip.  We clear the ones we don't want to skip.
+  # The negation is somewhat mind bending, but it is simple.
   @classmethod
   def protocol_mask(klass):
     try:

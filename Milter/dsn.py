@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.17  2009/05/20 20:08:44  customdesigned
+# Support non-DSN CBV (non-empty MAIL FROM)
+#
 # Revision 1.16  2007/09/25 01:24:59  customdesigned
 # Allow arbitrary object, not just spf.query like, to provide data for create_msg
 #
@@ -26,7 +29,31 @@
 # Revision 1.10  2006/05/24 20:56:35  customdesigned
 # Remove default templates.  Scrub test.
 #
-
+## @package Milter.dsn
+# Support DSNs and CallBackValidations (CBV).
+#
+# A Delivery Status Notification (bounce) is sent to the envelope
+# sender (original MAIL FROM) with a null MAIL FROM (<>) to notify the
+# original sender # of delays or problems with delivery.  A Callback Validation
+# starts the DSN process, but stops before issuing the DATA command.  The
+# purpose is to check whether the envelope recipient is accepted (and is
+# therefore a valid email).  The null MAIL FROM tells the remote
+# MTA to never reply according to RFC2821 (but some braindead MTAs
+# reply anyway, of course).
+#
+# Milters should cache CBV results and should avoid sending DSNs
+# unless the sender is authenticated somehow (e.g. SPF Pass).  However,
+# when email is quarantined, and is not known to be a forgery, sending a DSN 
+# is better than silently disappearing, and a DSN is better than sending
+# a normal message as notification - because MAIL FROM signing schemes
+# can reject bounces of forged emails.   Whatever you do, don't copy those
+# assinine commercial filters that send a normal message to notify you
+# that some virus is forging your email.
+#
+# <b>DSNs should *only* be sent to MAIL FROM addresses.</b>  Never send
+# a DSN or use a null MAIL FROM with an email address obtained from
+# anywhere else.
+#
 import smtplib
 import socket
 from email.Message import Message
@@ -34,6 +61,19 @@ import Milter
 import time
 import dns
 
+## Send DSN.
+# Try the published MX names in order, rejecting obviously bogus entries
+# (like <code>localhost</code>).
+# @param mailfrom the original sender we are notifying or validating
+# @param receiver the HELO name of the MTA we are sending the DSN on behalf of.
+#	Be sure to send from an IP that matches the HELO.
+# @param msg the DSN message in RFC2822 format, or None for CBV.
+# @param timeout total seconds to wait for a response from an MX
+# @param session Milter.dns.Session object from current incoming mail
+#	session to reuse its cache, or None to create a fresh one.
+# @param ourfrom set to a valid email to send a normal notification from, or
+#	to validate emails not obtained from MAIL FROM.
+# @return None on success or (status_code,msg) on failure.
 def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
   """Send DSN.  If msg is None, do callback verification.
      Mailfrom is original sender we are sending DSN or CBV to.
