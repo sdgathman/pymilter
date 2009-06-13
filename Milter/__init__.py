@@ -98,6 +98,28 @@ class Base(object):
     self._protocol = 0                # no protocol options by default
     if ctx:
       ctx.setpriv(self)
+  ## @var _actions
+  # A bitmask of actions this milter has negotiated to use.
+  # By default, all actions are enabled.  This may be changed
+  # by calling <code>milter.set_flags</code>, or by overriding
+  # the negotiate callback.  The bits include:
+  # <code>ADDHDRS,CHGBODY,MODBODY,ADDRCPT,ADDRCPT_PAR,DELRCPT
+  #  CHGHDRS,CURR_ACTS,QUARANTINE,CHGFROM,SETSMLIST</code>
+  #
+
+  ## @var _protocol
+  # A class var with a bitmask of protocol options negotiated.
+  # The bits generally indicate that a particular step should be
+  # skipped, since previous versions of the milter protocol had
+  # no provision for skipping steps.
+  # The bits include: <code>
+  # P_RCPT_REJ P_NR_CONN P_NR_HELO P_NR_MAIL P_NR_RCPT P_NR_DATA P_NR_UNKN
+  # P_NR_EOH P_NR_BODY P_NR_HDR P_NOCONNECT P_NOHELO P_NOMAIL P_NORCPT
+  # P_NODATA P_NOUNKNOWN P_NOEOH P_NOBODY P_NOHDRS P_HDR_LEADSPC P_SKIP
+  # </code> (all under the Milter namespace) and
+  # <code>Milter.ALL_OPTS</code> is all options available when 
+  # the <code>milter</code> module was compiled.
+
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
   ## Called for each connection to the MTA.
