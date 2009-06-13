@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.6  2009/06/09 03:13:13  customdesigned
+# More doxygen docs.
+#
 # Revision 1.5  2005/07/20 14:49:43  customdesigned
 # Handle corrupt and empty ZIP files.
 #
@@ -155,7 +158,7 @@ from email.Message import _parseparam
 
 ## Enhance email.Message 
 #
-# - Track modifications to headers of body or any part independently
+# Tracks modifications to headers of body or any part independently.
 
 class MimeMessage(Message):
   """Version of email.Message.Message compatible with old mime module

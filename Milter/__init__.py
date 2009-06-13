@@ -84,14 +84,16 @@ def noreply(func):
 class DisabledAction(RuntimeError):
   pass
 
-## A do nothing Milter base class.
+## A do "nothing" Milter base class.
 # Python milters should derive from this class
 # unless they are using the low lever milter module directly.  
 # All optional callbacks are disabled, and automatically
 # reenabled when overridden.
+#
 class Base(object):
   "The core class interface to the milter module."
 
+  ## Attach this Milter to the low level milter.milterContext object.
   def _setctx(self,ctx):
     self._ctx = ctx
     self._actions = CURR_ACTS         # all actions enabled by default
@@ -104,11 +106,13 @@ class Base(object):
   # by calling <code>milter.set_flags</code>, or by overriding
   # the negotiate callback.  The bits include:
   # <code>ADDHDRS,CHGBODY,MODBODY,ADDRCPT,ADDRCPT_PAR,DELRCPT
-  #  CHGHDRS,CURR_ACTS,QUARANTINE,CHGFROM,SETSMLIST</code>
+  #  CHGHDRS,QUARANTINE,CHGFROM,SETSMLIST</code>.
+  # The <code>Milter.CURR_ACTS</code> bitmask is all actions
+  # known when the milter module was compiled.
   #
 
   ## @var _protocol
-  # A class var with a bitmask of protocol options negotiated.
+  # A bitmask of protocol options this milter has negotiated.
   # The bits generally indicate that a particular step should be
   # skipped, since previous versions of the milter protocol had
   # no provision for skipping steps.
@@ -116,13 +120,27 @@ class Base(object):
   # P_RCPT_REJ P_NR_CONN P_NR_HELO P_NR_MAIL P_NR_RCPT P_NR_DATA P_NR_UNKN
   # P_NR_EOH P_NR_BODY P_NR_HDR P_NOCONNECT P_NOHELO P_NOMAIL P_NORCPT
   # P_NODATA P_NOUNKNOWN P_NOEOH P_NOBODY P_NOHDRS P_HDR_LEADSPC P_SKIP
-  # </code> (all under the Milter namespace) and
-  # <code>Milter.ALL_OPTS</code> is all options available when 
-  # the <code>milter</code> module was compiled.
+  # </code> (all under the Milter namespace).
 
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
   ## Called for each connection to the MTA.
+  # The <code>hostname</code> provided by the local MTA is either
+  # the PTR name or the IP in the form "[1.2.3.4]" if no PTR is available.
+  # The format of hostaddr depends on the socket family:
+  # <dl>
+  # <dt><code>socket.AF_INET</code>
+  # <dd>A tuple of (IP as string in dotted quad form, integer port)
+  # <dt><code>socket.AF_INET6</code>
+  # <dd>A tuple of (IP as a string in standard representation,
+  # integer port, integer flow info, integer scope id)
+  # <dt><code>socket.AF_UNIX</code>
+  # <dd>A string with the socketname
+  # </dl>
+  # @param hostname the PTR name or bracketed IP of the SMTP client
+  # @param family <code>socket.AF_INET</code>, <code>socket.AF_INET6</code>,
+  #     or <code>socket.AF_UNIX</code>
+  # @param hostaddr a tuple or string with peer IP or socketname
   @nocallback
   def connect(self,hostname,family,hostaddr): return CONTINUE
   ## Called when the SMTP client says HELO.
@@ -149,7 +167,7 @@ class Base(object):
   ## Called at the blank line that terminates the header fields.
   @nocallback
   def eoh(self): return CONTINUE
-  ## Called to copy the body of the message by chunks.
+  ## Called to supply the body of the message to the Milter by chunks.
   # @param blk a block of message bytes
   @nocallback
   def body(self,blk): return CONTINUE
@@ -223,6 +241,8 @@ class Base(object):
     return self._ctx.setreply(rcode,xcode,msg,*ml)
 
   ## Tell the MTA which macro names will be used.
+  # The <code>Milter.ADDHDRS</code> action flag must be set.
+  #
   # May only be called from negotiate callback.
   def setsmlist(self,stage,macros):
     if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")
@@ -233,6 +253,9 @@ class Base(object):
   # Milter methods which can only be called from eom callback.
 
   ## Add a mail header field.
+  # The <code>Milter.ADDHDRS</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param field        the header field name
   # @param value        the header field value
   # @param idx header field index from the top of the message to insert at
@@ -241,6 +264,9 @@ class Base(object):
     return self._ctx.addheader(field,value,idx)
 
   ## Change the value of a mail header field.
+  # The <code>Milter.CHGHDRS</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param field the name of the field to change
   # @param idx index of the field to change when there are multiple instances
   # @param value the new value of the field
@@ -253,13 +279,23 @@ class Base(object):
   # The syntax of the recipient is the same as used in the SMTP
   # RCPT TO command (and as delivered to the envrcpt callback), for example
   # "self.addrcpt('<foo@example.com>')".  
+  # The <code>Milter.ADDRCPT</code> action flag must be set.
+  # If the optional <code>params</code> argument is used, then
+  # the <code>Milter.ADDRCPT_PAR</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param rcpt the message recipient 
   # @param params an optional list of ESMTP parameters
   def addrcpt(self,rcpt,params=None):
     if not self._actions & ADDRCPT: raise DisabledAction("ADDRCPT")
+    if params and not self._actions & ADDRCPT_PAR:
+        raise DisabledAction("ADDRCPT_PAR")
     return self._ctx.addrcpt(rcpt,params)
   ## Delete a recipient from the message.
   # The recipient should match one passed to the envrcpt callback.
+  # The <code>Milter.DELRCPT</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param rcpt the message recipient to delete
   def delrcpt(self,rcpt):
     if not self._actions & DELRCPT: raise DisabledAction("DELRCPT")
@@ -268,6 +304,9 @@ class Base(object):
   ## Replace the message body.
   # The entire message body must be replaced.  
   # Call repeatedly with blocks of data until the entire body is transferred.
+  # The <code>Milter.MODBODY</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param body a chunk of body data
   def replacebody(self,body):
     if not self._actions & MODBODY: raise DisabledAction("MODBODY")
@@ -277,6 +316,9 @@ class Base(object):
   # The syntax of the sender is that same as used in the SMTP
   # MAIL FROM command (and as delivered to the envfrom callback),
   # for example <code>self.chgfrom('<bar@example.com>')</code>.
+  # The <code>Milter.CHGFROM</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param sender the new sender address
   # @param params an optional list of ESMTP parameters
   def chgfrom(self,sender,params=None):
@@ -286,7 +328,9 @@ class Base(object):
   ## Quarantine the message.
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.
-  # Called from eom callback only.
+  # The <code>Milter.QUARANTINE</code> action flag must be set.
+  #
+  # May be called from eom callback only.
   # @param reason a string describing the reason for quarantine
   def quarantine(self,reason):
     if not self._actions & QUARANTINE: raise DisabledAction("QUARANTINE")
@@ -303,6 +347,7 @@ class Base(object):
 class Milter(Base):
   "A simple class interface to the milter module."
 
+  ## Provide simple logging to sys.stdout
   def log(self,*msg):
     print 'Milter:',
     for i in msg: print i,
