@@ -40,5 +40,20 @@ def main(): pass
 def setdbg(lev): pass
 def settimeout(secs): pass
 def setbacklog(n): pass
+
+## Set the socket used to communicate with the MTA.
+# The MTA can communicate with the milter by means of a
+# unix, inet, or inet6 socket. By default, a unix domain socket
+# is used.  It must not exist,
+# and sendmail will throw warnings if, eg, the file is under a
+# group or world writable directory.
+# <pre>
+# setconn('unix:/var/run/pythonfilter')
+# setconn('inet:8800') 			# listen on ANY interface
+# setconn('inet:7871@@publichost')	# listen on a specific interface
+# setconn('inet6:8020')
+# </pre>
 def setconn(s): pass
+
+## Stop the milter gracefully.
 def stop(): pass

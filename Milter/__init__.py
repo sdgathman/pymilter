@@ -40,6 +40,41 @@ OPTIONAL_CALLBACKS = {
   'header':(P_NR_HDR,P_NOHDRS)
 }
 
+def decode_mask(bits,names):
+  t = [ (s,getattr(milter,s)) for s in names]
+  nms = [s for s,m in t if bits & m]
+  for s,m in t: bits &= ~m
+  if bits: nms += hex(bits)
+  return nms
+
+## Class decorator to enable optional protocol steps.
+# P_SKIP is enabled by default when supported, but
+# milter applications may wish to enable P_HDR_LEADSPC
+# to send and receive the leading space of header continuation
+# lines unchanged, and/or P_RCPT_REJ to have recipients 
+# detected as invalid by the MTA passed to the envcrpt callback.
+#
+# Applications may want to check whether the protocol is actually
+# supported by the MTA in use.  The <code>_protocol</code> 
+# member is a bitmask of protocol options negotiated.  So,
+# for instance, if <code>self._protocol & Milter.P_RCPT_REJ</code>
+# is true, then that feature was successfully negotiated with the MTA.
+# 
+# Sample use:
+# <pre>
+# class myMilter(Milter.Base):
+#   def envrcpt(self,to,*params):
+#     return Milter.CONTINUE
+# myMilter = Milter.enable_protocols(myMilter,Milter.P_RCPT_REJ)
+# </pre>
+# @since 0.9.3
+# @param klass the milter application class to modify
+# @param mask a bitmask of protocol steps to enable
+# @return the modified milter class
+def enable_protocols(klass,mask):
+  klass._protocol_mask = klass.protocol_mask() & ~mask
+  return klass
+
 ## Function decorator to disable callback methods.
 # If the MTA supports it, tells the MTA not to call this callback,
 # increasing efficiency.  All the callbacks (except negotiate)
@@ -48,6 +83,7 @@ OPTIONAL_CALLBACKS = {
 # another milter and wants to disable a callback again.
 # The disabled method should still return Milter.CONTINUE, in case the MTA does
 # not support protocol negotiation.
+# @since 0.9.2
 def nocallback(func):
   try:
     func.milter_protocol = OPTIONAL_CALLBACKS[func.__name__][1]
@@ -62,6 +98,7 @@ def nocallback(func):
 # CONTINUE in case the MTA does not support protocol negotiation.
 # The decorator arranges to change the return code to NOREPLY 
 # when supported by the MTA.
+# @since 0.9.2
 def noreply(func):
   try:
     nr_mask = OPTIONAL_CALLBACKS[func.__name__][0]
@@ -81,6 +118,7 @@ def noreply(func):
 # connection in the negotiate callback.  If the application then calls
 # the feature anyway via an instance method, this exception is
 # thrown.
+# @since 0.9.2
 class DisabledAction(RuntimeError):
   pass
 
@@ -89,7 +127,7 @@ class DisabledAction(RuntimeError):
 # unless they are using the low lever milter module directly.  
 # All optional callbacks are disabled, and automatically
 # reenabled when overridden.
-#
+# @since 0.9.2
 class Base(object):
   "The core class interface to the milter module."
 
@@ -109,6 +147,7 @@ class Base(object):
   #  CHGHDRS,QUARANTINE,CHGFROM,SETSMLIST</code>.
   # The <code>Milter.CURR_ACTS</code> bitmask is all actions
   # known when the milter module was compiled.
+  # @since 0.9.2
   #
 
   ## @var _protocol
@@ -121,6 +160,7 @@ class Base(object):
   # P_NR_EOH P_NR_BODY P_NR_HDR P_NOCONNECT P_NOHELO P_NOMAIL P_NORCPT
   # P_NODATA P_NOUNKNOWN P_NOEOH P_NOBODY P_NOHDRS P_HDR_LEADSPC P_SKIP
   # </code> (all under the Milter namespace).
+  # @since 0.9.2
 
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
@@ -159,6 +199,7 @@ class Base(object):
   ## Called when the SMTP client says DATA.
   # Returning REJECT rejects the message without wasting bandwidth
   # on the unwanted message.
+  # @since 0.9.2
   @nocallback
   def data(self): return CONTINUE
   ## Called for each header field in the message body.
@@ -173,6 +214,7 @@ class Base(object):
   def body(self,blk): return CONTINUE
   ## Called when the SMTP client issues an unknown command.
   # @param cmd the unknown command
+  # @since 0.9.2
   @nocallback
   def unknown(self,cmd): return CONTINUE
   ## Called at the end of the message body.
@@ -194,12 +236,13 @@ class Base(object):
   # Libmilter passes the protocol bits that the current MTA knows
   # how to skip.  We clear the ones we don't want to skip.
   # The negation is somewhat mind bending, but it is simple.
+  # @since 0.9.2
   @classmethod
   def protocol_mask(klass):
     try:
       return klass._protocol_mask
     except AttributeError:
-      p = 0
+      p = P_RCPT_REJ | P_HDR_LEADSPC    # turn these new features off by default
       for func,(nr,nc) in OPTIONAL_CALLBACKS.items():
         func = getattr(klass,func)
         ca = getattr(func,'milter_protocol',0)
@@ -212,11 +255,11 @@ class Base(object):
   # Default negotiation sets P_NO* and P_NR* for callbacks
   # marked @@nocallback and @@noreply respectively, leaves all
   # actions enabled, and enables Milter.SKIP.
+  # @since 0.9.2
   def negotiate(self,opts):
     try:
       self._actions,p,f1,f2 = opts
-      opts[1] = self._protocol = \
-              p & ~self.protocol_mask() & ~P_RCPT_REJ & ~P_HDR_LEADSPC
+      opts[1] = self._protocol = p & ~self.protocol_mask()
       opts[2] = 0
       opts[3] = 0
       #self.log("Negotiated:",opts)
@@ -241,9 +284,12 @@ class Base(object):
     return self._ctx.setreply(rcode,xcode,msg,*ml)
 
   ## Tell the MTA which macro names will be used.
-  # The <code>Milter.ADDHDRS</code> action flag must be set.
+  # The <code>Milter.SETSMLIST</code> action flag must be set.
   #
   # May only be called from negotiate callback.
+  # @since 0.9.2
+  # @param stage the protocol stage to set to macro list for
+  # @param macros a string with a space delimited list of macros
   def setsmlist(self,stage,macros):
     if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")
     if type(macros) in (list,tuple):
@@ -319,6 +365,7 @@ class Base(object):
   # The <code>Milter.CHGFROM</code> action flag must be set.
   #
   # May be called from eom callback only.
+  # @since 0.9.1
   # @param sender the new sender address
   # @param params an optional list of ESMTP parameters
   def chgfrom(self,sender,params=None):
@@ -452,7 +499,9 @@ def dictfromlist(args):
 
 ## Convert ESMTP parm list to keyword dictionary.
 # Params with no value are set to None in the dictionary.
+# @since 0.9.3
 # @param str list of param strings of the form "NAME" or "NAME=VALUE"
+# @return a dictionary of ESMTP param names and values
 def param2dict(str): 
   "Convert ESMTP parm list to keyword dictionary."
   pairs = [x.split('=',1) for x in str]
@@ -475,19 +524,8 @@ def envcallback(c,args):
   return c(*pargs,**kw)
 
 ## Run the milter.
-# The MTA can communicate with the milter by means of a
-# unix, inet, or inet6 socket. By default, a unix domain socket
-# is used.  It must not exist,
-# and sendmail will throw warnings if, eg, the file is under a
-# group or world writable directory.
-# <pre>
-# setconn('unix:/var/run/pythonfilter')
-# setconn('inet:8800') 			# listen on ANY interface
-# setconn('inet:7871@@publichost')	# listen on a specific interface
-# setconn('inet6:8020')
-# </pre>
 # @param name the name of the milter known by the MTA
-# @param socketname the descriptor of the unix socket 
+# @param socketname the socket to be passed to <code>milter.setconn</code>
 # @param timeout the time in secs the MTA should wait for a response before 
 #	considering this milter dead
 def runmilter(name,socketname,timeout = 0):
