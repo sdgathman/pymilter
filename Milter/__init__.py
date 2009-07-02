@@ -458,6 +458,10 @@ class Milter(Base):
 # This factory method is called for each connection to create the
 # python object that tracks the connection.  It should return
 # an object derived from Milter.Base.
+#
+# Note that since python is dynamic, this variable can be changed while
+# the milter is running: for instance, to a new subclass based on a 
+# change in configuration.
 factory = Milter
 
 ## @private

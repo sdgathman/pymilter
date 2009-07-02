@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.18  2009/06/10 18:01:59  customdesigned
+# Doxygen updates
+#
 # Revision 1.17  2009/05/20 20:08:44  customdesigned
 # Support non-DSN CBV (non-empty MAIL FROM)
 #
@@ -79,7 +82,7 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
      Mailfrom is original sender we are sending DSN or CBV to.
      Receiver is the MTA sending the DSN.
      Return None for success or (code,msg) for failure."""
-  user,domain = mailfrom.split('@')
+  user,domain = mailfrom.rsplit('@',1)
   if not session: session = dns.Session()
   try:
     mxlist = session.dns(domain,'MX')
