@@ -7,6 +7,7 @@ import StringIO
 
 class TestMilter(sample.sampleMilter):
 
+  _protocol = 0
   def __init__(self):
     self.logfp = open("test/milter.log","a")
 
