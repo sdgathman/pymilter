@@ -101,6 +101,8 @@ def parse_addr(t):
   ['foo']
   >>> parse_addr('@mx.example.com:user@example.com')
   ['user', 'example.com']
+  >>> parse_addr('@user@example.com')
+  ['@user', 'example.com']
   """
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
   if t.startswith('"'):
@@ -108,7 +110,8 @@ def parse_addr(t):
     pos = t.find('"@')
     if pos > 0: return [t[1:pos],t[pos+2:]]
   if t.startswith('@'):
-    t = t.split(':',1)[1]
+    try: t = t.split(':',1)[1]
+    except IndexError: pass
   return t.rsplit('@',1)
 
 ## Decode headers gratuitously encoded to hide the content.
