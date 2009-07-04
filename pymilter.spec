@@ -83,6 +83,9 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Thu Jul 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.3-1
+- Handle source route in Milter.util.parse_addr()
+
 * Tue Jun 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.2-3
 - Change result of @noreply callbacks to NOREPLY when so negotiated.
 

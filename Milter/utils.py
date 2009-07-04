@@ -1,3 +1,7 @@
+## @package Milter.utils
+# Miscellaneous functions.
+#
+
 import re
 import struct
 import socket
@@ -11,7 +15,7 @@ ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
 
 # from spf.py
 def addr2bin(str):
-  "Convert a string IPv4 address into an unsigned integer."
+  """Convert a string IPv4 address into an unsigned integer."""
   return struct.unpack("!L", socket.inet_aton(str))[0]
 
 MASK = 0xFFFFFFFFL
@@ -42,6 +46,10 @@ def iniplist(ipaddr,iplist):
       return True
   return False
 
+## Split email into Fullname and address.
+# This replaces <code>email.Utils.parseaddr</code> but fixes
+# some <a href="http://bugs.python.org/issue1025395">tricky test cases</a>.
+#
 def parseaddr(t):
   """Split email into Fullname and address.
 
@@ -91,13 +99,24 @@ def parse_addr(t):
   ['user@bar', 'example.com']
   >>> parse_addr('foo')
   ['foo']
+  >>> parse_addr('@mx.example.com:user@example.com')
+  ['user', 'example.com']
   """
   if t.startswith('<') and t.endswith('>'): t = t[1:-1]
   if t.startswith('"'):
     if t.endswith('"'): return [t[1:-1]]
     pos = t.find('"@')
     if pos > 0: return [t[1:pos],t[pos+2:]]
-  return t.split('@')
+  if t.startswith('@'):
+    t = t.split(':',1)[1]
+  return t.rsplit('@',1)
+
+## Decode headers gratuitously encoded to hide the content.
+# Spammers often encode headers to obscure the content from
+# spam filters.  This function decodes gratuitously encoded
+# headers.
+# @param val    the raw header value
+# @return the decoded value or the original raw value
 
 def parse_header(val):
   """Decode headers gratuitously encoded to hide the content.
