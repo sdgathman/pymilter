@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.26  2009/07/28 21:08:20  customdesigned
+ * Increment del count.
+ *
  * Revision 1.25  2009/07/28 20:58:55  customdesigned
  * getdiag method
  *
@@ -1090,6 +1093,20 @@ milter_getdiag(PyObject *self, PyObject *args) {
   return Py_BuildValue("(kk)", diag.contextNew,diag.contextDel);
 }
 
+static char milter_getversion__doc__[] =
+"getversion() -> tuple\n\
+Return runtime libmilter version as a tuple of major,minor,patchlevel.";
+static PyObject *
+milter_getversion(PyObject *self, PyObject *args) {
+  unsigned int major, minor, patch;
+  if (!PyArg_ParseTuple(args, ":getversion")) return NULL;
+  if (smfi_version(&major,&minor,&patch) != MI_SUCCESS) {
+    PyErr_SetString(MilterError, "smfi_version failed");
+    return NULL;
+  }
+  return Py_BuildValue("(kkk)", major,minor,patch);
+}
+
 static char milter_getsymval__doc__[] =
 "getsymval(String) -> String\n\
 Returns a symbol's value.  Context-dependent, and unclear from the dox.";
@@ -1503,6 +1520,7 @@ static PyMethodDef milter_methods[] = {
    { "setconn",              milter_setconn,              METH_VARARGS, milter_setconn__doc__},
    { "stop",                 milter_stop,                 METH_VARARGS, milter_stop__doc__},
    { "getdiag",              milter_getdiag,              METH_VARARGS, milter_getdiag__doc__},
+   { "getversion",           milter_getversion,           METH_VARARGS, milter_getversion__doc__},
    { NULL, NULL }
 };
 
