@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.24  2009/06/09 01:54:44  customdesigned
+ * Forgot to initialize optional parameter.
+ *
  * Revision 1.23  2009/05/29 20:44:58  customdesigned
  * Typo SMFIP_NO constants.
  *
@@ -278,6 +281,12 @@ staticforward struct smfiDesc description; /* forward declaration */
 static PyObject *MilterError;
 /* The interpreter instance that called milter.main */
 static PyInterpreterState *interp;
+typedef struct {
+  unsigned int contextNew;
+  unsigned int contextDel;
+} milter_Diag;
+
+static milter_Diag diag;
 
 staticforward PyTypeObject milter_ContextType;
 
@@ -316,6 +325,7 @@ _get_context(SMFICTX *ctx) {
       PyThreadState_Delete(t);
       return NULL;
     }
+    ++diag.contextNew;
     self->t = t;
     self->ctx = ctx;
     Py_INCREF(Py_None);
@@ -354,6 +364,7 @@ milter_Context_dealloc(PyObject *s) {
   }
   Py_DECREF(self->priv);
   PyObject_DEL(self);
+  --diag.contextDel;
 }
 
 /* Throw an exception if an smfi call failed, otherwise return PyNone. */
@@ -1066,6 +1077,16 @@ milter_stop(PyObject *self, PyObject *args) {
   return _thread_return(t,smfi_stop(), "cannot stop");
 }
 
+static char milter_getdiag__doc__[] =
+"getdiag() -> tuple\n\
+Return a tuple of diagnostic data.  The first two items are context new\n\
+count and context del count.  The rest are yet to be defined.";
+static PyObject *
+milter_getdiag(PyObject *self, PyObject *args) {
+  if (!PyArg_ParseTuple(args, ":getdiag")) return NULL;
+  return Py_BuildValue("(kk)", diag.contextNew,diag.contextDel);
+}
+
 static char milter_getsymval__doc__[] =
 "getsymval(String) -> String\n\
 Returns a symbol's value.  Context-dependent, and unclear from the dox.";
@@ -1478,6 +1499,7 @@ static PyMethodDef milter_methods[] = {
    { "setbacklog",           milter_setbacklog,           METH_VARARGS, milter_setbacklog__doc__},
    { "setconn",              milter_setconn,              METH_VARARGS, milter_setconn__doc__},
    { "stop",                 milter_stop,                 METH_VARARGS, milter_stop__doc__},
+   { "getdiag",              milter_getdiag,              METH_VARARGS, milter_getdiag__doc__},
    { NULL, NULL }
 };
 
