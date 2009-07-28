@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.25  2009/07/28 20:58:55  customdesigned
+ * getdiag method
+ *
  * Revision 1.24  2009/06/09 01:54:44  customdesigned
  * Forgot to initialize optional parameter.
  *
@@ -364,7 +367,7 @@ milter_Context_dealloc(PyObject *s) {
   }
   Py_DECREF(self->priv);
   PyObject_DEL(self);
-  --diag.contextDel;
+  ++diag.contextDel;
 }
 
 /* Throw an exception if an smfi call failed, otherwise return PyNone. */
