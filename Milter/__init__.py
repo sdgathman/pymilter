@@ -8,7 +8,7 @@
 # Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 
 import os
 import milter

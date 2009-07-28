@@ -6,6 +6,19 @@
 # A thin wrapper around libmilter.
 #
 
+## Hold context for a milter connection.
+# Each connection to sendmail creates a new <code>SMFICTX</code> struct within
+# libmilter.  The milter module in turn creates a milterContext
+# tied to the <code>SMFICTX</code> struct via <code>smfi_setpriv</code>
+# to hold a PyThreadState and a user defined Python object for the connection.
+# 
+# Most application interaction with libmilter takes places via 
+# the milterContext object for the connection.  It is passed to
+# callback functions as the first parameter.
+#
+# The <code>Milter</code> module creates a python class for each connection,
+# and converts function callbacks to instance method invocations.
+#
 class milterContext(object):
   def getsymval(self,sym): pass
   def setreply(self,rcode,xcode,*msg): pass
