@@ -574,11 +574,15 @@ def runmilter(name,socketname,timeout = 0):
 
   milter.setconn(socketname)
   if timeout > 0: milter.settimeout(timeout)
+  # disable negotiate callback if runtime version < (1,0,1)
+  ncb = negotiate_callback
+  if milter.getversion() < (1,0,1):
+    ncb = None
   # The name *must* match the X line in sendmail.cf (supposedly)
   milter.register(name,
         data=lambda ctx: ctx.getpriv().data(),
         unknown=lambda ctx,cmd: ctx.getpriv().unknown(cmd),
-        negotiate=negotiate_callback
+        negotiate=ncb
   )
   start_seq = _seq
   try:
