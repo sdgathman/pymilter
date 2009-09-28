@@ -79,7 +79,7 @@ def enable_protocols(klass,mask):
 # If the MTA supports it, tells the MTA not to call this callback,
 # increasing efficiency.  All the callbacks (except negotiate)
 # are disabled in Milter.Base, and overriding them reenables the
-# callback.  An application may need to use @@callback when it extends
+# callback.  An application may need to use @@nocallback when it extends
 # another milter and wants to disable a callback again.
 # The disabled method should still return Milter.CONTINUE, in case the MTA does
 # not support protocol negotiation.
@@ -102,7 +102,7 @@ def nocallback(func):
 def noreply(func):
   try:
     nr_mask = OPTIONAL_CALLBACKS[func.__name__][0]
-  except KeyErro:
+  except KeyError:
     raise ValueError(
       '@noreply applied to non-optional method: '+func.__name__)
   def wrapper(self,*args):
