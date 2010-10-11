@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.19  2009/07/02 19:41:12  customdesigned
+# Handle @ in localpart.
+#
 # Revision 1.18  2009/06/10 18:01:59  customdesigned
 # Doxygen updates
 #
@@ -116,13 +119,23 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
 	code,resp = smtp.docmd('MAIL FROM: <%s>'%ourfrom)
 	if code != 250:
 	  raise smtplib.SMTPSenderRefused(code, resp, '<%s>'%ourfrom)
-	code,resp = smtp.rcpt(mailfrom)
-	if code not in (250,251):
-	  return (code,resp)		# permanent error
+        if isinstance(mailfrom,basestring):
+          mailfrom = [mailfrom]
+        badrcpts = {}
+        for rcpt in mailfrom:
+          code,resp = smtp.rcpt(mailfrom)
+          if code not in (250,251):
+            badrcpts[rcpt] = (code,resp)# permanent error
 	smtp.quit()
+        if len(badrcpts) == 1:
+          return badrcpts.values()[0]	# permanent error
+        if badrcpts:
+          return badrcpts
       return None			# success
     except smtplib.SMTPRecipientsRefused,x:
-      return x.recipients[mailfrom]	# permanent error
+      if len(x.recipients) == 1:
+        return x.recipients.values()[0]	# permanent error
+      return x.recipients
     except smtplib.SMTPSenderRefused,x:
       return x.args[:2]			# does not accept DSN
     except smtplib.SMTPDataError,x:
