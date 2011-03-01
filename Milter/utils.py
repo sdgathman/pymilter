@@ -11,17 +11,48 @@ from email.Header import decode_header
 #import email.Utils
 import rfc822
 
-ip4re = re.compile(r'^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$')
+PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
+ip4re = re.compile(PAT_IP4+'$')
+ip6re = re.compile(                 '(?:%(hex4)s:){6}%(ls32)s$'
+                   '|::(?:%(hex4)s:){5}%(ls32)s$'
+                  '|(?:%(hex4)s)?::(?:%(hex4)s:){4}%(ls32)s$'
+    '|(?:(?:%(hex4)s:){0,1}%(hex4)s)?::(?:%(hex4)s:){3}%(ls32)s$'
+    '|(?:(?:%(hex4)s:){0,2}%(hex4)s)?::(?:%(hex4)s:){2}%(ls32)s$'
+    '|(?:(?:%(hex4)s:){0,3}%(hex4)s)?::%(hex4)s:%(ls32)s$'
+    '|(?:(?:%(hex4)s:){0,4}%(hex4)s)?::%(ls32)s$'
+    '|(?:(?:%(hex4)s:){0,5}%(hex4)s)?::%(hex4)s$'
+    '|(?:(?:%(hex4)s:){0,6}%(hex4)s)?::$'
+  % {
+    'ls32': r'(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|%s)'%PAT_IP4,
+    'hex4': r'[0-9a-f]{1,4}'
+    }, re.IGNORECASE)
 
 # from spf.py
 def addr2bin(str):
   """Convert a string IPv4 address into an unsigned integer."""
-  return struct.unpack("!L", socket.inet_aton(str))[0]
+  try:
+    return struct.unpack("!L", socket.inet_aton(str))[0]
+  except socket.error:
+    raise socket.error("Invalid IP4 address: "+str)
+
+def bin2long6(str):
+    """Convert binary IP6 address into an unsigned Python long integer."""
+    h, l = struct.unpack("!QQ", str)
+    return h << 64 | l
+
+if hasattr(socket,'has_ipv6') and socket.has_ipv6:
+    def inet_ntop(s):
+        return socket.inet_ntop(socket.AF_INET6,s)
+    def inet_pton(s):
+        return socket.inet_pton(socket.AF_INET6,s)
+else:
+    from pyip6 import inet_ntop, inet_pton
 
 MASK = 0xFFFFFFFFL
+MASK6 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFL
 
-def cidr(i,n):
-  return ~(MASK >> n) & MASK & i
+def cidr(i,n,mask=MASK):
+  return ~(mask >> n) & mask & i
 
 def iniplist(ipaddr,iplist):
   """Return whether ip is in cidr list
@@ -31,8 +62,17 @@ def iniplist(ipaddr,iplist):
   True
   >>> iniplist('192.168.0.45',['192.168.0.*'])
   True
+  >>> iniplist('2001:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
+  True
+  >>> iniplist('2G01:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
+  True
   """
-  ipnum = addr2bin(ipaddr)
+  if ip4re.match(ipaddr):
+    ipnum = addr2bin(ipaddr)
+  elif ip6re.match(ipaddr):
+    ipnum = bin2long6(inet_pton(ipaddr))
+  else:
+    raise ValueError('Invalid ip syntax:'+ipaddr)
   for pat in iplist:
     p = pat.split('/',1)
     if ip4re.match(p[0]):
@@ -41,6 +81,13 @@ def iniplist(ipaddr,iplist):
       else:
         n = 32
       if cidr(addr2bin(p[0]),n) == cidr(ipnum,n):
+        return True
+    elif ip6re.match(p[0]):
+      if len(p) > 1:
+	n = int(p[1])
+      else:
+        n = 128
+      if cidr(bin2long6(inet_pton(p[0])),n,MASK6) == cidr(ipnum,n,MASK6):
         return True
     elif fnmatchcase(ipaddr,pat):
       return True
