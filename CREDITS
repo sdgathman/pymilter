@@ -7,6 +7,9 @@ real, usable Python extension.
 
 Other contributors (in random order):
 
+
+Daniel Troeder
+  for pointing out a typo in @noreply
 arkanes@irc.freenode.net
   for suggesting a class method to compute and cache protocol masks
 habnabit@habnabit.org

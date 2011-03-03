@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.20  2010/10/11 00:29:47  customdesigned
+# Handle multiple recipients.  For CBV or auto whitelist of multiple emails.
+#
 # Revision 1.19  2009/07/02 19:41:12  customdesigned
 # Handle @ in localpart.
 #
@@ -123,7 +126,7 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
           mailfrom = [mailfrom]
         badrcpts = {}
         for rcpt in mailfrom:
-          code,resp = smtp.rcpt(mailfrom)
+          code,resp = smtp.rcpt(rcpt)
           if code not in (250,251):
             badrcpts[rcpt] = (code,resp)# permanent error
 	smtp.quit()

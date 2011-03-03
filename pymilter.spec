@@ -1,9 +1,4 @@
-# EL 3,4,5 supported, set to 0 for Fedora
-%define el4 1
-%define dist .el4
-%if 0%{?el3} || 0%{?el4}
-%define __python python2.4
-%endif
+%define __python python2.6
 
 %define libdir %{_libdir}/pymilter
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
@@ -11,7 +6,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: pymilter
-Version: 0.9.3
+Version: 0.9.4
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
 License: GPLv2+
@@ -19,13 +14,9 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Url: http://www.bmsi.com/python/milter.html
 Requires: %{pythonbase} >= 2.4, sendmail >= 8.13
-%if 0%{?el3} || 0%{?el4}
 # Need python2.4 specific pydns, not the version for system python
 Requires: pydns
-%else
 # Needed for callbacks, not a core function but highly useful for milters
-Requires: python-pydns
-%endif
 BuildRequires: ed, %{pythonbase}-devel >= 2.4, sendmail-devel >= 8.13
 
 %description
@@ -83,6 +74,8 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.4-1
+
 * Thu Jul 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.3-1
 - Handle source route in Milter.util.parse_addr()
 - Fix default arg in chgfrom.
