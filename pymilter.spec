@@ -75,9 +75,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.4-1
+- Handle IP6 in Milter.utils.iniplist()
+- python-2.6
 
 * Thu Jul 02 2009 Stuart Gathman <stuart@bmsi.com> 0.9.3-1
-- Handle source route in Milter.util.parse_addr()
+- Handle source route in Milter.utils.parse_addr()
 - Fix default arg in chgfrom.
 - Disable negotiate callback for libmilter < 8.14.3 (1,0,1)
 
