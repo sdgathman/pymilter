@@ -65,7 +65,9 @@ def iniplist(ipaddr,iplist):
   >>> iniplist('2001:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
   True
   >>> iniplist('2G01:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
-  True
+  Traceback (most recent call last):
+    ...
+  ValueError: Invalid ip syntax:2G01:610:779:0:223:6cff:fe9a:9cf3
   """
   if ip4re.match(ipaddr):
     ipnum = addr2bin(ipaddr)
