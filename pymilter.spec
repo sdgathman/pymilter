@@ -26,7 +26,7 @@ modules provide for navigating and modifying MIME parts, sending
 DSNs, and doing CBV.
 
 %prep
-%setup -q
+%setup -q -n pymilter-%{version}
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
