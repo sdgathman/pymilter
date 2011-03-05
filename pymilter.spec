@@ -2,10 +2,10 @@
 
 %define libdir %{_libdir}/pymilter
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-%define pythonbase %(basename %{__python})
+%define pythonbase python26
 
 Summary: Python interface to sendmail milter API
-Name: pymilter
+Name: %{pythonbase}-pymilter
 Version: 0.9.4
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/%{name}-%{version}.tar.gz
@@ -13,11 +13,11 @@ License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{pythonbase} >= 2.4, sendmail >= 8.13
+Requires: %{pythonbase}, sendmail >= 8.13
 # Need python2.4 specific pydns, not the version for system python
-Requires: pydns
+Requires: %{pythonbase}-pydns
 # Needed for callbacks, not a core function but highly useful for milters
-BuildRequires: ed, %{pythonbase}-devel >= 2.4, sendmail-devel >= 8.13
+BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
 
 %description
 This is a python extension module to enable python scripts to
