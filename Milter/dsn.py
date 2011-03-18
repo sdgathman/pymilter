@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.21  2011/03/03 05:11:58  customdesigned
+# Release 0.9.4
+#
 # Revision 1.20  2010/10/11 00:29:47  customdesigned
 # Handle multiple recipients.  For CBV or auto whitelist of multiple emails.
 #
@@ -149,7 +152,7 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
       pass		# MX didn't accept connections, try next one
     except socket.timeout:
       pass		# MX too slow, try next one
-    smtp.close()
+    if hasattr(smtp,'sock'): smtp.close()
     if time.time() > toolate:
       return (450,'No MX response within %f minutes'%(timeout/60.0))
   return (450,'No MX servers available')	# temp error
