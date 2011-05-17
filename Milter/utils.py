@@ -180,7 +180,7 @@ def parse_header(val):
     for s,enc in h:
       if enc:
         try:
-	  u.append(unicode(s,enc))
+	  u.append(unicode(s,enc,'replace'))
 	except LookupError:
 	  u.append(unicode(s))
       else:
@@ -192,5 +192,6 @@ def parse_header(val):
       except UnicodeError: continue
   except UnicodeDecodeError: pass
   except LookupError: pass
+  except ValueError: pass
   except email.Errors.HeaderParseError: pass
   return val
