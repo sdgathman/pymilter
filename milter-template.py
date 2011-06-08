@@ -11,8 +11,9 @@ import Milter
 import StringIO
 import time
 import email
+import sys
 from socket import AF_INET, AF_INET6
-from Milter import parse_addr
+from Milter.utils import parse_addr
 
 
 class myMilter(Milter.Base):
@@ -23,7 +24,7 @@ class myMilter(Milter.Base):
   # each connection runs in its own thread and has its own myMilter
   # instance.  Python code must be thread safe.  This is trivial if only stuff
   # in myMilter instances is referenced.
-  @noreply
+  @Milter.noreply
   def connect(self, IPname, family, hostaddr):
     # (self, 'ip068.subnet71.example.com', AF_INET, ('215.183.71.68', 4720) )
     # (self, 'ip6.mxout.example.com', AF_INET6,
@@ -71,7 +72,7 @@ class myMilter(Milter.Base):
 
 
   ##  def envrcpt(self, to, *str):
-  @noreply
+  @Milter.noreply
   def envrcpt(self, recipient, *str):
     rcptinfo = to,Milter.dictfromlist(str)
     self.R.append(rcptinfo)
@@ -79,17 +80,17 @@ class myMilter(Milter.Base):
     return Milter.CONTINUE
 
 
-  @noreply
+  @Milter.noreply
   def header(self, name, hval):
     self.fp.write("%s: %s\n" % (name,hval))	# add header to buffer
     return Milter.CONTINUE
 
-  @noreply
+  @Milter.noreply
   def eoh(self):
     self.fp.write("\n")				# terminate headers
     return Milter.CONTINUE
 
-  @noreply
+  @Milter.noreply
   def body(self, chunk):
     self.fp.write(chunk)
     return Milter.CONTINUE
@@ -125,6 +126,8 @@ class myMilter(Milter.Base):
 ## ===
     
 def main():
+  socketname = "/tmp/pythonsock"
+  timeout = 600
   # Register to have the Milter factory create instances of your class:
   Milter.factory = myMilter
   flags = Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS
@@ -133,7 +136,7 @@ def main():
   Milter.set_flags(flags)       # tell Sendmail which features we use
   print "%s milter startup" % time.strftime('%Y%b%d %H:%M:%S')
   sys.stdout.flush()
-  Milter.runmilter("pythonfilter",socketname,timeout)
+  Milter.runmilter("test",socketname,timeout)
   print "%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
 
 if __name__ == "__main__":
