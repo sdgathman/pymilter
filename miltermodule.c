@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.27  2009/07/28 21:45:54  customdesigned
+ * Add getversion() to return runtime version.
+ *
  * Revision 1.26  2009/07/28 21:08:20  customdesigned
  * Increment del count.
  *
@@ -631,9 +634,13 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
   result = PyEval_CallObject(cb, arglist);
   Py_DECREF(arglist);
   if (result == NULL) return _report_exception(self);
-  retval = PyInt_AsLong(result);
+  if (!PyInt_Check(result)) {
+    Py_DECREF(result);
+    PyErr_SetString(MilterError,"callback methods must return int");
+    return _report_exception(self);
+  }
+  retval = PyInt_AS_LONG(result);
   Py_DECREF(result);
-  if (PyErr_Occurred()) return _report_exception(self);
   _release_thread(self->t);
   return retval;
 }
