@@ -2,19 +2,15 @@ import os
 import sys
 from distutils.core import setup, Extension
 
+if sys.version < '2.6.5':
+  sys.exit('ERROR: Sorry, python 2.6.5 is required for this module.')
+
 # FIXME: on some versions of sendmail, smutil is renamed to sm.
 # On slackware and debian, leave it out entirely.  It depends
 # on how libmilter was built by the sendmail package.
 #libs = ["milter", "smutil"]
 libs = ["milter"]
 libdirs = ["/usr/lib/libmilter"]    # needed for Debian
-
-# patch distutils if it can't cope with the "classifiers" or
-# "download_url" keywords
-if sys.version < '2.2.3':
-  from distutils.dist import DistributionMetadata
-  DistributionMetadata.classifiers = None
-  DistributionMetadata.download_url = None
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
 setup(name = "pymilter", version = '0.9.5',
