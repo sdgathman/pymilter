@@ -20,27 +20,49 @@
 # and converts function callbacks to instance method invocations.
 #
 class milterContext(object):
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_getsymval">smfi_getsymval</a>.
   def getsymval(self,sym): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_setreply">smfi_setreply</a>.
+  # @param rcode SMTP response code
+  # @param xcode extended SMTP response code
+  # @param msg one or more message lines.  If the MTA does not support 
+  #     multiline messages, only the first is used.
   def setreply(self,rcode,xcode,*msg): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_addheader">smfi_addheader</a>.
   def addheader(self,name,value,idx=-1): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_chgheader">smfi_chgheader</a>.
   def chgheader(self,name,idx,value): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_addrcpt">smfi_addrcpt</a>.
   def addrcpt(self,rcpt,params=None): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_delrcpt">smfi_delrcpt</a>.
   def delrcpt(self,rcpt): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_replacebody">smfi_replacebody</a>.
   def replacebody(self,data): pass
+  ## Attach a Python object to this connection context.
+  # @return the old value or None
   def setpriv(self,priv): pass
+  ## Return the Python object attached to this connection context.
   def getpriv(self): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_quarantine">smfi_quarantine</a>.
   def quarantine(self,reason): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_progress">smfi_progress</a>.
   def progress(self): pass
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_chgfrom">smfi_chgfrom</a>.
   def chgfrom(self,sender,param=None): pass
+  ## Tell the MTA which macro values we are interested in for a given stage.
+  # Of interest only when you need to squeeze a few more bytes of bandwidth.
   def setsmlist(self,stage,macrolist): pass
 
 class error(Exception): pass
 
 ## Enable optional milter actions.
-# Certain milter actions need to be enabled before calling milter.runmilter()
-# or they throw an exception. 
+# Certain milter actions need to be enabled before calling main()
+# or they throw an exception.  Pymilter enables them all by
+# default (since 0.9.2), but you may wish to disable unneeded
+# actions as an optimization.
 # @param flags Bit or mask of optional actions to enable
 def set_flags(flags): pass
+
 def set_connect_callback(cb): pass
 def set_helo_callback(cb): pass
 def set_envfrom_callback(cb): pass
@@ -50,7 +72,11 @@ def set_eoh_callback(cb): pass
 def set_body_callback(cb): pass
 def set_abort_callback(cb): pass
 def set_close_callback(cb): pass
+
+## Sets the return code for untrapped Python exceptions during a callback.
+# Must be one of TEMPFAIL,REJECT,CONTINUE
 def set_exception_policy(code): pass
+
 ## Register python milter with libmilter.
 # The name we pass is used to identify the milter in the MTA configuration.
 # Callback functions must be set using the set_*_callback() functions before
@@ -75,16 +101,28 @@ def set_exception_policy(code): pass
 #       SMTP command is received.
 def register(name,negotiate=None,unknown=None,data=None): pass
 def opensocket(rmsock): pass
+
+## Transfer control to libmilter.
+# Calls <a href="https://www.milter.org/developers/api/smfi_main">
+#   smfi_main</a>.
 def main(): pass
 
 ## Set the libmilter debugging level.
-# smfi_setdbg sets the milter library's internal debugging level to a new level
+# <a href="https://www.milter.org/developers/api/smfi_setdbg">smfi_setdbg</a>
+# sets the milter library's internal debugging level to a new level
 # so that code details may be traced. A level of zero turns off debugging. The
 # greater (more positive) the level the more detailed the debugging. Six is the
-# current, highest, useful value.
+# current, highest, useful value.  Must be called before calling main().
 def setdbg(lev): pass
 
+## Set timeout for MTA communication.
+# Calls <a href="https://www.milter.org/developers/api/smfi_settimeout">
+# smfi_settimeout</a>.  Must be called before calling main().
 def settimeout(secs): pass
+
+## Set socket backlog.
+# Calls <a href="https://www.milter.org/developers/api/smfi_setbacklog">
+# smfi_setbacklog</a>.  Must be called before calling main().
 def setbacklog(n): pass
 
 ## Set the socket used to communicate with the MTA.

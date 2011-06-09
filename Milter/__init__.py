@@ -70,7 +70,7 @@ def decode_mask(bits,names):
 # </pre>
 # or with python-2.6 and later:
 # <pre>
-# @Milter.enable_protocols(Milter.P_RCPT_REJ)
+# @@Milter.enable_protocols(Milter.P_RCPT_REJ)
 # class myMilter(Milter.Base):
 #   def envrcpt(self,to,*params):
 #     return Milter.CONTINUE
@@ -538,12 +538,11 @@ class Milter(Base):
 # change in configuration.
 factory = Milter
 
-## @fn set_flags(flags)
+## @fn void set_flags(int flags);
 # @brief Enable optional %milter actions.
 # Certain %milter actions need to be enabled before calling milter.runmilter()
 # or they throw an exception. 
-# @param flags Bit or mask of optional actions to enable
-# def set_flags(flags): pass
+# @param flags Bit ored mask of optional actions to enable
 
 ## @private
 # @brief Connect context to connection instance and return enabled callbacks.
