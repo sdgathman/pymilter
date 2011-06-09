@@ -74,6 +74,10 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
+- Print milter.error for invalid callback return type.
+  (Since stacktrace is empty, the TypeError exception is confusing.)
+
 * Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.4-1
 - Handle IP6 in Milter.utils.iniplist()
 - python-2.6

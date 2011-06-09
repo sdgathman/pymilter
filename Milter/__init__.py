@@ -8,7 +8,7 @@
 # Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
-__version__ = '0.9.3'
+__version__ = '0.9.5'
 
 import os
 import milter
@@ -538,7 +538,7 @@ class Milter(Base):
 # change in configuration.
 factory = Milter
 
-## @fn void set_flags(int flags);
+## @fn set_flags(flags)
 # @brief Enable optional %milter actions.
 # Certain %milter actions need to be enabled before calling milter.runmilter()
 # or they throw an exception. 
