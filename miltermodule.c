@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.28  2011/06/08 23:13:48  customdesigned
+ * Generate special exception when callback return not int.
+ *
  * Revision 1.27  2009/07/28 21:45:54  customdesigned
  * Add getversion() to return runtime version.
  *
@@ -271,7 +274,6 @@ $ python setup.py help
 #endif
 #endif
 
-
 /* Yes, these are static.  If you need multiple different callbacks, */
 /* it's cleaner to use multiple filters, or convert to OO method calls. */
 static PyObject *connect_callback = NULL;
@@ -284,6 +286,32 @@ static PyObject *body_callback    = NULL;
 static PyObject *eom_callback     = NULL;
 static PyObject *abort_callback   = NULL;
 static PyObject *close_callback   = NULL;
+#ifdef SMFIS_ALL_OPTS
+static PyObject *unknown_callback = NULL;
+static PyObject *data_callback    = NULL;
+static PyObject *negotiate_callback = NULL;
+#endif
+static struct MilterCallback {
+  PyObject **cbp;
+  const char *name;
+} callback_names[] = {
+      { &connect_callback,"connect" },
+      { &helo_callback,"helo" },
+      { &envfrom_callback,"envfrom" },
+      { &envrcpt_callback,"envrcpt" },
+      { &header_callback,"header" },
+      { &eoh_callback,"eoh" },
+      { &body_callback,"body" },
+      { &eom_callback,"eom" },
+      { &abort_callback,"abort" },
+      { &close_callback,"close" },
+#ifdef SMFIS_ALL_OPTS
+      { &unknown_callback,"unknown" },
+      { &data_callback,"data" },
+      { &negotiate_callback,"negotiate" },
+#endif
+      { NULL, NULL }
+    };
 
 staticforward struct smfiDesc description; /* forward declaration */
 
@@ -635,8 +663,18 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
   Py_DECREF(arglist);
   if (result == NULL) return _report_exception(self);
   if (!PyInt_Check(result)) {
+    const struct MilterCallback *p;
+    const char *cbname = "milter";
+    char buf[40];
     Py_DECREF(result);
-    PyErr_SetString(MilterError,"callback methods must return int");
+    for (p = callback_names; p->cbp; ++p) {
+      if (cb == *p->cbp) {
+        cbname = p->name;
+	break;
+      }
+    }
+    sprintf(buf,"The %s callback must return int",cbname);
+    PyErr_SetString(MilterError,buf);
     return _report_exception(self);
   }
   retval = PyInt_AS_LONG(result);
@@ -829,10 +867,6 @@ milter_wrap_abort(SMFICTX *ctx) {
 }
 
 #ifdef SMFIS_ALL_OPTS
-static PyObject *unknown_callback = NULL;
-static PyObject *data_callback    = NULL;
-static PyObject *negotiate_callback = NULL;
-
 static int
 milter_wrap_unknown(SMFICTX *ctx, const char *cmd) {
    PyObject *arglist;
