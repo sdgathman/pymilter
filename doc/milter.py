@@ -36,6 +36,10 @@ class milterContext(object):
 
 class error(Exception): pass
 
+## Enable optional milter actions.
+# Certain milter actions need to be enabled before calling milter.runmilter()
+# or they throw an exception. 
+# @param flags Bit or mask of optional actions to enable
 def set_flags(flags): pass
 def set_connect_callback(cb): pass
 def set_helo_callback(cb): pass
@@ -47,6 +51,28 @@ def set_body_callback(cb): pass
 def set_abort_callback(cb): pass
 def set_close_callback(cb): pass
 def set_exception_policy(code): pass
+## Register python milter with libmilter.
+# The name we pass is used to identify the milter in the MTA configuration.
+# Callback functions must be set using the set_*_callback() functions before
+# registering the milter.
+# Three additional callbacks are specified as keyword parameters.  These
+# were added by recent versions of libmilter.  The keyword parameters is
+# a nicer way to do it, I think, since it makes clear that you have to do
+# it before registering.  I may move all the callbacks 
+# in the future (perhaps keeping the set functions for compatibility).
+# @param name the milter name by which the MTA finds us
+# @param negotiate the
+#       <a href="https://www.milter.org/developers/api/xxfi_negotiate">
+#       xxfi_negotiate</a> callback, called to negotiate supported
+#       actions, callbacks, and protocol steps.
+# @param unknown the
+#       <a href="https://www.milter.org/developers/api/xxfi_unknown">
+#       xxfi_unknown</a> callback, called when for SMTP commands
+#       not recognized by the MTA. (Extend SMTP in your milter!)
+# @param data the
+#       <a href="https://www.milter.org/developers/api/xxfi_data">
+#       xxfi_data</a> callback, called when the DATA
+#       SMTP command is received.
 def register(name,negotiate=None,unknown=None,data=None): pass
 def opensocket(rmsock): pass
 def main(): pass

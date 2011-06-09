@@ -1,8 +1,8 @@
 %define __python python2.6
+%define pythonbase python26
 
 %define libdir %{_libdir}/pymilter
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-%define pythonbase python26
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter

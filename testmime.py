@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.4  2005/07/20 14:49:44  customdesigned
+# Handle corrupt and empty ZIP files.
+#
 # Revision 1.3  2005/06/17 01:49:39  customdesigned
 # Handle zip within zip.
 #
@@ -26,6 +29,7 @@ import socket
 import StringIO
 import email
 import sys
+import Milter
 from email import Errors
 
 samp1_txt1 = """Dear Agent 1
@@ -145,6 +149,31 @@ class MimeTestCase(unittest.TestCase):
     self.testDefang('zip3',1,'zip.zip')
     # test zip within zip
     self.testDefang('ziploop',1,'stuart@bmsi.com.zip')
+
+  def _chk_name(self,name):
+    self.filename = name
+
+  def _chk_attach(self,msg):
+    "Filter attachments by content."
+    # check for bad extensions
+    mime.check_name(msg,ckname=self._chk_name,scan_zip=True)
+    # remove scripts from HTML
+    mime.check_html(msg)
+    # don't let a tricky virus slip one past us
+    msg = msg.get_submsg()
+    if isinstance(msg,email.Message.Message):
+      return mime.check_attachments(msg,self._chk_attach)
+    return Milter.CONTINUE
+
+  def testCheckAttach(self,fname="test1"):
+    # test1 contains a very long filename
+    msg = mime.message_from_file(open('test/'+fname,'r'))
+    mime.defang(msg,scan_zip=True)
+    self.failIf(msg.ismodified())
+    msg = mime.message_from_file(open('test/tmpytgcE5.fail','r'))
+    rc = mime.check_attachments(msg,self._chk_attach)
+    self.assertEquals(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
+    self.assertEquals(rc,Milter.CONTINUE)
 
   def testHTML(self,fname=""):
     result = StringIO.StringIO()

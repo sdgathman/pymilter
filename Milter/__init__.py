@@ -20,7 +20,7 @@ _seq_lock = thread.allocate_lock()
 _seq = 0
 
 def uniqueID():
-  """Return a sequence number unique to this process.
+  """Return a unique sequence number (incremented on each call).
   """
   global _seq
   _seq_lock.acquire()
@@ -49,16 +49,17 @@ def decode_mask(bits,names):
 
 ## Class decorator to enable optional protocol steps.
 # P_SKIP is enabled by default when supported, but
-# milter applications may wish to enable P_HDR_LEADSPC
+# applications may wish to enable P_HDR_LEADSPC
 # to send and receive the leading space of header continuation
 # lines unchanged, and/or P_RCPT_REJ to have recipients 
 # detected as invalid by the MTA passed to the envcrpt callback.
 #
 # Applications may want to check whether the protocol is actually
-# supported by the MTA in use.  The <code>_protocol</code> 
-# member is a bitmask of protocol options negotiated.  So,
+# supported by the MTA in use.  Base._protocol
+# is a bitmask of protocol options negotiated.  So,
 # for instance, if <code>self._protocol & Milter.P_RCPT_REJ</code>
-# is true, then that feature was successfully negotiated with the MTA.
+# is true, then that feature was successfully negotiated with the MTA
+# and the application will see recipients the MTA has flagged as invalid.
 # 
 # Sample use:
 # <pre>
@@ -67,22 +68,29 @@ def decode_mask(bits,names):
 #     return Milter.CONTINUE
 # myMilter = Milter.enable_protocols(myMilter,Milter.P_RCPT_REJ)
 # </pre>
+# or with python-2.6 and later:
+# <pre>
+# @Milter.enable_protocols(Milter.P_RCPT_REJ)
+# class myMilter(Milter.Base):
+#   def envrcpt(self,to,*params):
+#     return Milter.CONTINUE
+# </pre>
 # @since 0.9.3
-# @param klass the milter application class to modify
+# @param klass the %milter application class to modify
 # @param mask a bitmask of protocol steps to enable
-# @return the modified milter class
+# @return the modified %milter class
 def enable_protocols(klass,mask):
   klass._protocol_mask = klass.protocol_mask() & ~mask
   return klass
 
 ## Function decorator to disable callback methods.
-# If the MTA supports it, tells the MTA not to call this callback,
+# If the MTA supports it, tells the MTA not to invoke this callback,
 # increasing efficiency.  All the callbacks (except negotiate)
 # are disabled in Milter.Base, and overriding them reenables the
 # callback.  An application may need to use @@nocallback when it extends
-# another milter and wants to disable a callback again.
+# another %milter and wants to disable a callback again.
 # The disabled method should still return Milter.CONTINUE, in case the MTA does
-# not support protocol negotiation.
+# not support protocol negotiation, and for when called from a test harness.
 # @since 0.9.2
 def nocallback(func):
   try:
@@ -122,45 +130,81 @@ def noreply(func):
 class DisabledAction(RuntimeError):
   pass
 
-## A do "nothing" Milter base class.
+## A do "nothing" Milter base class representing an SMTP connection.
+#
 # Python milters should derive from this class
-# unless they are using the low lever milter module directly.  
-# All optional callbacks are disabled, and automatically
-# reenabled when overridden.
+# unless they are using the low level milter module directly.  
+#
+# Most of the methods are either "actions" or "callbacks".  Callbacks
+# are invoked by the MTA at certain points in the SMTP protocol.  For
+# instance when the HELO command is seen, the MTA calls the helo
+# callback before returning a response code.  All callbacks must
+# return one of these constants: CONTINUE, TEMPFAIL, REJECT, ACCEPT,
+# DISCARD, SKIP.  The NOREPLY response is supplied automatically by
+# the @@noreply decorator if negotiation with the MTA is successful.
+# @@noreply and @@nocallback methods should return CONTINUE for two reasons:
+# the MTA may not support negotiation, and the class may be running in a test
+# harness.
+# 
+# Optional callbacks are disabled with the @@nocallback decorator, and
+# automatically reenabled when overridden.  Disabled callbacks should
+# still return CONTINUE for testing and MTAs that do not support
+# negotiation.  
+
+# Each SMTP connection to the MTA calls the factory method you provide to
+# create an instance derived from this class.  This is typically the
+# constructor for a class derived from Base.  The _setctx() method attaches
+# the instance to the low level milter.milterContext object.  When the SMTP
+# connection terminates, the close callback is called, the low level connection
+# object is destroyed, and this normally causes instances of this class to be
+# garbage collected as well.  The close() method should release any global
+# resources held by instances.
 # @since 0.9.2
 class Base(object):
-  "The core class interface to the milter module."
+  "The core class interface to the %milter module."
 
   ## Attach this Milter to the low level milter.milterContext object.
   def _setctx(self,ctx):
+    ## The low level @ref milter.milterContext object.
     self._ctx = ctx
+    ## A bitmask of actions this connection has negotiated to use.
+    # By default, all actions are enabled.  High throughput milters
+    # may want to disable unused actions to increase efficiency.
+    # Some optional actions may be disabled by calling milter.set_flags(), or
+    # by overriding the negotiate callback.  The bits include:
+    # <code>ADDHDRS,CHGBODY,MODBODY,ADDRCPT,ADDRCPT_PAR,DELRCPT
+    #  CHGHDRS,QUARANTINE,CHGFROM,SETSMLIST</code>.
+    # The <code>Milter.CURR_ACTS</code> bitmask is all actions
+    # known when the milter module was compiled.
+    # Application code can also inspect this field to determine
+    # which actions are available.  This is especially useful in
+    # generic library code designed to work in multiple milters.
+    # @since 0.9.2
+    #
     self._actions = CURR_ACTS         # all actions enabled by default
+    ## A bitmask of protocol options this connection has negotiated.
+    # An application may inspect this
+    # variable to determine which protocol steps are supported.  Options
+    # of interest to applications: the SKIP result code is allowed
+    # only if the P_SKIP bit is set, rejected recipients are passed to the
+    # %milter application only if the P_RCPT_REJ bit is set, and
+    # header values are sent and received with leading spaces (in the
+    # continuation lines) intact if the P_HDR_LEADSPC bit is set (so
+    # that the application can customize indenting).  
+    #
+    # The P_N* bits should be negotiated via the @@noreply and @@nocallback
+    # method decorators, and P_RCPT_REJ, P_HDR_LEADSPC should
+    # be enabled using the enable_protocols class decorator.
+    #
+    # The bits include: <code>
+    # P_RCPT_REJ P_NR_CONN P_NR_HELO P_NR_MAIL P_NR_RCPT P_NR_DATA P_NR_UNKN
+    # P_NR_EOH P_NR_BODY P_NR_HDR P_NOCONNECT P_NOHELO P_NOMAIL P_NORCPT
+    # P_NODATA P_NOUNKNOWN P_NOEOH P_NOBODY P_NOHDRS P_HDR_LEADSPC P_SKIP
+    # </code> (all under the Milter namespace).
+    # @since 0.9.2
     self._protocol = 0                # no protocol options by default
     if ctx:
       ctx.setpriv(self)
-  ## @var _actions
-  # A bitmask of actions this milter has negotiated to use.
-  # By default, all actions are enabled.  This may be changed
-  # by calling <code>milter.set_flags</code>, or by overriding
-  # the negotiate callback.  The bits include:
-  # <code>ADDHDRS,CHGBODY,MODBODY,ADDRCPT,ADDRCPT_PAR,DELRCPT
-  #  CHGHDRS,QUARANTINE,CHGFROM,SETSMLIST</code>.
-  # The <code>Milter.CURR_ACTS</code> bitmask is all actions
-  # known when the milter module was compiled.
-  # @since 0.9.2
-  #
-
-  ## @var _protocol
-  # A bitmask of protocol options this milter has negotiated.
-  # The bits generally indicate that a particular step should be
-  # skipped, since previous versions of the milter protocol had
-  # no provision for skipping steps.
-  # The bits include: <code>
-  # P_RCPT_REJ P_NR_CONN P_NR_HELO P_NR_MAIL P_NR_RCPT P_NR_DATA P_NR_UNKN
-  # P_NR_EOH P_NR_BODY P_NR_HDR P_NOCONNECT P_NOHELO P_NOMAIL P_NORCPT
-  # P_NODATA P_NOUNKNOWN P_NOEOH P_NOBODY P_NOHDRS P_HDR_LEADSPC P_SKIP
-  # </code> (all under the Milter namespace).
-  # @since 0.9.2
 
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
@@ -251,10 +295,17 @@ class Base(object):
       klass._protocol_mask = p
       return p
     
-  ## Negotiate milter protocol options.
+  ## Negotiate milter protocol options.  Called by the
+  # <a href="https://www.milter.org/developers/api/xxfi_negotiate">
+  # xffi_negotiate</a> callback.
+  # Options are passed as 
+  # a list of 4 32-bit ints which can be modified and are passed
+  # back to libmilter on return.
   # Default negotiation sets P_NO* and P_NR* for callbacks
   # marked @@nocallback and @@noreply respectively, leaves all
-  # actions enabled, and enables Milter.SKIP.
+  # actions enabled, and enables Milter.SKIP.  The @@enable_protocols
+  # class decorator can customize which protocol steps are implemented.
+  # @param opts a modifiable list of 4 ints with negotiated options
   # @since 0.9.2
   def negotiate(self,opts):
     try:
@@ -299,28 +350,36 @@ class Base(object):
   # Milter methods which can only be called from eom callback.
 
   ## Add a mail header field.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_addheader">
+  # smfi_addheader</a>.  
   # The <code>Milter.ADDHDRS</code> action flag must be set.
   #
   # May be called from eom callback only.
   # @param field        the header field name
   # @param value        the header field value
   # @param idx header field index from the top of the message to insert at
+  # @throws DisabledAction if ADDHDRS is not enabled
   def addheader(self,field,value,idx=-1):
     if not self._actions & ADDHDRS: raise DisabledAction("ADDHDRS")
     return self._ctx.addheader(field,value,idx)
 
   ## Change the value of a mail header field.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_chgheader">
+  # smfi_chgheader</a>.  
   # The <code>Milter.CHGHDRS</code> action flag must be set.
   #
   # May be called from eom callback only.
   # @param field the name of the field to change
   # @param idx index of the field to change when there are multiple instances
   # @param value the new value of the field
+  # @throws DisabledAction if CHGHDRS is not enabled
   def chgheader(self,field,idx,value):
     if not self._actions & CHGHDRS: raise DisabledAction("CHGHDRS")
     return self._ctx.chgheader(field,idx,value)
 
-  ## Add a recipient to the message.
+  ## Add a recipient to the message.  
+  # Calls <a href="https://www.milter.org/developers/api/smfi_addrcpt">
+  # smfi_addrcpt</a>.  
   # If no corresponding mail header is added, this is like a Bcc.
   # The syntax of the recipient is the same as used in the SMTP
   # RCPT TO command (and as delivered to the envrcpt callback), for example
@@ -332,33 +391,42 @@ class Base(object):
   # May be called from eom callback only.
   # @param rcpt the message recipient 
   # @param params an optional list of ESMTP parameters
+  # @throws DisabledAction if ADDRCPT or ADDRCPT_PAR is not enabled 
   def addrcpt(self,rcpt,params=None):
     if not self._actions & ADDRCPT: raise DisabledAction("ADDRCPT")
     if params and not self._actions & ADDRCPT_PAR:
         raise DisabledAction("ADDRCPT_PAR")
     return self._ctx.addrcpt(rcpt,params)
   ## Delete a recipient from the message.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_delrcpt">
+  # smfi_delrcpt</a>.  
   # The recipient should match one passed to the envrcpt callback.
   # The <code>Milter.DELRCPT</code> action flag must be set.
   #
   # May be called from eom callback only.
   # @param rcpt the message recipient to delete
+  # @throws DisabledAction if DELRCPT is not enabled
   def delrcpt(self,rcpt):
     if not self._actions & DELRCPT: raise DisabledAction("DELRCPT")
     return self._ctx.delrcpt(rcpt)
 
   ## Replace the message body.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_replacebody">
+  # smfi_replacebody</a>.  
   # The entire message body must be replaced.  
   # Call repeatedly with blocks of data until the entire body is transferred.
   # The <code>Milter.MODBODY</code> action flag must be set.
   #
   # May be called from eom callback only.
   # @param body a chunk of body data
+  # @throws DisabledAction if MODBODY is not enabled
   def replacebody(self,body):
     if not self._actions & MODBODY: raise DisabledAction("MODBODY")
     return self._ctx.replacebody(body)
 
   ## Change the SMTP envelope sender address.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_chgfrom">
+  # smfi_chgfrom</a>.  
   # The syntax of the sender is that same as used in the SMTP
   # MAIL FROM command (and as delivered to the envfrom callback),
   # for example <code>self.chgfrom('<bar@example.com>')</code>.
@@ -368,22 +436,28 @@ class Base(object):
   # @since 0.9.1
   # @param sender the new sender address
   # @param params an optional list of ESMTP parameters
+  # @throws DisabledAction if CHGFROM is not enabled
   def chgfrom(self,sender,params=None):
     if not self._actions & CHGFROM: raise DisabledAction("CHGFROM")
     return self._ctx.chgfrom(sender,params)
 
   ## Quarantine the message.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_quarantine">
+  # smfi_quarantine</a>.  
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.
   # The <code>Milter.QUARANTINE</code> action flag must be set.
   #
   # May be called from eom callback only.
   # @param reason a string describing the reason for quarantine
+  # @throws DisabledAction if QUARANTINE is not enabled
   def quarantine(self,reason):
     if not self._actions & QUARANTINE: raise DisabledAction("QUARANTINE")
     return self._ctx.quarantine(reason)
 
   ## Tell the MTA to wait a bit longer.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_progress">
+  # smfi_progress</a>.  
   # Resets timeouts in the MTA that detect a "hung" milter.
   def progress(self):
     return self._ctx.progress()
@@ -464,13 +538,22 @@ class Milter(Base):
 # change in configuration.
 factory = Milter
 
+## @fn set_flags(flags)
+# @brief Enable optional %milter actions.
+# Certain %milter actions need to be enabled before calling milter.runmilter()
+# or they throw an exception. 
+# @param flags Bit or mask of optional actions to enable
+# def set_flags(flags): pass
+
 ## @private
+# @brief Connect context to connection instance and return enabled callbacks.
 def negotiate_callback(ctx,opts):
   m = factory()
   m._setctx(ctx)
   return m.negotiate(opts)
 
 ## @private
+# @brief Connect context if needed and invoke connect method.
 def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   m = ctx.getpriv()
   if not m:     
@@ -481,6 +564,7 @@ def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   return m.connect(hostname,family,hostaddr)
 
 ## @private
+# @brief Disconnect milterContext and call close method.
 def close_callback(ctx):
   m = ctx.getpriv()
   if not m: return CONTINUE
@@ -527,11 +611,11 @@ def envcallback(c,args):
       pargs.append(s)
   return c(*pargs,**kw)
 
-## Run the milter.
-# @param name the name of the milter known by the MTA
-# @param socketname the socket to be passed to <code>milter.setconn</code>
+## Run the %milter.
+# @param name the name of the %milter known to the MTA
+# @param socketname the socket to be passed to milter.setconn()
 # @param timeout the time in secs the MTA should wait for a response before 
-#	considering this milter dead
+#	considering this %milter dead
 def runmilter(name,socketname,timeout = 0):
   # This bit is here on the assumption that you will be starting this filter
   # before sendmail.  If sendmail is not running and the socket already exists,
