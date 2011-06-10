@@ -13,8 +13,9 @@ License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Url: http://www.bmsi.com/python/milter.html
-Requires: %{pythonbase}, sendmail >= 8.13
-# Need python2.4 specific pydns, not the version for system python
+# python-2.6.4 gets RuntimeError: not holding the import lock
+Requires: %{pythonbase} >= 2.6.5, sendmail >= 8.13
+# Need python2.6 specific pydns, not the version for system python
 Requires: %{pythonbase}-pydns
 # Needed for callbacks, not a core function but highly useful for milters
 BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
@@ -77,6 +78,7 @@ rm -rf $RPM_BUILD_ROOT
 * Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
 - Print milter.error for invalid callback return type.
   (Since stacktrace is empty, the TypeError exception is confusing.)
+- Fix milter-template.py
 
 * Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.4-1
 - Handle IP6 in Milter.utils.iniplist()

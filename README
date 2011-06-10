@@ -69,8 +69,7 @@ Not-so-quick Installation
 First install Sendmail.  Make sure you read libmilter/README in the Sendmail
 source directory, and make sure you enable libmilter before you build.  The
 8.11 series had libmilter marked as FFR (For Future Release); 8.12
-officially
-supports libmilter, but it's still not built by default.
+officially supports libmilter, but it's still not built by default.
 
 Install Python, and enable threading in Modules/Setup.
 

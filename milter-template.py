@@ -14,7 +14,13 @@ import email
 import sys
 from socket import AF_INET, AF_INET6
 from Milter.utils import parse_addr
+if True:
+  from multiprocessing import Process as Thread, Queue
+else:
+  from threading import Thread
+  from Queue import Queue
 
+logq = Queue(maxsize=4)
 
 class myMilter(Milter.Base):
 
@@ -117,16 +123,24 @@ class myMilter(Milter.Base):
   ## === Support Functions ===
 
   def log(self,*msg):
-    print "%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S'),self.id),
+    logq.put((msg,self.id,time.time()))
+
+def background():
+  while True:
+    t = logq.get()
+    if not t: break
+    msg,id,ts = t
+    print "%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S',time.localtime(ts)),id),
     # 2005Oct13 02:34:11 [1] msg1 msg2 msg3 ...
     for i in msg: print i,
     print
 
-
 ## ===
     
 def main():
-  socketname = "/tmp/pythonsock"
+  bt = Thread(target=background)
+  bt.start()
+  socketname = "/home/stuart/pythonsock"
   timeout = 600
   # Register to have the Milter factory create instances of your class:
   Milter.factory = myMilter
@@ -136,7 +150,9 @@ def main():
   Milter.set_flags(flags)       # tell Sendmail which features we use
   print "%s milter startup" % time.strftime('%Y%b%d %H:%M:%S')
   sys.stdout.flush()
-  Milter.runmilter("test",socketname,timeout)
+  Milter.runmilter("pythonfilter",socketname,timeout)
+  logq.put(None)
+  bt.join()
   print "%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
 
 if __name__ == "__main__":

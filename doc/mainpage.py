@@ -1,6 +1,5 @@
 ## @mainpage Writing Milters in Python
 #
-# 
 # At the lowest level, the <code>milter</code> module provides a thin wrapper
 # around the <a href="https://www.milter.org/developers/api/index"> sendmail
 # libmilter API</a>.  This API lets you register callbacks for a number of
@@ -34,3 +33,21 @@
 # The <code>mime</code> module provides a wrapper for the Python email package
 # that fixes some bugs, and simplifies modifying selected parts of a MIME
 # message.
+#
+# @section threading
+#
+# The libmilter library which pymilter wraps 
+# <a href="https://www.milter.org/developers/overview#SignalHandling">handles
+# all signals</a> itself, and expects to be called from a single main thread.
+# It handles SIGTERM, SIGHUP, and SIGINT, mapping the first two to 
+# <a href="https://www.milter.org/developers/api/smfi_stop">smfi_stop</a>
+# and the last to an internal ABORT.
+#
+# If you use python threads or threading modules, then signal handling gets
+# confused.  Threads may still be useful, but you may need to provide an
+# alternate means of causing graceful shutdown.
+#
+# You may find the
+# <a href="http://docs.python.org/release/2.6.6/library/multiprocessing.html">
+# multiprocessing</a> module useful.  It can be a drop-in
+# replacement for threading as illustrated in @ref milter-template.py.

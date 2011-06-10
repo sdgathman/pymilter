@@ -28,6 +28,7 @@ def uniqueID():
   _seq_lock.release()
   return seqno
 
+## @private
 OPTIONAL_CALLBACKS = {
   'connect':(P_NR_CONN,P_NOCONNECT),
   'hello':(P_NR_HELO,P_NOHELO),
@@ -40,12 +41,20 @@ OPTIONAL_CALLBACKS = {
   'header':(P_NR_HDR,P_NOHDRS)
 }
 
+## @private
 def decode_mask(bits,names):
   t = [ (s,getattr(milter,s)) for s in names]
   nms = [s for s,m in t if bits & m]
   for s,m in t: bits &= ~m
   if bits: nms += hex(bits)
   return nms
+
+## @fn set_flags(flags)
+# @brief Enable optional %milter actions.
+# Certain %milter actions need to be enabled before calling milter.runmilter()
+# or they throw an exception. 
+# @param flags Bit ored mask of optional actions to enable
+
 
 ## Class decorator to enable optional protocol steps.
 # P_SKIP is enabled by default when supported, but
@@ -537,12 +546,6 @@ class Milter(Base):
 # the milter is running: for instance, to a new subclass based on a 
 # change in configuration.
 factory = Milter
-
-## @fn set_flags(flags)
-# @brief Enable optional %milter actions.
-# Certain %milter actions need to be enabled before calling milter.runmilter()
-# or they throw an exception. 
-# @param flags Bit ored mask of optional actions to enable
 
 ## @private
 # @brief Connect context to connection instance and return enabled callbacks.
