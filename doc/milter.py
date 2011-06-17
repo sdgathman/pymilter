@@ -22,7 +22,10 @@
 class milterContext(object):
   ## Calls <a href="https://www.milter.org/developers/api/smfi_getsymval">smfi_getsymval</a>.
   def getsymval(self,sym): pass
-  ## Calls <a href="https://www.milter.org/developers/api/smfi_setreply">smfi_setreply</a>.
+  ## Calls <a href="https://www.milter.org/developers/api/smfi_setreply">
+  # smfi_setreply</a> or
+  # <a href="https://www.milter.org/developers/api/smfi_setmlreply">
+  # smfi_setmlreply</a>.
   # @param rcode SMTP response code
   # @param xcode extended SMTP response code
   # @param msg one or more message lines.  If the MTA does not support 

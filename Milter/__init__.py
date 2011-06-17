@@ -19,6 +19,12 @@ from milter import *
 _seq_lock = thread.allocate_lock()
 _seq = 0
 
+## @fn set_flags(flags)
+# @brief Enable optional %milter actions.
+# Certain %milter actions need to be enabled before calling milter.runmilter()
+# or they throw an exception. 
+# @param flags Bit ored mask of optional actions to enable
+
 def uniqueID():
   """Return a unique sequence number (incremented on each call).
   """
@@ -49,13 +55,6 @@ def decode_mask(bits,names):
   if bits: nms += hex(bits)
   return nms
 
-## @fn set_flags(flags)
-# @brief Enable optional %milter actions.
-# Certain %milter actions need to be enabled before calling milter.runmilter()
-# or they throw an exception. 
-# @param flags Bit ored mask of optional actions to enable
-
-
 ## Class decorator to enable optional protocol steps.
 # P_SKIP is enabled by default when supported, but
 # applications may wish to enable P_HDR_LEADSPC
@@ -77,13 +76,6 @@ def decode_mask(bits,names):
 #     return Milter.CONTINUE
 # myMilter = Milter.enable_protocols(myMilter,Milter.P_RCPT_REJ)
 # </pre>
-# or with python-2.6 and later:
-# <pre>
-# @@Milter.enable_protocols(Milter.P_RCPT_REJ)
-# class myMilter(Milter.Base):
-#   def envrcpt(self,to,*params):
-#     return Milter.CONTINUE
-# </pre>
 # @since 0.9.3
 # @param klass the %milter application class to modify
 # @param mask a bitmask of protocol steps to enable
@@ -91,6 +83,44 @@ def decode_mask(bits,names):
 def enable_protocols(klass,mask):
   klass._protocol_mask = klass.protocol_mask() & ~mask
   return klass
+
+## Milter rejected recipients. A class decorator that calls
+# enable_protocols() with the P_RCPT_REJ flag.  By default, the MTA
+# does not pass recipients that it knows are invalid on to the milter.
+# This decorator enables a %milter app to see all recipients if supported
+# by the MTA.  Use like this with python-2.6 and later:
+# <pre>
+# @@Milter.rejected_recipients
+# class myMilter(Milter.Base):
+#   def envrcpt(self,to,*params):
+#     return Milter.CONTINUE
+# </pre>
+# @since 0.9.5
+# @param klass the %milter application class to modify
+# @return the modified %milter class
+def rejected_recipients(klass):
+  return enable_protocols(klass,P_RCPT_REJ)
+
+## Milter leading space on headers. A class decorator that calls
+# enable_protocols() with the P_HEAD_LEADSPC flag.  By default,
+# header continuation lines are collected and joined before getting
+# sent to a milter.  Headers modified or added by the milter are
+# folded by the MTA as necessary according to its own standards.
+# With this flag, header continuation lines are preserved
+# with their newlines and leading space.  In addition, header folding
+# done by the milter is preserved as well.
+# Use like this with python-2.6 and later:
+# <pre>
+# @@Milter.header_leading_space
+# class myMilter(Milter.Base):
+#   def header(self,hname,value):
+#     return Milter.CONTINUE
+# </pre>
+# @since 0.9.5
+# @param klass the %milter application class to modify
+# @return the modified %milter class
+def header_leading_space(klass):
+  return enable_protocols(klass,P_HEAD_LEADSPC)
 
 ## Function decorator to disable callback methods.
 # If the MTA supports it, tells the MTA not to invoke this callback,
