@@ -48,9 +48,10 @@ def is_dynip(host,addr):
   True
   """
   if host.startswith('[') and host.endswith(']'):
-    return True
+    return True                                 # no ptr
   if addr:
     if host.find(addr) >= 0: return True
+    if addr.find(':') >= 0: return False        # IP6
     a = addr.split('.')
     ia = map(int,a)
     h = host

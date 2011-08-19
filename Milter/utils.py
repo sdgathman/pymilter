@@ -28,16 +28,21 @@ ip6re = re.compile(                 '(?:%(hex4)s:){6}%(ls32)s$'
     }, re.IGNORECASE)
 
 # from spf.py
-def addr2bin(str):
+def addr2bin(s):
   """Convert a string IPv4 address into an unsigned integer."""
+  if s.find(':') >= 0:
+    try:
+      return bin2long6(inet_pton(s))
+    except:
+      raise socket.error("Invalid IP6 address: "+s)
   try:
-    return struct.unpack("!L", socket.inet_aton(str))[0]
+    return struct.unpack("!L", socket.inet_aton(s))[0]
   except socket.error:
-    raise socket.error("Invalid IP4 address: "+str)
+    raise socket.error("Invalid IP4 address: "+s)
 
-def bin2long6(str):
+def bin2long6(s):
     """Convert binary IP6 address into an unsigned Python long integer."""
-    h, l = struct.unpack("!QQ", str)
+    h, l = struct.unpack("!QQ", s)
     return h << 64 | l
 
 if hasattr(socket,'has_ipv6') and socket.has_ipv6:
