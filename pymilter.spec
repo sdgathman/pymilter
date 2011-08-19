@@ -6,7 +6,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 0.9.4
+Version: 0.9.5
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 License: GPLv2+
@@ -79,6 +79,7 @@ rm -rf $RPM_BUILD_ROOT
 - Print milter.error for invalid callback return type.
   (Since stacktrace is empty, the TypeError exception is confusing.)
 - Fix milter-template.py
+- Tweak Milter.utils.addr2bin and Milter.dynip to handle IP6
 
 * Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.4-1
 - Handle IP6 in Milter.utils.iniplist()
