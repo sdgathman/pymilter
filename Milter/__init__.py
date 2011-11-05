@@ -310,7 +310,7 @@ class Base(object):
   ## Called when the connection is closed.
   def close(self): return CONTINUE
 
-  ## Return mask of SMFIP_N.. protocol option bits to clear for this class
+  ## Return mask of SMFIP_N* protocol option bits to clear for this class
   # The @@nocallback and @@noreply decorators set the
   # <code>milter_protocol</code> function attribute to the protocol mask bit to
   # pass to libmilter, causing that callback or its reply to be skipped.
@@ -336,7 +336,10 @@ class Base(object):
     
   ## Negotiate milter protocol options.  Called by the
   # <a href="https://www.milter.org/developers/api/xxfi_negotiate">
-  # xffi_negotiate</a> callback.
+  # xffi_negotiate</a> callback.  This is an advanced callback,
+  # do not override unless you know what you are doing.  Most
+  # negotiation can be done simply by using the supplied 
+  # class and function decorators.
   # Options are passed as 
   # a list of 4 32-bit ints which can be modified and are passed
   # back to libmilter on return.
@@ -363,6 +366,8 @@ class Base(object):
   ## Return the value of an MTA macro.  Sendmail macro names
   # are either single chars (e.g. "j") or multiple chars enclosed
   # in braces (e.g. "{auth_type}").  Macro names are MTA dependent.
+  # See <a href="https://www.milter.org/developers/api/smfi_getsymval">
+  # smfi_getsymval</a> for default sendmail macros.
   # @param sym the macro name
   def getsymval(self,sym):
     return self._ctx.getsymval(sym)
@@ -714,4 +719,5 @@ for priv in ('os','milter','thread','factory','_seq','_seq_lock','__version__'):
 __all__ = __all__.keys()
 
 ## @example milter-template.py
+## @example milter-nomix.py
 #

@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.7  2009/06/13 21:15:12  customdesigned
+# Doxygen updates.
+#
 # Revision 1.6  2009/06/09 03:13:13  customdesigned
 # More doxygen docs.
 #
@@ -165,15 +168,14 @@ class MimeMessage(Message):
   """
   def __init__(self,fp=None,seekable=1):
     Message.__init__(self)
-    self.headerchange = None
     self.submsg = None
     self.modified = False
-
   ## @var headerchange
   # Provide a headerchange event for integration with Milter.
   #   The headerchange attribute can be assigned a function to be called when
   #   changing headers.  The signature is:
   #   headerchange(msg,name,value) -> None
+    self.headerchange = None
 
   def get_param(self, param, failobj=None, header='content-type', unquote=True):
     val = Message.get_param(self,param,failobj,header,unquote)

@@ -1,11 +1,6 @@
-## To roll your own milter, create a class that extends Milter.  
-#  See the pymilter project at http://bmsi.com/python/milter.html
-#  based on Sendmail's milter API http://www.milter.org/milter_api/api.html
+## A very simple milter to prevent mixing of internal and external mail.  
+# Internal is defined as using one of a list of internal top level domains.
 #  This code is open-source on the same terms as Python.
-
-## Milter calls methods of your class at milter events.
-## Return REJECT,TEMPFAIL,ACCEPT to short circuit processing for a message.
-## You can also add/del recipients, replacebody, add/del headers, etc.
 
 import Milter
 import time
@@ -14,15 +9,11 @@ from Milter.utils import parse_addr
 
 internal_tlds = ["corp", "personal"]
 
-# Determine if a hostname is internal or not. True if internal,
-# False otherwise
+## Determine if a hostname is internal or not. 
+# True if internal, False otherwise
 def is_internal(hostname):
     components = hostname.split(".")
-
-    if components.pop() in internal_tlds:
-        return True
-    else:
-        return False
+    return components.pop() in internal_tlds:
 
 # Determine if internal and external hosts are mixed based on a list
 # of hostnames

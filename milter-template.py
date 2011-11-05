@@ -79,7 +79,7 @@ class myMilter(Milter.Base):
 
   ##  def envrcpt(self, to, *str):
   @Milter.noreply
-  def envrcpt(self, recipient, *str):
+  def envrcpt(self, to, *str):
     rcptinfo = to,Milter.dictfromlist(str)
     self.R.append(rcptinfo)
     
@@ -109,7 +109,6 @@ class myMilter(Milter.Base):
     # example of adding a Bcc:
     self.addrcpt('<%s>' % 'spy@example.com')
     return Milter.ACCEPT
-
 
   def close(self):
     # always called, even when abort is called.  Clean up
