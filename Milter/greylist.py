@@ -50,7 +50,7 @@ class Greylist(object):
           # expired
           log.debug('Expired greylist: %s',key)
           r = Record()
-        elif now < r.firstseen + self.greylist_time:
+        elif now < r.firstseen + self.greylist_time + 5:
           # still greylisted
           log.debug('Early greylist: %s',key)
           #r = Record()
