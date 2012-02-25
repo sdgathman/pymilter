@@ -374,8 +374,16 @@ class Base(object):
 
   ## Set the SMTP reply code and message.
   # If the MTA does not support setmlreply, then only the
-  # first msg line is used.
+  # first msg line is used.  Any '%' in a message line
+  # must be doubled, or libmilter will silently ignore the setreply.
+  # Beginning with 0.9.6, we test for that case and throw ValueError to avoid
+  # head scratching.  What will <i>really</i> irritate you, however,
+  # is that if you carefully double any '%', your message will be
+  # sent - but with the '%' still doubled!
   def setreply(self,rcode,xcode=None,msg=None,*ml):
+    for m in (msg,)+ml:
+      if 1 in [len(s)&1 for s in R.findall(m)]:
+        raise ValueError("'%' must be doubled: "+m)
     return self._ctx.setreply(rcode,xcode,msg,*ml)
 
   ## Tell the MTA which macro names will be used.
