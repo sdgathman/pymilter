@@ -6,7 +6,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 0.9.5
+Version: 0.9.6
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 License: GPLv2+
@@ -75,7 +75,10 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
-* Wed Mar 02 2010 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
+* Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.6-1
+- Raise ValueError on unescaped '%' passed to setreply
+
+* Fri Aug 19 2011 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
 - Print milter.error for invalid callback return type.
   (Since stacktrace is empty, the TypeError exception is confusing.)
 - Fix milter-template.py
