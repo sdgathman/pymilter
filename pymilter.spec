@@ -77,6 +77,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.6-1
 - Raise ValueError on unescaped '%' passed to setreply
+- Grace time at end of Greylist window
 
 * Fri Aug 19 2011 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
 - Print milter.error for invalid callback return type.
