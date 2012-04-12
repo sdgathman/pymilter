@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.30  2012/04/12 23:08:06  customdesigned
+ * Support RFC2553 on BSD
+ *
  * Revision 1.29  2011/06/09 15:45:27  customdesigned
  * Print callback name for non-int return error.
  *
@@ -277,43 +280,51 @@ $ python setup.py help
 #endif
 #endif
 
-/* Yes, these are static.  If you need multiple different callbacks, */
-/* it's cleaner to use multiple filters, or convert to OO method calls. */
-static PyObject *connect_callback = NULL;
-static PyObject *helo_callback    = NULL;
-static PyObject *envfrom_callback = NULL;
-static PyObject *envrcpt_callback = NULL;
-static PyObject *header_callback  = NULL;
-static PyObject *eoh_callback     = NULL;
-static PyObject *body_callback    = NULL;
-static PyObject *eom_callback     = NULL;
-static PyObject *abort_callback   = NULL;
-static PyObject *close_callback   = NULL;
+enum callbacks {
+	CONNECT,HELO,ENVFROM,ENVRCPT,HEADER,EOH,BODY,EOM,ABORT,CLOSE,
 #ifdef SMFIS_ALL_OPTS
-static PyObject *unknown_callback = NULL;
-static PyObject *data_callback    = NULL;
-static PyObject *negotiate_callback = NULL;
+	UNKNOWN,DATA,NEGOTIATE,
 #endif
+	NUMCALLBACKS
+};
+
+#define connect_callback callback[CONNECT].cb
+#define helo_callback callback[HELO].cb
+#define envfrom_callback callback[ENVFROM].cb
+#define envrcpt_callback callback[ENVRCPT].cb
+#define header_callback callback[HEADER].cb
+#define eoh_callback callback[EOH].cb
+#define body_callback callback[BODY].cb
+#define eom_callback callback[EOM].cb
+#define abort_callback callback[ABORT].cb
+#define close_callback callback[CLOSE].cb
+#define unknown_callback callback[UNKNOWN].cb
+#define data_callback callback[DATA].cb
+#define negotiate_callback callback[NEGOTIATE].cb
+
+/* Yes, these are static.  If you need multiple different callbacks, 
+   it's cleaner to use multiple filters, or convert to OO method calls. */
+
 static struct MilterCallback {
-  PyObject **cbp;
+  PyObject *cb;
   const char *name;
-} callback_names[] = {
-      { &connect_callback,"connect" },
-      { &helo_callback,"helo" },
-      { &envfrom_callback,"envfrom" },
-      { &envrcpt_callback,"envrcpt" },
-      { &header_callback,"header" },
-      { &eoh_callback,"eoh" },
-      { &body_callback,"body" },
-      { &eom_callback,"eom" },
-      { &abort_callback,"abort" },
-      { &close_callback,"close" },
+} callback[NUMCALLBACKS+1] = {
+      { NULL ,"connect" },
+      { NULL ,"helo" },
+      { NULL ,"envfrom" },
+      { NULL ,"envrcpt" },
+      { NULL ,"header" },
+      { NULL ,"eoh" },
+      { NULL ,"body" },
+      { NULL ,"eom" },
+      { NULL ,"abort" },
+      { NULL ,"close" },
 #ifdef SMFIS_ALL_OPTS
-      { &unknown_callback,"unknown" },
-      { &data_callback,"data" },
-      { &negotiate_callback,"negotiate" },
+      { NULL ,"unknown" },
+      { NULL ,"data" },
+      { NULL ,"negotiate" },
 #endif
-      { NULL, NULL }
+      { NULL , NULL }
     };
 
 staticforward struct smfiDesc description; /* forward declaration */
@@ -670,8 +681,8 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
     const char *cbname = "milter";
     char buf[40];
     Py_DECREF(result);
-    for (p = callback_names; p->cbp; ++p) {
-      if (cb == *p->cbp) {
+    for (p = callback; p->name; ++p) {
+      if (cb == p->cb) {
         cbname = p->name;
 	break;
       }
