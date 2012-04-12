@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.29  2011/06/09 15:45:27  customdesigned
+ * Print callback name for non-int return error.
+ *
  * Revision 1.28  2011/06/08 23:13:48  customdesigned
  * Generate special exception when callback return not int.
  *
@@ -257,10 +260,10 @@ $ python setup.py help
 #define HAVE_IPV6_SUPPORT /* use this for #ifdef's later on */
 /* Now see if it supports the RFC-2553 socket's API spec.  Early
  * IPv6 "prototype" implementations existed before the RFC was
- * published.  Unfortunately I know of now good way to do this
+ * published.  Unfortunately I know of no good way to do this
  * other than with OS-specific tests.
  */
-#ifdef linux
+#if defined(__FreeBSD_kernel__) || defined(__linux__)
 #define HAVE_IPV6_RFC2553
 #include <arpa/inet.h>
 #endif
