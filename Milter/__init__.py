@@ -8,7 +8,7 @@
 # Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
-__version__ = '0.9.5'
+__version__ = '0.9.7'
 
 import os
 import milter
@@ -137,7 +137,12 @@ def nocallback(func):
   except KeyError:
     raise ValueError(
       '@nocallback applied to non-optional method: '+func.__name__)
-  return func
+  def wrapper(self,*args):
+    if func(self,*args) != CONTINUE:
+      raise RuntimeError('%s return code must be CONTINUE with @nocallback'
+        % func.__name__)
+    return CONTINUE
+  return wrapper
 
 ## Function decorator to disable callback reply.
 # If the MTA supports it, tells the MTA not to wait for a reply from
@@ -154,7 +159,11 @@ def noreply(func):
       '@noreply applied to non-optional method: '+func.__name__)
   def wrapper(self,*args):
     rc = func(self,*args)
-    if self._protocol & nr_mask: return NOREPLY
+    if self._protocol & nr_mask:
+      if rc != CONTINUE:
+        raise RuntimeError('%s return code must be CONTINUE with @noreply'
+	  % func.__name__)
+      return NOREPLY
     return rc
   wrapper.milter_protocol = nr_mask
   return wrapper

@@ -75,6 +75,10 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.7-1
+- Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
+- Remove redundant table in miltermodule
+
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.6-1
 - Raise ValueError on unescaped '%' passed to setreply
 - Grace time at end of Greylist window
