@@ -49,7 +49,7 @@ if hasattr(socket,'has_ipv6') and socket.has_ipv6:
     def inet_ntop(s):
         return socket.inet_ntop(socket.AF_INET6,s)
     def inet_pton(s):
-        return socket.inet_pton(socket.AF_INET6,s)
+        return socket.inet_pton(socket.AF_INET6,s.strip())
 else:
     from pyip6 import inet_ntop, inet_pton
 
