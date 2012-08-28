@@ -256,7 +256,9 @@ class Base(object):
 
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
-  ## Called for each connection to the MTA.
+  ## Called for each connection to the MTA.  Called by the
+  # <a href="https://www.milter.org/developers/api/xxfi_connect">
+  # xxfi_connect</a> callback.  
   # The <code>hostname</code> provided by the local MTA is either
   # the PTR name or the IP in the form "[1.2.3.4]" if no PTR is available.
   # The format of hostaddr depends on the socket family:
@@ -269,6 +271,17 @@ class Base(object):
   # <dt><code>socket.AF_UNIX</code>
   # <dd>A string with the socketname
   # </dl>
+  # To vary behavior based on what port the client connected to,
+  # for example skipping blacklist checks for port 587 (which must 
+  # be authenticated), use @link #getsymval getsymval('{daemon_port}') @endlink.
+  # The <code>{daemon_port}</code> macro must be enabled in sendmail.cf
+  # <pre>
+  # O Milter.macros.connect=j, _, {daemon_name}, {daemon_port}, {if_name}, {if_addr}
+  # </pre>
+  # or sendmail.mc
+  # <pre>
+  # define(`confMILTER_MACROS_CONNECT', ``j, _, {daemon_name}, {daemon_port}, {if_name}, {if_addr}'')dnl
+  # </pre>
   # @param hostname the PTR name or bracketed IP of the SMTP client
   # @param family <code>socket.AF_INET</code>, <code>socket.AF_INET6</code>,
   #     or <code>socket.AF_UNIX</code>
@@ -280,12 +293,26 @@ class Base(object):
   # this almost always results in terminating the connection.
   @nocallback
   def hello(self,hostname): return CONTINUE
-  ## Called when the SMTP client says MAIL FROM.
+  ## Called when the SMTP client says MAIL FROM. Called by the
+  # <a href="https://www.milter.org/developers/api/xxfi_envfrom">
+  # xxfi_envfrom</a> callback.  
   # Returning REJECT rejects the message, but not the connection.
+  # The sender is the "envelope" from as defined by
+  # <a href="http://tools.ietf.org/html/rfc5321">RFC 5321</a>.
+  # For the From: header (author) defined in 
+  # <a href="http://tools.ietf.org/html/rfc5322">RFC 5322</a>,
+  # see @link #header the header callback @endlink.
   @nocallback
   def envfrom(self,f,*str): return CONTINUE
-  ## Called when the SMTP client says RCPT TO.
+  ## Called when the SMTP client says RCPT TO. Called by the
+  # <a href="https://www.milter.org/developers/api/xxfi_envrcpt">
+  # xxfi_envrcpt</a> callback.
   # Returning REJECT rejects the current recipient, not the entire message.
+  # The recipient is the "envelope" recipient as defined by 
+  # <a href="http://tools.ietf.org/html/rfc5321">RFC 5321</a>.
+  # For recipients defined in 
+  # <a href="http://tools.ietf.org/html/rfc5322">RFC 5322</a>, 
+  # for example To: or Cc:, see @link #header the header callback @endlink.
   @nocallback
   def envrcpt(self,to,*str): return CONTINUE
   ## Called when the SMTP client says DATA.
