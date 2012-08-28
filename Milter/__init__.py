@@ -15,6 +15,7 @@ import milter
 import thread
 
 from milter import *
+from functools import wraps
 
 _seq_lock = thread.allocate_lock()
 _seq = 0
@@ -157,6 +158,7 @@ def noreply(func):
   except KeyError:
     raise ValueError(
       '@noreply applied to non-optional method: '+func.__name__)
+  @wraps(func)
   def wrapper(self,*args):
     rc = func(self,*args)
     if self._protocol & nr_mask:
