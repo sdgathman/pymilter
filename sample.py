@@ -35,7 +35,9 @@ class sampleMilter(Milter.Milter):
   # multiple messages can be received on a single connection
   # envfrom (MAIL FROM in the SMTP protocol) seems to mark the start
   # of each message.
+  @Milter.noreply
   def envfrom(self,f,*str):
+    "start of MAIL transaction"
     self.log("mail from",f,str)
     self.fp = StringIO.StringIO()
     self.tempname = None
