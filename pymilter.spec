@@ -6,7 +6,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 0.9.6
+Version: 0.9.7
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 License: GPLv2+
@@ -78,6 +78,7 @@ rm -rf $RPM_BUILD_ROOT
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.7-1
 - Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
 - Remove redundant table in miltermodule
+- Fix CNAME chain duplicating TXT records in Milter.dns (from pyspf).
 
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.6-1
 - Raise ValueError on unescaped '%' passed to setreply
