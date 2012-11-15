@@ -11,6 +11,7 @@
 __version__ = '0.9.7'
 
 import os
+import re
 import milter
 import thread
 
@@ -47,6 +48,9 @@ OPTIONAL_CALLBACKS = {
   'body':(P_NR_BODY,P_NOBODY),
   'header':(P_NR_HDR,P_NOHDRS)
 }
+
+## @private
+R = re.compile(r'%+')
 
 ## @private
 def decode_mask(bits,names):
