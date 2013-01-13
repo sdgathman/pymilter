@@ -416,12 +416,21 @@ class Base(object):
 
   ## Set the SMTP reply code and message.
   # If the MTA does not support setmlreply, then only the
-  # first msg line is used.  Any '%' in a message line
+  # first msg line is used.  Any '%%' in a message line
   # must be doubled, or libmilter will silently ignore the setreply.
   # Beginning with 0.9.6, we test for that case and throw ValueError to avoid
   # head scratching.  What will <i>really</i> irritate you, however,
-  # is that if you carefully double any '%', your message will be
-  # sent - but with the '%' still doubled!
+  # is that if you carefully double any '%%', your message will be
+  # sent - but with the '%%' still doubled!
+  # See <a href="https://www.milter.org/developers/api/smfi_setreply">
+  # smfi_setreply</a> for more information.
+  # @param rcode The three-digit (RFC 821/2821) SMTP reply code as a string. 
+  # rcode cannot be None, and <b>must be a valid 4XX or 5XX reply code</b>.
+  # @param xcode The extended (RFC 1893/2034) reply code. If xcode is None,
+  # no extended code is used. Otherwise, xcode must conform to RFC 1893/2034.
+  # @param msg The text part of the SMTP reply. If msg is None,
+  # an empty message is used.
+  # @param ml  Optional additional message lines.
   def setreply(self,rcode,xcode=None,msg=None,*ml):
     for m in (msg,)+ml:
       if 1 in [len(s)&1 for s in R.findall(m)]:
@@ -429,11 +438,15 @@ class Base(object):
     return self._ctx.setreply(rcode,xcode,msg,*ml)
 
   ## Tell the MTA which macro names will be used.
-  # The <code>Milter.SETSMLIST</code> action flag must be set.
+  # This information can reduce the size of messages received from sendmail,
+  # and hence could reduce bandwidth between sendmail and your milter where
+  # that is a factor.  The <code>Milter.SETSMLIST</code> action flag must be
+  # set.
   #
   # May only be called from negotiate callback.
-  # @since 0.9.2
-  # @param stage the protocol stage to set to macro list for
+  # @since 0.9.2, M_* constants since 0.9.8
+  # @param stage the protocol stage to set to macro list for, 
+  # one of the M_* constants defined in Milter
   # @param macros a string with a space delimited list of macros
   def setsmlist(self,stage,macros):
     if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")

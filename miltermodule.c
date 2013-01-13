@@ -35,6 +35,10 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.31  2012/04/12 23:32:50  customdesigned
+ * Replace redundant callback array with macros.  If this doesn't break anything,
+ * macros can be eliminated with code changes.
+ *
  * Revision 1.30  2012/04/12 23:08:06  customdesigned
  * Support RFC2553 on BSD
  *
@@ -1647,6 +1651,13 @@ initmilter(void) {
 #endif
 #ifdef SMFIF_SETSMLIST
    setitem(d,"SETSMLIST",SMFIF_SETSMLIST);
+   setitem(d,"M_CONNECT",SMFIM_CONNECT);/* connect */
+   setitem(d,"M_HELO",SMFIM_HELO);	/* HELO/EHLO */
+   setitem(d,"M_ENVFROM",SMFIM_ENVFROM);/* MAIL From */
+   setitem(d,"M_ENVRCPT",SMFIM_ENVRCPT);/* RCPT To */
+   setitem(d,"M_DATA",SMFIM_DATA);	/* DATA */
+   setitem(d,"M_EOM",SMFIM_EOM);	/* end of message (final dot) */
+   setitem(d,"M_EOH",SMFIM_EOH);	/* end of header */
 #endif
 #ifdef SMFIS_ALL_OPTS
    setitem(d,"P_RCPT_REJ",SMFIP_RCPT_REJ);
