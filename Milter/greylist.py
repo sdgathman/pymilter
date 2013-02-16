@@ -35,7 +35,7 @@ class Greylist(object):
     self.dbp = shelve.open(dbname,'c',protocol=2)
     self.lock = thread.allocate_lock()
   
-  def check(self,ip,sender,recipient):
+  def check(self,ip,sender,recipient,timeinc=0):
     "Return number of allowed messages for greylist triple."
     sender = quoteAddress(sender)
     recipient = quoteAddress(recipient)
@@ -45,7 +45,7 @@ class Greylist(object):
       dbp = self.dbp
       try:
         r = dbp[key]
-        now = time.time()
+        now = time.time() + timeinc
         if now > r.lastseen + self.greylist_retain:
           # expired
           log.debug('Expired greylist: %s',key)

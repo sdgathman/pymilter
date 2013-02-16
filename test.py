@@ -2,6 +2,7 @@ import unittest
 import testmime
 import testsample
 import testutils
+import testgrey
 import os
 
 def suite(): 
@@ -9,6 +10,7 @@ def suite():
   s.addTest(testmime.suite())
   s.addTest(testsample.suite())
   s.addTest(testutils.suite())
+  s.addTest(testgrey.suite())
   return s
 
 if __name__ == '__main__':
