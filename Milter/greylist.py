@@ -18,12 +18,18 @@ def quoteAddress(s):
 class Record(object):
   __slots__ = ( 'firstseen', 'lastseen', 'umis', 'cnt' )
 
-  def __init__(self):
-    now = time.time()
+  def __init__(self,timeinc=0):
+    now = time.time() + timeinc
     self.firstseen = now
     self.lastseen = now
     self.cnt = 0
     self.umis = None
+
+  def __str__(self):
+    return "Grey[%s:%s:%s:%d]" % (
+        time.ctime(self.firstseen),time.ctime(self.lastseen),
+        self.umis,self.cnt
+    )
 
 class Greylist(object):
 
@@ -34,6 +40,25 @@ class Greylist(object):
     self.greylist_retain = grey_retain * 24 * 3600   # days
     self.dbp = shelve.open(dbname,'c',protocol=2)
     self.lock = thread.allocate_lock()
+
+  def clean(self,timeinc=0):
+    "Delete records past the retention limit."
+    now = time.time() + timeinc
+    cnt = 0
+    dbp = self.dbp
+    for key, r in dbp.iteritems():
+      #print key,r,time.ctime(now)
+      if now > r.lastseen + self.greylist_retain:
+        self.lock.acquire()
+        try:
+          r = dbp[key]
+          now = time.time() + timeinc
+          if now > r.lastseen + self.greylist_retain:
+            del dbp[key]
+            cnt += 1
+        finally:
+          self.lock.release()
+    return cnt
   
   def check(self,ip,sender,recipient,timeinc=0):
     "Return number of allowed messages for greylist triple."
@@ -49,11 +74,11 @@ class Greylist(object):
         if now > r.lastseen + self.greylist_retain:
           # expired
           log.debug('Expired greylist: %s',key)
-          r = Record()
+          r = Record(timeinc)
         elif now < r.firstseen + self.greylist_time + 5:
           # still greylisted
           log.debug('Early greylist: %s',key)
-          #r = Record()
+          #r = Record(timeinc)
           r.lastseen = now
         elif r.cnt or now < r.firstseen + self.greylist_expire:
           # in greylist window or active
@@ -63,12 +88,15 @@ class Greylist(object):
         else:
           # passed greylist window
           log.debug('Late greylist: %s',key)
-          r = Record()
+          r = Record(timeinc)
         dbp[key] = r
       except:
-        r = Record()
+        r = Record(timeinc)
         dbp[key] = r
       dbp.sync()
     finally:
       self.lock.release()
     return r.cnt
+
+  def close(self):
+    self.dbp.close()
