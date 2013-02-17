@@ -26,50 +26,54 @@ class Greylist(object):
     "Delete records past the retention limit."
     now = time.time() + timeinc - self.greylist_retain
     cur = self.conn.cursor()
-    cur.execute('delete from greylist where lastseen < ?',(now,))
-    cnt = cur.rowcount
-    self.conn.commit()
+    try:
+      cur.execute('delete from greylist where lastseen < ?',(now,))
+      cnt = cur.rowcount
+      self.conn.commit()
+    finally: cur.close()
     return cnt
 
   def check(self,ip,sender,recipient,timeinc=0):
     "Return number of allowed messages for greylist triple."
     cur = self.conn.cursor()
-    cur.execute('''select firstseen,lastseen,cnt,umis from greylist where
-      ip=? and sender=? and recipient=?''',(ip,sender,recipient))
-    r = cur.fetchone()
-    now = time.time() + timeinc
-    cnt = 0
-    if not r:
-      cur.execute('''insert into 
-        greylist(ip,sender,recipient,firstseen,lastseen,cnt,umis)
-        values(?,?,?,?,?,?,?)''', (ip,sender,recipient,now,now,0,None))
-    elif now > r['lastseen'] + self.greylist_retain:
-      # expired
-      log.debug('Expired greylist: %s:%s:%s',ip,sender,recipient)
-      cur.execute('''update greylist set firstseen=?,lastseen=?,cnt=?,umis=?
-        where ip=? and sender=? and recipient=?''',
-        (now,now,0,None,ip,sender,recipient))
-    elif now < r['firstseen'] + self.greylist_time + 5:
-      # still greylisted
-      log.debug('Early greylist: %s:%s:%s',ip,sender,recipient)
-      #r = Record()
-      cur.execute('''update greylist set lastseen=?
-        where ip=? and sender=? and recipient=?''',
-        (now,ip,sender,recipient))
-    elif r['cnt'] or now < r['firstseen'] + self.greylist_expire:
-      # in greylist window or active
-      cnt = r['cnt'] + 1
-      cur.execute('''update greylist set lastseen=?,cnt=?
-        where ip=? and sender=? and recipient=?''',
-        (now,cnt,ip,sender,recipient))
-      log.debug('Active greylist(%d): %s:%s:%s',cnt,ip,sender,recipient)
-    else:
-      # passed greylist window
-      log.debug('Late greylist: %s:%s:%s',ip,sender,recipient)
-      cur.execute('''update greylist set firstseen=?,lastseen=?,cnt=?,umis=?
-        where ip=? and sender=? and recipient=?''',
-        (now,now,0,None,ip,sender,recipient))
-    self.conn.commit()
+    try:
+      cur.execute('''select firstseen,lastseen,cnt,umis from greylist where
+        ip=? and sender=? and recipient=?''',(ip,sender,recipient))
+      r = cur.fetchone()
+      now = time.time() + timeinc
+      cnt = 0
+      if not r:
+        cur.execute('''insert into 
+          greylist(ip,sender,recipient,firstseen,lastseen,cnt,umis)
+          values(?,?,?,?,?,?,?)''', (ip,sender,recipient,now,now,0,None))
+      elif now > r['lastseen'] + self.greylist_retain:
+        # expired
+        log.debug('Expired greylist: %s:%s:%s',ip,sender,recipient)
+        cur.execute('''update greylist set firstseen=?,lastseen=?,cnt=?,umis=?
+          where ip=? and sender=? and recipient=?''',
+          (now,now,0,None,ip,sender,recipient))
+      elif now < r['firstseen'] + self.greylist_time + 5:
+        # still greylisted
+        log.debug('Early greylist: %s:%s:%s',ip,sender,recipient)
+        #r = Record()
+        cur.execute('''update greylist set lastseen=?
+          where ip=? and sender=? and recipient=?''',
+          (now,ip,sender,recipient))
+      elif r['cnt'] or now < r['firstseen'] + self.greylist_expire:
+        # in greylist window or active
+        cnt = r['cnt'] + 1
+        cur.execute('''update greylist set lastseen=?,cnt=?
+          where ip=? and sender=? and recipient=?''',
+          (now,cnt,ip,sender,recipient))
+        log.debug('Active greylist(%d): %s:%s:%s',cnt,ip,sender,recipient)
+      else:
+        # passed greylist window
+        log.debug('Late greylist: %s:%s:%s',ip,sender,recipient)
+        cur.execute('''update greylist set firstseen=?,lastseen=?,cnt=?,umis=?
+          where ip=? and sender=? and recipient=?''',
+          (now,now,0,None,ip,sender,recipient))
+      self.conn.commit()
+    finally: cur.close()
     return cnt
 
   def close(self):
