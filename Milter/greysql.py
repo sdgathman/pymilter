@@ -35,7 +35,7 @@ class Greylist(object):
 
   def check(self,ip,sender,recipient,timeinc=0):
     "Return number of allowed messages for greylist triple."
-    cur = self.conn.cursor()
+    cur = self.conn.execute('begin immediate')
     try:
       cur.execute('''select firstseen,lastseen,cnt,umis from greylist where
         ip=? and sender=? and recipient=?''',(ip,sender,recipient))
