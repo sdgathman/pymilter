@@ -2,9 +2,12 @@ import time
 import logging
 import urllib
 import sqlite3
+import thread
 from datetime import datetime
 
 log = logging.getLogger('milter.greylist')
+
+_db_lock = thread.allocate_lock()
 
 class Greylist(object):
 
@@ -35,6 +38,7 @@ class Greylist(object):
 
   def check(self,ip,sender,recipient,timeinc=0):
     "Return number of allowed messages for greylist triple."
+    _db_lock.acquire()
     cur = self.conn.execute('begin immediate')
     try:
       cur.execute('''select firstseen,lastseen,cnt,umis from greylist where
@@ -73,7 +77,9 @@ class Greylist(object):
           where ip=? and sender=? and recipient=?''',
           (now,now,0,None,ip,sender,recipient))
       self.conn.commit()
-    finally: cur.close()
+    finally:
+      cur.close()
+      _db_lock.release()
     return cnt
 
   def close(self):
