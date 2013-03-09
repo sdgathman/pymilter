@@ -62,8 +62,8 @@ class TestBase(object):
       raise IOError,"addrcpt not called from eom()"
     self._addrcpt.append(rcpt)
 
-  def setreply(self,rcode,xcode,msg):
-    self.reply = (rcode,xcode,msg)
+  def setreply(self,rcode,xcode,*msg):
+    self.reply = (rcode,xcode) + msg
 
   def feedFile(self,fp,sender="spam@adv.com",rcpt="victim@lamb.com"):
     self._body = None
