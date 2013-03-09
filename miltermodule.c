@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.32  2013/01/13 01:46:16  customdesigned
+ * Doc updates.
+ *
  * Revision 1.31  2012/04/12 23:32:50  customdesigned
  * Replace redundant callback array with macros.  If this doesn't break anything,
  * macros can be eliminated with code changes.
@@ -440,7 +443,7 @@ _thread_return(PyThreadState *t,int val,char *errstr) {
   return _generic_return(val,errstr);
 }
 
-static char milter_set_flags__doc__[] =
+static const char milter_set_flags__doc__[] =
 "set_flags(int) -> None\n\
 Set flags for filter capabilities; OR of one or more of:\n\
 ADDHDRS - filter may add headers\n\
@@ -481,7 +484,7 @@ generic_set_callback(PyObject *args,char *t,PyObject **cb) {
   return Py_None;
 }
 
-static char milter_set_connect_callback__doc__[] =
+static const char milter_set_connect_callback__doc__[] =
 "set_connect_callback(Function) -> None\n\
 Sets the Python function invoked when a connection is made to sendmail.\n\
 Function takes args (ctx, hostname, integer, hostaddr) -> int\n\
@@ -508,7 +511,7 @@ milter_set_connect_callback(PyObject *self, PyObject *args) {
     "O:set_connect_callback", &connect_callback);
 }
 
-static char milter_set_helo_callback__doc__[] =
+static const char milter_set_helo_callback__doc__[] =
 "set_helo_callback(Function) -> None\n\
 Sets the Python function invoked upon SMTP HELO.\n\
 Function takes args (ctx, hostname) -> int\n\
@@ -519,7 +522,7 @@ milter_set_helo_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_helo_callback", &helo_callback);
 }
 
-static char milter_set_envfrom_callback__doc__[] =
+static const char milter_set_envfrom_callback__doc__[] =
 "set_envfrom_callback(Function) -> None\n\
 Sets the Python function invoked on envelope from.\n\
 Function takes args (ctx, from, *str) -> int\n\
@@ -532,7 +535,7 @@ milter_set_envfrom_callback(PyObject *self, PyObject *args) {
   	&envfrom_callback);
 }
 
-static char milter_set_envrcpt_callback__doc__[] =
+static const char milter_set_envrcpt_callback__doc__[] =
 "set_envrcpt_callback(Function) -> None\n\
 Sets the Python function invoked on each envelope recipient.\n\
 Function takes args (ctx, rcpt, *str) -> int\n\
@@ -545,7 +548,7 @@ milter_set_envrcpt_callback(PyObject *self, PyObject *args) {
   	&envrcpt_callback);
 }
 
-static char milter_set_header_callback__doc__[] =
+static const char milter_set_header_callback__doc__[] =
 "set_header_callback(Function) -> None\n\
 Sets the Python function invoked on each message header.\n\
 Function takes args (ctx, field, value) ->int\n\
@@ -558,7 +561,7 @@ milter_set_header_callback(PyObject *self, PyObject *args) {
   	&header_callback);
 }
 
-static char milter_set_eoh_callback__doc__[] =
+static const char milter_set_eoh_callback__doc__[] =
 "set_eoh_callback(Function) -> None\n\
 Sets the Python function invoked at end of header.\n\
 Function takes args (ctx) -> int";
@@ -568,7 +571,7 @@ milter_set_eoh_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_eoh_callback", &eoh_callback);
 }
 
-static char milter_set_body_callback__doc__[] =
+static const char milter_set_body_callback__doc__[] =
 "set_body_callback(Function) -> None\n\
 Sets the Python function invoked for each body chunk. There may\n\
 be multiple body chunks passed to the filter. End-of-lines are\n\
@@ -581,7 +584,7 @@ milter_set_body_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_body_callback", &body_callback);
 }
 
-static char milter_set_eom_callback__doc__[] =
+static const char milter_set_eom_callback__doc__[] =
 "set_eom_callback(Function) -> None\n\
 Sets the Python function invoked at end of message.\n\
 This routine is the only place where special operations\n\
@@ -594,7 +597,7 @@ milter_set_eom_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_eom_callback", &eom_callback);
 }
 
-static char milter_set_abort_callback__doc__[] =
+static const char milter_set_abort_callback__doc__[] =
 "set_abort_callback(Function) -> None\n\
 Sets the Python function invoked if message is aborted\n\
 outside of the control of the filter, for example,\n\
@@ -608,7 +611,7 @@ milter_set_abort_callback(PyObject *self, PyObject *args) {
   return generic_set_callback(args, "O:set_abort_callback", &abort_callback);
 }
 
-static char milter_set_close_callback__doc__[] =
+static const char milter_set_close_callback__doc__[] =
 "set_close_callback(Function) -> None\n\
 Sets the Python function invoked at end of the connection.  This\n\
 is called on close even if the previous mail transaction was aborted.\n\
@@ -621,7 +624,7 @@ milter_set_close_callback(PyObject *self, PyObject *args) {
 
 static int exception_policy = SMFIS_TEMPFAIL;
 
-static char milter_set_exception_policy__doc__[] =
+static const char milter_set_exception_policy__doc__[] =
 "set_exception_policy(i) -> None\n\
 Sets the policy for untrapped Python exceptions during a callback.\n\
 Must be one of TEMPFAIL,REJECT,CONTINUE";
@@ -647,19 +650,21 @@ _release_thread(PyThreadState *t) {
     PyEval_ReleaseThread(t);
 }
 
+
 /** Report and clear any python exception before returning to libmilter. 
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
+  char *untrapped_msg = "pymilter: untrapped exception in milter app";
   if (PyErr_Occurred()) {
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */
     _release_thread(self->t);
     switch (exception_policy) {
       case SMFIS_REJECT:
-	smfi_setreply(self->ctx, "554", "5.3.0", "Filter failure");
+	smfi_setreply(self->ctx, "554", "5.3.0", untrapped_msg);
 	return SMFIS_REJECT;
       case SMFIS_TEMPFAIL:
-	smfi_setreply(self->ctx, "451", "4.3.0", "Filter failure");
+	smfi_setreply(self->ctx, "451", "4.3.0", untrapped_msg);
 	return SMFIS_TEMPFAIL;
     }
     return SMFIS_CONTINUE;
@@ -991,7 +996,7 @@ milter_wrap_close(SMFICTX *ctx) {
   return r;
 }
 
-static char milter_register__doc__[] =
+static const char milter_register__doc__[] =
 "register(name,unknown=,data=,negotiate=) -> None\n\
 Registers the milter name with current callbacks, and flags.\n\
 Required before main() is called.";
@@ -1036,7 +1041,7 @@ milter_register(PyObject *self, PyObject *args, PyObject *kwds) {
   return _generic_return(smfi_register(description), "cannot register");
 }
 
-static char milter_opensocket__doc__[] =
+static const char milter_opensocket__doc__[] =
 "opensocket(rmsock) -> None\n\
 Attempts to create and open the socket provided with setconn.\n\
 Removes the socket first if rmsock is True.";
@@ -1049,7 +1054,7 @@ milter_opensocket(PyObject *self, PyObject *args) {
    return _generic_return(smfi_opensocket(rmsock), "cannot opensocket");
 }
 
-static char milter_main__doc__[] =
+static const char milter_main__doc__[] =
 "main() -> None\n\
 Main milter routine.  Set any callbacks, and flags desired, then call\n\
 setconn(), then call register(name), and finally call main().";
@@ -1073,7 +1078,7 @@ milter_main(PyObject *self, PyObject *args) {
   return o;
 }
 
-static char milter_setdbg__doc__[] =
+static const char milter_setdbg__doc__[] =
 "setdbg(int) -> None\n\
 Sets debug level in sendmail/libmilter source.  Dubious usefulness.";
 
@@ -1084,7 +1089,7 @@ milter_setdbg(PyObject *self, PyObject *args) {
   return _generic_return(smfi_setdbg(val), "cannot set debug value");
 }
 
-static char milter_setbacklog__doc__[] =
+static const char milter_setbacklog__doc__[] =
 "setbacklog(int) -> None\n\
 Set the TCP connection queue size for the milter socket.";
 
@@ -1096,7 +1101,7 @@ milter_setbacklog(PyObject *self, PyObject *args) {
    return _generic_return(smfi_setbacklog(val), "cannot set backlog");
 }
 
-static char milter_settimeout__doc__[] =
+static const char milter_settimeout__doc__[] =
 "settimeout(int) -> None\n\
 Set the time (in seconds) that sendmail will wait before\n\
 considering this filter dead.";
@@ -1109,7 +1114,7 @@ milter_settimeout(PyObject *self, PyObject *args) {
    return _generic_return(smfi_settimeout(val), "cannot set timeout");
 }
 
-static char milter_setconn__doc__[] =
+static const char milter_setconn__doc__[] =
 "setconn(filename) -> None\n\
 Sets the pathname to the unix, inet, or inet6 socket that\n\
 sendmail will use to communicate with this filter.  By default,\n\
@@ -1129,7 +1134,7 @@ milter_setconn(PyObject *self, PyObject *args) {
    return _generic_return(smfi_setconn(str), "cannot set connection");
 }
 
-static char milter_stop__doc__[] =
+static const char milter_stop__doc__[] =
 "stop() -> None\n\
 This function appears to be a controlled method to tell sendmail to\n\
 stop using this filter.  It will close the socket.";
@@ -1142,7 +1147,7 @@ milter_stop(PyObject *self, PyObject *args) {
   return _thread_return(t,smfi_stop(), "cannot stop");
 }
 
-static char milter_getdiag__doc__[] =
+static const char milter_getdiag__doc__[] =
 "getdiag() -> tuple\n\
 Return a tuple of diagnostic data.  The first two items are context new\n\
 count and context del count.  The rest are yet to be defined.";
@@ -1152,7 +1157,7 @@ milter_getdiag(PyObject *self, PyObject *args) {
   return Py_BuildValue("(kk)", diag.contextNew,diag.contextDel);
 }
 
-static char milter_getversion__doc__[] =
+static const char milter_getversion__doc__[] =
 "getversion() -> tuple\n\
 Return runtime libmilter version as a tuple of major,minor,patchlevel.";
 static PyObject *
@@ -1166,7 +1171,7 @@ milter_getversion(PyObject *self, PyObject *args) {
   return Py_BuildValue("(kkk)", major,minor,patch);
 }
 
-static char milter_getsymval__doc__[] =
+static const char milter_getsymval__doc__[] =
 "getsymval(String) -> String\n\
 Returns a symbol's value.  Context-dependent, and unclear from the dox.";
 
@@ -1181,7 +1186,7 @@ milter_getsymval(PyObject *self, PyObject *args) {
   return Py_BuildValue("s", smfi_getsymval(ctx, str));
 }
 
-static char milter_setreply__doc__[] =
+static const char milter_setreply__doc__[] =
 "setreply(rcode, xcode, message) -> None\n\
 Sets the specific reply code to be used in response\n\
 to the active command.\n\
@@ -1245,7 +1250,7 @@ milter_setreply(PyObject *self, PyObject *args) {
 			 "cannot set reply");
 }
 
-static char milter_addheader__doc__[] =
+static const char milter_addheader__doc__[] =
 "addheader(field, value, idx=-1) -> None\n\
 Add a header to the message. This header is not passed to other\n\
 filters. It is not checked for standards compliance;\n\
@@ -1282,7 +1287,7 @@ milter_addheader(PyObject *self, PyObject *args) {
 }
 
 #ifdef SMFIF_CHGFROM
-static char milter_chgfrom__doc__[] =
+static const char milter_chgfrom__doc__[] =
 "chgfrom(sender,params) -> None\n\
 Change the envelope sender (MAIL From) of the current message.\n\
 A filter which calls smfi_chgfrom must have set the CHGFROM flag\n\
@@ -1305,7 +1310,7 @@ milter_chgfrom(PyObject *self, PyObject *args) {
 }
 #endif
 
-static char milter_chgheader__doc__[] =
+static const char milter_chgheader__doc__[] =
 "chgheader(field, int, value) -> None\n\
 Change/delete a header in the message. \n\
 It is not checked for standards compliance; the mail filter\n\
@@ -1333,7 +1338,7 @@ milter_chgheader(PyObject *self, PyObject *args) {
 			 "cannot change header");
 }
 
-static char milter_addrcpt__doc__[] =
+static const char milter_addrcpt__doc__[] =
 "addrcpt(string,params=None) -> None\n\
 Add a recipient to the envelope.  It must be in the same format\n\
 as is passed to the envrcpt callback in the first tuple element.\n\
@@ -1363,7 +1368,7 @@ milter_addrcpt(PyObject *self, PyObject *args) {
   return _thread_return(t,rc, "cannot add recipient");
 }
 
-static char milter_delrcpt__doc__[] =
+static const char milter_delrcpt__doc__[] =
 "delrcpt(string) -> None\n\
 Delete a recipient from the envelope.\n\
 This function can only be called from the EOM callback.";
@@ -1381,7 +1386,7 @@ milter_delrcpt(PyObject *self, PyObject *args) {
   return _thread_return(t,smfi_delrcpt(ctx, rcpt), "cannot delete recipient");
 }
 
-static char milter_replacebody__doc__[] =
+static const char milter_replacebody__doc__[] =
 "replacebody(string) -> None\n\
 Replace the body of the message. This routine may be called multiple\n\
 times if the body is longer than convenient to send in one call. End of\n\
@@ -1403,7 +1408,7 @@ milter_replacebody(PyObject *self, PyObject *args) {
 	(unsigned char *)bodyp, bodylen), "cannot replace message body");
 }
 
-static char milter_setpriv__doc__[] =
+static const char milter_setpriv__doc__[] =
 "setpriv(object) -> object\n\
 Associates any Python object with this context, and returns\n\
 the old value or None.  Use this to\n\
@@ -1429,7 +1434,7 @@ milter_setpriv(PyObject *self, PyObject *args) {
   return old;
 }
 
-static char milter_getpriv__doc__[] =
+static const char milter_getpriv__doc__[] =
 "getpriv() -> None\n\
 Returns the Python object associated with the current context (if any).\n\
 Use this in conjunction with setpriv to keep track of data in a thread-safe\n\
@@ -1447,7 +1452,7 @@ milter_getpriv(PyObject *self, PyObject *args) {
 }
 
 #ifdef SMFIF_QUARANTINE
-static char milter_quarantine__doc__[] =
+static const char milter_quarantine__doc__[] =
 "quarantine(string) -> None\n\
 Place the message in quarantine.  A string with a description of the reason\n\
 is the only argument.";
@@ -1468,7 +1473,7 @@ milter_quarantine(PyObject *self, PyObject *args) {
 #endif
 
 #ifdef SMFIR_PROGRESS
-static char milter_progress__doc__[] =
+static const char milter_progress__doc__[] =
 "progress() -> None\n\
 Notify the MTA that we are working on a message so it will reset timeouts.";
 
@@ -1486,7 +1491,7 @@ milter_progress(PyObject *self, PyObject *args) {
 #endif
 
 #ifdef SMFIF_SETSMLIST
-static char milter_setsmlist__doc__[] =
+static const char milter_setsmlist__doc__[] =
 "setsmlist(stage,macrolist) -> None\n\
 Tell the MTA which macro values we are interested in for a given stage";
 
@@ -1607,7 +1612,7 @@ static PyTypeObject milter_ContextType = {
         Py_TPFLAGS_DEFAULT,                     /* tp_flags */
 };
 
-static char milter_documentation[] =
+static const char milter_documentation[] =
 "This module interfaces with Sendmail's libmilter functionality,\n\
 allowing one to write email filters directly in Python.\n\
 Libmilter is currently marked FFR, and needs to be explicitly installed.\n\
