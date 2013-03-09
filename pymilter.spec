@@ -75,6 +75,12 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 rm -rf $RPM_BUILD_ROOT
 
 %changelog
+* Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 0.9.8-1
+- Add Milter.test module for unit testing milters.
+- Fix typo that prevented setsymlist from being active.
+- Change untrapped exception message to:
+- "pymilter: untrapped exception in milter app"
+
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.7-1
 - Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
 - Remove redundant table in miltermodule

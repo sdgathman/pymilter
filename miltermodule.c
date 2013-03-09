@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.33  2013/03/09 00:25:23  customdesigned
+ * Better untrapped exception message.  const char for doc comments.
+ *
  * Revision 1.32  2013/01/13 01:46:16  customdesigned
  * Doc updates.
  *
@@ -1490,23 +1493,23 @@ milter_progress(PyObject *self, PyObject *args) {
 }
 #endif
 
-#ifdef SMFIF_SETSMLIST
-static const char milter_setsmlist__doc__[] =
-"setsmlist(stage,macrolist) -> None\n\
+#ifdef SMFIF_SETSYMLIST
+static const char milter_setsymlist__doc__[] =
+"setsymlist(stage,macrolist) -> None\n\
 Tell the MTA which macro values we are interested in for a given stage";
 
 static PyObject *
-milter_setsmlist(PyObject *self, PyObject *args) {
+milter_setsymlist(PyObject *self, PyObject *args) {
   SMFICTX *ctx;
   PyThreadState *t;
   int stage = 0;
   char *smlist = 0;
 
-  if (!PyArg_ParseTuple(args, "is:setsmlist",&stage, &smlist)) return NULL;
+  if (!PyArg_ParseTuple(args, "is:setsymlist",&stage, &smlist)) return NULL;
   ctx = _find_context(self);
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
-  return _thread_return(t,smfi_setsmlist(ctx,stage,smlist),
+  return _thread_return(t,smfi_setsymlist(ctx,stage,smlist),
         "cannot set macro list");
 }
 #endif
@@ -1530,8 +1533,8 @@ static PyMethodDef context_methods[] = {
 #ifdef SMFIF_CHGFROM
   { "chgfrom",  milter_chgfrom,  METH_VARARGS, milter_chgfrom__doc__},
 #endif
-#ifdef SMFIF_SETSMLIST
-  { "setsmlist",  milter_setsmlist,  METH_VARARGS, milter_setsmlist__doc__},
+#ifdef SMFIF_SETSYMLIST
+  { "setsymlist",  milter_setsymlist,  METH_VARARGS, milter_setsymlist__doc__},
 #endif
   { NULL, NULL }
 };
@@ -1654,8 +1657,8 @@ initmilter(void) {
 #ifdef SMFIF_CHGFROM
    setitem(d,"CHGFROM",SMFIF_CHGFROM);
 #endif
-#ifdef SMFIF_SETSMLIST
-   setitem(d,"SETSMLIST",SMFIF_SETSMLIST);
+#ifdef SMFIF_SETSYMLIST
+   setitem(d,"SETSYMLIST",SMFIF_SETSYMLIST);
    setitem(d,"M_CONNECT",SMFIM_CONNECT);/* connect */
    setitem(d,"M_HELO",SMFIM_HELO);	/* HELO/EHLO */
    setitem(d,"M_ENVFROM",SMFIM_ENVFROM);/* MAIL From */

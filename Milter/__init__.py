@@ -227,7 +227,7 @@ class Base(object):
     # Some optional actions may be disabled by calling milter.set_flags(), or
     # by overriding the negotiate callback.  The bits include:
     # <code>ADDHDRS,CHGBODY,MODBODY,ADDRCPT,ADDRCPT_PAR,DELRCPT
-    #  CHGHDRS,QUARANTINE,CHGFROM,SETSMLIST</code>.
+    #  CHGHDRS,QUARANTINE,CHGFROM,SETSYMLIST</code>.
     # The <code>Milter.CURR_ACTS</code> bitmask is all actions
     # known when the milter module was compiled.
     # Application code can also inspect this field to determine
@@ -440,7 +440,7 @@ class Base(object):
   ## Tell the MTA which macro names will be used.
   # This information can reduce the size of messages received from sendmail,
   # and hence could reduce bandwidth between sendmail and your milter where
-  # that is a factor.  The <code>Milter.SETSMLIST</code> action flag must be
+  # that is a factor.  The <code>Milter.SETSYMLIST</code> action flag must be
   # set.
   #
   # May only be called from negotiate callback.
@@ -448,9 +448,9 @@ class Base(object):
   # @param stage the protocol stage to set to macro list for, 
   # one of the M_* constants defined in Milter
   # @param macros a string with a space delimited list of macros
-  def setsmlist(self,stage,macros):
-    if not self._actions & SETSMLIST: raise DisabledAction("SETSMLIST")
-    if type(macros) in (list,tuple):
+  def setsymlist(self,stage,macros):
+    if not self._actions & SETSYMLIST: raise DisabledAction("SETSYMLIST")
+    if type(macros) != str:
       macros = ' '.join(macros)
     return self._ctx.setsmlist(stage,macros)
 

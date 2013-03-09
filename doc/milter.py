@@ -54,7 +54,12 @@ class milterContext(object):
   def chgfrom(self,sender,param=None): pass
   ## Tell the MTA which macro values we are interested in for a given stage.
   # Of interest only when you need to squeeze a few more bytes of bandwidth.
-  def setsmlist(self,stage,macrolist): pass
+  # It may only be called from the negotiate callback.
+  # The protocol stages are 
+  # M_CONNECT, M_HELO, M_ENVFROM, M_ENVRCPT, M_DATA, M_EOM, M_EOH.
+  # Calls <a href="https://www.milter.org/developers/api/smfi_setsymlist">smfi_setsymlist</a>.
+  # @param stage protocol stage in which the macro list should be used
+  def setsymlist(self,stage,macrolist): pass
 
 class error(Exception): pass
 
@@ -77,7 +82,12 @@ def set_abort_callback(cb): pass
 def set_close_callback(cb): pass
 
 ## Sets the return code for untrapped Python exceptions during a callback.
-# Must be one of TEMPFAIL,REJECT,CONTINUE
+# Must be one of TEMPFAIL,REJECT,CONTINUE.  The default is TEMPFAIL.
+# You should not depend on this handler.  Your application should
+# have its own top level exception handler for each callback.  You can
+# then choose your own reply message, log the stack track were you please,
+# and so on.  However, if you miss one, this last ditch handler will
+# print a standard stack trace to sys.stderr, and return to sendmail.
 def set_exception_policy(code): pass
 
 ## Register python milter with libmilter.
