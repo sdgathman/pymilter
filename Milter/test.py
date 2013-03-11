@@ -5,14 +5,16 @@ import rfc822
 import StringIO
 import Milter
 
+Milter.NOREPLY = Milter.CONTINUE
+
 ## Test mixin for unit testing milter applications.
 # This mixin overrides many Milter.MilterBase methods
 # with stub versions that simply record what was done.
 # @since 0.9.8
 class TestBase(object):
 
-  _protocol = 0
   def __init__(self,logfile='test/milter.log'):
+    self._protocol = 0
     self.logfp = open(logfile,"a")
     ## List of recipients deleted
     self._delrcpt = []	
@@ -178,6 +180,8 @@ class TestBase(object):
   def connect(self,host='localhost',helo='spamrelay',ip='1.2.3.4'):
     self._body = None
     self._bodyreplaced = False
+    opts = [ Milter.CURR_ACTS,~0,0,0 ]
+    rc = self.negotiate(opts)
     rc =  super(TestBase,self).connect(host,1,(ip,1234)) 
     if rc != Milter.CONTINUE:
       self.close()
@@ -186,4 +190,3 @@ class TestBase(object):
     if rc != Milter.CONTINUE:
       self.close()
     return rc
-
