@@ -441,18 +441,26 @@ class Base(object):
   # This information can reduce the size of messages received from sendmail,
   # and hence could reduce bandwidth between sendmail and your milter where
   # that is a factor.  The <code>Milter.SETSYMLIST</code> action flag must be
-  # set.
+  # set.  The protocol stages are M_CONNECT, M_HELO, M_ENVFROM, M_ENVRCPT,
+  # M_DATA, M_EOM, M_EOH.
   #
   # May only be called from negotiate callback.
-  # @since 0.9.2, M_* constants since 0.9.8
+  # @since 0.9.8, previous version was misspelled!
   # @param stage the protocol stage to set to macro list for, 
   # one of the M_* constants defined in Milter
-  # @param macros a string with a space delimited list of macros
-  def setsymlist(self,stage,macros):
+  # @param macros space separated and/or lists of strings
+  def setsymlist(self,stage,*macros):
     if not self._actions & SETSYMLIST: raise DisabledAction("SETSYMLIST")
-    if type(macros) != str:
-      macros = ' '.join(macros)
-    return self._ctx.setsmlist(stage,macros)
+    a = []
+    for m in macros:
+      try:
+        m = m.encode('utf8')
+      except: pass
+      try:
+        m = m.split(' ')
+      except: pass
+      a += m
+    return self._ctx.setsmlist(stage,' '.join(a))
 
   # Milter methods which can only be called from eom callback.
 

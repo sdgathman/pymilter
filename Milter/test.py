@@ -89,9 +89,17 @@ class TestBase(object):
 
   def setsymlist(self,stage,macros):
     if not self._actions & SETSYMLIST: raise DisabledAction("SETSYMLIST")
-    if type(macros) != str:
-      macros = ' '.join(macros)
-    self._symlist[stage] = macros
+    # not used yet, but just for grins we save the data
+    a = []
+    for m in macros:
+      try:
+        m = m.encode('utf8')
+      except: pass
+      try:
+        m = m.split(' ')
+      except: pass
+      a += m
+    self._symlist[stage] = set(a)
 
   ## Feed a file like object to the milter.  Calls envfrom, envrcpt for
   # each recipient, header for each header field, body for each body 
