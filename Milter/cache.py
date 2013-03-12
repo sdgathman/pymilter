@@ -10,6 +10,9 @@
 # CBV results.
 #
 # $Log$
+# Revision 1.9  2008/05/08 21:35:57  customdesigned
+# Allow explicitly whitelisted email from banned_users.
+#
 # Revision 1.8  2007/09/03 16:18:45  customdesigned
 # Delete unparseable timestamps when loading address cache.  These have
 # arisen because of failure to parse MAIL FROM properly.   Will have to
@@ -72,8 +75,8 @@ class AddrCache(object):
       except OSError:
         fp = ()
       for ln in fp:
-	try:
-	  rcpt,ts = ln.strip().split(None,1)
+        try:
+          rcpt,ts = ln.strip().split(None,1)
           try:
             l = time.strptime(ts,AddrCache.time_format)
             t = time.mktime(l)
@@ -84,11 +87,11 @@ class AddrCache(object):
           except:       # unparsable timestamp - likely garbage
             changed = True
             continue
-	except: # manual entry (no timestamp)
-	  cache[ln.strip().lower()] = (now,None)
-	wfp.write(ln)
+        except: # manual entry (no timestamp)
+          cache[ln.strip().lower()] = (now,None)
+        wfp.write(ln)
       if changed:
-	lock.commit(self.fname+'.old')
+        lock.commit(self.fname+'.old')
       else:
         lock.unlock()
     except IOError:
@@ -126,13 +129,13 @@ class AddrCache(object):
       ts,res = self.cache[lsender]
       too_old = time.time() - self.age*24*60*60	# max age in days
       if not ts or ts > too_old:
-	return res
+        return res
       del self.cache[lsender]
       raise KeyError, sender
     except KeyError,x:
       try:
-	user,host = sender.split('@',1)
-	return self.__getitem__(host)
+        user,host = sender.split('@',1)
+        return self.__getitem__(host)
       except ValueError:
         raise x
 

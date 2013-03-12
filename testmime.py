@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.5  2011/06/09 17:27:42  customdesigned
+# Documentation updates.
+#
 # Revision 1.4  2005/07/20 14:49:44  customdesigned
 # Handle corrupt and empty ZIP files.
 #
@@ -69,12 +72,12 @@ class MimeTestCase(unittest.TestCase):
       # python 2.4 doesn't get exceptions on missing boundaries, and
       # if message is modified, output is readable by mail clients
       if sys.hexversion < 0x02040000:
-	self.fail('should get boundary error parsing bad rfc822 attachment')
+        self.fail('should get boundary error parsing bad rfc822 attachment')
     except Errors.BoundaryError:
       pass
   
   def testDefang(self,vname='virus1',part=1,
-  	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
+	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
     msg = mime.message_from_file(open('test/'+vname,"r"))
     mime.defang(msg,scan_zip=True)
     self.failUnless(msg.ismodified(),"virus not removed")
@@ -108,7 +111,7 @@ class MimeTestCase(unittest.TestCase):
     self.failIf(msg.ismultipart())
     txt2 = msg.get_payload()
     self.failUnless(txt2 == mime.virus_msg % \
-    	(fname,hostname,None),txt2)
+	(fname,hostname,None),txt2)
 
   # honey virus has a sneaky ASP payload which is parsed correctly
   # by email package in python-2.2.2, but not by mime.MimeMessage or 2.2.1
@@ -122,7 +125,7 @@ class MimeTestCase(unittest.TestCase):
     txt2 = parts[1].get_payload()
     txt3 = parts[2].get_payload()
     self.failUnless(txt2.rstrip()+'\n' == mime.virus_msg % \
-    	(fname,hostname,None),txt2)
+	(fname,hostname,None),txt2)
     if txt3 != '':
       self.failUnless(txt3.rstrip()+'\n' == mime.virus_msg % \
 	  ('story[1].asp',hostname,None),txt3)
@@ -170,7 +173,7 @@ class MimeTestCase(unittest.TestCase):
     msg = mime.message_from_file(open('test/'+fname,'r'))
     mime.defang(msg,scan_zip=True)
     self.failIf(msg.ismodified())
-    msg = mime.message_from_file(open('test/tmpytgcE5.fail','r'))
+    msg = mime.message_from_file(open('test/test2','r'))
     rc = mime.check_attachments(msg,self._chk_attach)
     self.assertEquals(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
     self.assertEquals(rc,Milter.CONTINUE)

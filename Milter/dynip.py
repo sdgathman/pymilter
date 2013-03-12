@@ -68,8 +68,8 @@ def is_dynip(host,addr):
       if ia[2:] in (g[:2],g[-2:]): return True
       for m in ip3.finditer(host):
         if int(m.group()) == ia[3]:
-	  h = host[:m.start()] + '<3>' + host[m.end():]
-	  break
+          h = host[:m.start()] + '<3>' + host[m.end():]
+          break
     if rehmac.search(h): return True
     if host.find(''.join(a[:3])) >= 0: return True
     if host.find(''.join(a[1:])) >= 0: return True
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     if a[3:5] == ['connect','from']:
       host = a[5]
       if host.startswith('[') and host.endswith(']'):
-	continue	# no PTR
+        continue	# no PTR
       ip = a[7][2:-2]
       if ip in seen: continue
       seen.add(ip)

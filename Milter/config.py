@@ -29,10 +29,10 @@ class MilterConfigParser(ConfigParser):
       q = q.strip()
       if q.startswith('file:'):
         domain = q[5:].lower()
-	d[domain] = d.setdefault(domain,[]) + open(domain,'r').read().split()
+        d[domain] = d.setdefault(domain,[]) + open(domain,'r').read().split()
       else:
-	user,domain = q.split('@')
-	d.setdefault(domain.lower(),[]).append(user)
+        user,domain = q.split('@')
+        d.setdefault(domain.lower(),[]).append(user)
     return d
   
   def getaddrdict(self,sect,opt):
@@ -43,14 +43,14 @@ class MilterConfigParser(ConfigParser):
       q = q.strip()
       if self.has_option(sect,q):
         l = self.get(sect,q)
-	for addr in l.split(','):
-	  addr = addr.strip()
-	  if addr.startswith('file:'):
-	    fname = addr[5:]
-	    for a in open(fname,'r').read().split():
-	      d[a] = q
-	  else:
-	    d[addr] = q
+        for addr in l.split(','):
+          addr = addr.strip()
+          if addr.startswith('file:'):
+            fname = addr[5:]
+            for a in open(fname,'r').read().split():
+              d[a] = q
+          else:
+            d[addr] = q
     return d
 
   def getdefault(self,sect,opt,default=None):

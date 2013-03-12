@@ -31,8 +31,8 @@ class PLock(object):
       os.chown(self.lockname,-1,st.st_gid)
     except:
       if strict_perms:
-	self.unlock()
-	raise
+        self.unlock()
+        raise
     return self.fp
 
   def wlock(self,lockname=None):
@@ -51,7 +51,7 @@ class PLock(object):
     self.fp = None
     if backname:
       try:
-	os.remove(backname)
+        os.remove(backname)
       except OSError: pass
       os.link(self.basename,backname)
     os.rename(self.lockname,self.basename)

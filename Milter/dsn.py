@@ -5,6 +5,9 @@
 # Send DSNs, do call back verification,
 # and generate DSN messages from a template
 # $Log$
+# Revision 1.22  2011/03/18 20:41:31  customdesigned
+# Python2.6 SMTP.close() fails when instance never connected.
+#
 # Revision 1.21  2011/03/03 05:11:58  customdesigned
 # Release 0.9.4
 #
@@ -114,17 +117,17 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
       if a[0] == receiver:
         return (553,'Fraudulent MX for %s: %s' % (domain,host))
       if not (200 <= code <= 299):
-	raise smtplib.SMTPHeloError(code, resp)
+        raise smtplib.SMTPHeloError(code, resp)
       if msg:
         try:
-	  smtp.sendmail('<%s>'%ourfrom,mailfrom,msg)
-	except smtplib.SMTPSenderRefused:
+          smtp.sendmail('<%s>'%ourfrom,mailfrom,msg)
+        except smtplib.SMTPSenderRefused:
 	  # does not accept DSN, try postmaster (at the risk of mail loops)
-	  smtp.sendmail('<postmaster@%s>'%receiver,mailfrom,msg)
+          smtp.sendmail('<postmaster@%s>'%receiver,mailfrom,msg)
       else:	# CBV
-	code,resp = smtp.docmd('MAIL FROM: <%s>'%ourfrom)
-	if code != 250:
-	  raise smtplib.SMTPSenderRefused(code, resp, '<%s>'%ourfrom)
+        code,resp = smtp.docmd('MAIL FROM: <%s>'%ourfrom)
+        if code != 250:
+          raise smtplib.SMTPSenderRefused(code, resp, '<%s>'%ourfrom)
         if isinstance(mailfrom,basestring):
           mailfrom = [mailfrom]
         badrcpts = {}
@@ -132,7 +135,7 @@ def send_dsn(mailfrom,receiver,msg=None,timeout=600,session=None,ourfrom=''):
           code,resp = smtp.rcpt(rcpt)
           if code not in (250,251):
             badrcpts[rcpt] = (code,resp)# permanent error
-	smtp.quit()
+        smtp.quit()
         if len(badrcpts) == 1:
           return badrcpts.values()[0]	# permanent error
         if badrcpts:

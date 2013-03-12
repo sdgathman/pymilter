@@ -60,23 +60,23 @@ class sampleMilter(Milter.Milter):
       # even if we wanted the Taiwanese spam, we can't read Chinese
       # (delete if you read chinese mail)
       if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
-	self.log('REJECT: %s: %s' % (name,val))
+        self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')
-	return Milter.REJECT
+        return Milter.REJECT
 
       # check for common spam keywords
       if val.find("$$$") >= 0 or val.find("XXX") >= 0	\
-      	or val.find("!!!") >= 0 or val.find("FREE") >= 0:
-	self.log('REJECT: %s: %s' % (name,val))
+	or val.find("!!!") >= 0 or val.find("FREE") >= 0:
+        self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')
-	return Milter.REJECT
+        return Milter.REJECT
 
       # check for spam that pretends to be legal
       lval = val.lower()
       if lval.startswith("adv:") or lval.startswith("adv.") \
-      	or lval.find('viagra') >= 0:
-	self.log('REJECT: %s: %s' % (name,val))
-	return Milter.REJECT
+	or lval.find('viagra') >= 0:
+        self.log('REJECT: %s: %s' % (name,val))
+        return Milter.REJECT
 
     # check for invalid message id
     if lname == 'message-id' and len(val) < 4:
@@ -86,7 +86,7 @@ class sampleMilter(Milter.Milter):
 
     # check for common bulk mailers
     if lname == 'x-mailer' and \
-    	val.lower() in ('direct email','calypso','mail bomber'):
+	val.lower() in ('direct email','calypso','mail bomber'):
       self.log('REJECT: %s: %s' % (name,val))
       #self.setreply('550','','Go away spammer')
       return Milter.REJECT
@@ -123,7 +123,7 @@ class sampleMilter(Milter.Milter):
       h = msg.getheaders(name)
       cnt = len(h)
       for i in range(cnt,0,-1):
-	self.chgheader(name,i-1,'')
+        self.chgheader(name,i-1,'')
 
   def eom(self):
     if not self.fp: return Milter.ACCEPT
@@ -145,9 +145,9 @@ class sampleMilter(Milter.Milter):
       msg = rfc822.Message(out)
       msg.rewindbody()
       while 1:
-	buf = out.read(8192)
-	if len(buf) == 0: break
-	self.replacebody(buf)	# feed modified message to sendmail
+        buf = out.read(8192)
+        if len(buf) == 0: break
+        self.replacebody(buf)	# feed modified message to sendmail
       return Milter.ACCEPT	# ACCEPT modified message
     finally:
       out.close()

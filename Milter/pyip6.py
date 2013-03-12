@@ -48,11 +48,11 @@ def inet_ntop(s):
     e = n[:l]
     for i in range(9-l):
       if a[i:i+l] == e:
-	if i == 0:
-	  return ':'+':%x'*(8-l) % a[l:]
-	if i == 8 - l:
-	  return '%x:'*(8-l) % a[:-l] + ':'
-	return '%x:'*i % a[:i] + ':%x'*(8-l-i) % a[i+l:]
+        if i == 0:
+          return ':'+':%x'*(8-l) % a[l:]
+        if i == 8 - l:
+          return '%x:'*(8-l) % a[:-l] + ':'
+        return '%x:'*i % a[:i] + ':%x'*(8-l-i) % a[i+l:]
   return "%x:%x:%x:%x:%x:%x:%x:%x" % a
 
 def inet_pton(p):
@@ -89,29 +89,29 @@ def inet_pton(p):
   m = RE_IP4.search(s)
   try:
       if m:
-	  pos = m.start()
-	  ip4 = [int(i) for i in s[pos:].split('.')]
-	  if not pos:
-	      return struct.pack('!QLBBBB',0,65535,*ip4)
-	  s = s[:pos]+'%x%02x:%x%02x'%tuple(ip4)
+          pos = m.start()
+          ip4 = [int(i) for i in s[pos:].split('.')]
+          if not pos:
+              return struct.pack('!QLBBBB',0,65535,*ip4)
+          s = s[:pos]+'%x%02x:%x%02x'%tuple(ip4)
       a = s.split('::')
       if len(a) == 2:
-	l,r = a
-	if not l:
-	  r = r.split(':')
-	  return struct.pack('!HHHHHHHH',
+        l,r = a
+        if not l:
+          r = r.split(':')
+          return struct.pack('!HHHHHHHH',
 	    *[0]*(8-len(r)) + [int(s,16) for s in r])
-	if not r:
-	  l = l.split(':')
-	  return struct.pack('!HHHHHHHH',
+        if not r:
+          l = l.split(':')
+          return struct.pack('!HHHHHHHH',
 	    *[int(s,16) for s in l] + [0]*(8-len(l)))
-	l = l.split(':')
-	r = r.split(':')
-	return struct.pack('!HHHHHHHH',
+        l = l.split(':')
+        r = r.split(':')
+        return struct.pack('!HHHHHHHH',
 	    *[int(s,16) for s in l] + [0]*(8-len(l)-len(r))
 	    + [int(s,16) for s in r])
       if len(a) == 1:
-	return struct.pack('!HHHHHHHH',
+        return struct.pack('!HHHHHHHH',
 	    *[int(s,16) for s in a[0].split(':')])
   except ValueError: pass
   raise ValueError,p

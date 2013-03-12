@@ -84,14 +84,14 @@ def iniplist(ipaddr,iplist):
     p = pat.split('/',1)
     if ip4re.match(p[0]):
       if len(p) > 1:
-	n = int(p[1])
+        n = int(p[1])
       else:
         n = 32
       if cidr(addr2bin(p[0]),n) == cidr(ipnum,n):
         return True
     elif ip6re.match(p[0]):
       if len(p) > 1:
-	n = int(p[1])
+        n = int(p[1])
       else:
         n = 128
       if cidr(bin2long6(inet_pton(p[0])),n,MASK6) == cidr(ipnum,n,MASK6):
@@ -185,15 +185,15 @@ def parse_header(val):
     for s,enc in h:
       if enc:
         try:
-	  u.append(unicode(s,enc,'replace'))
-	except LookupError:
-	  u.append(unicode(s))
+          u.append(unicode(s,enc,'replace'))
+        except LookupError:
+          u.append(unicode(s))
       else:
-	u.append(unicode(s))
+        u.append(unicode(s))
     u = ''.join(u)
     for enc in ('us-ascii','iso-8859-1','utf8'):
       try:
-	return u.encode(enc)
+        return u.encode(enc)
       except UnicodeError: continue
   except UnicodeDecodeError: pass
   except LookupError: pass

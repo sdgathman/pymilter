@@ -17,7 +17,7 @@ class TestBase(object):
     self._protocol = 0
     self.logfp = open(logfile,"a")
     ## List of recipients deleted
-    self._delrcpt = []	
+    self._delrcpt = []
     ## List of recipients added
     self._addrcpt = []
     ## Macros defined
@@ -128,11 +128,11 @@ class TestBase(object):
     line = None
     for h in msg.headers:
       if h[:1].isspace():
-	line = line + h
-	continue
+        line = line + h
+        continue
       if not line:
-	line = h
-	continue
+        line = h
+        continue
       s = line.split(': ',1)
       if len(s) > 1: val = s[1].strip()
       else: val = ''

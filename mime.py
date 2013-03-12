@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.8  2011/11/05 15:51:03  customdesigned
+# New example
+#
 # Revision 1.7  2009/06/13 21:15:12  customdesigned
 # Doxygen updates.
 #
@@ -127,24 +130,24 @@ class MimeGenerator(Generator):
         # full MIME type, then dispatch to self._handle_<maintype>().  If
         # that's missing too, then dispatch to self._writeBody().
         main = msg.get_content_maintype()
-	if msg.is_multipart() and main.lower() != 'multipart':
-	  self._handle_multipart(msg)
-	else:
-	  Generator._dispatch(self,msg)
+        if msg.is_multipart() and main.lower() != 'multipart':
+          self._handle_multipart(msg)
+        else:
+          Generator._dispatch(self,msg)
 
 def unquote(s):
     """Remove quotes from a string."""
     if len(s) > 1:
         if s.startswith('"'):
-	  if s.endswith('"'):
+          if s.endswith('"'):
             s = s[1:-1]
-	  else: # remove garbage after trailing quote
-	    try: s = s[1:s[1:].index('"')+1]
-	    except:
-	      return s
-	  return s.replace('\\\\', '\\').replace('\\"', '"')
+          else: # remove garbage after trailing quote
+            try: s = s[1:s[1:].index('"')+1]
+            except:
+              return s
+          return s.replace('\\\\', '\\').replace('\\"', '"')
         if s.startswith('<') and s.endswith('>'):
-	  return s[1:-1]
+          return s[1:-1]
     return s
 
 from types import TupleType
@@ -202,21 +205,21 @@ class MimeMessage(Message):
     for attr,val in self._get_params_preserve([],'content-type'):
       if isinstance(val, TupleType):
 	  # It's an RFC 2231 encoded parameter
-	  newvalue = _unquotevalue(val)
-	  if val[0]:
-	    val =  unicode(newvalue[2], newvalue[0])
-	  else:
-	    val = unicode(newvalue[2])
+          newvalue = _unquotevalue(val)
+          if val[0]:
+            val =  unicode(newvalue[2], newvalue[0])
+          else:
+            val = unicode(newvalue[2])
       else:
-	  val = _unquotevalue(val.strip())
+          val = _unquotevalue(val.strip())
       names.append((attr,val))
     names += [("filename",self.get_filename())]
     if scan_zip:
       for key,name in tuple(names):	# copy by converting to tuple
-	if name and name.lower().endswith('.zip'):
-	  txt = self.get_payload(decode=True)
-	  if txt.strip():
-	    names += zipnames(txt)
+        if name and name.lower().endswith('.zip'):
+          txt = self.get_payload(decode=True)
+          if txt.strip():
+            names += zipnames(txt)
     return names
 
   def ismodified(self):
@@ -287,13 +290,13 @@ class MimeMessage(Message):
     if t == 'message/rfc822' or t.startswith('multipart/'):
       if not self.submsg:
         txt = self.get_payload()
-	if type(txt) == str:
-	  txt = self.get_payload(decode=True)
-	  self.submsg = email.message_from_string(txt,MimeMessage)
-	  for part in self.submsg.walk():
-	    part.modified = False
-	else:
-	  self.submsg = txt[0]
+        if type(txt) == str:
+          txt = self.get_payload(decode=True)
+          self.submsg = email.message_from_string(txt,MimeMessage)
+          for part in self.submsg.walk():
+            part.modified = False
+        else:
+          self.submsg = txt[0]
       return self.submsg
     return None
 
@@ -333,7 +336,7 @@ def check_name(msg,savname=None,ckname=check_ext,scan_zip=False):
       if badname:
         if key == 'zipname':
           badname = msg.get_filename()
-	break
+        break
     else:
       return Milter.CONTINUE
   except zipfile.BadZipfile:
@@ -380,7 +383,7 @@ class _defang:
     return rc
 
   def __call__(self,msg,savname=None,check=check_ext,scan_rfc822=True,
-  		scan_zip=False):
+		scan_zip=False):
     """Compatible entry point.
     Replace all attachments with dangerous names."""
     self._savname = savname
@@ -450,25 +453,25 @@ class SGMLFilter(sgmllib.SGMLParser):
       n = len(rawdata)
       j = i + 2
       while j < n:
-	  c = rawdata[j]
-	  if c == ">":
-	      # end of declaration syntax
-	      self.handle_special(rawdata[i+2:j])
-	      return j + 1
-	  if c in "\"'":
-	      m = declstringlit.match(rawdata, j)
-	      if not m:
+          c = rawdata[j]
+          if c == ">":
+              # end of declaration syntax
+              self.handle_special(rawdata[i+2:j])
+              return j + 1
+          if c in "\"'":
+              m = declstringlit.match(rawdata, j)
+              if not m:
 		  # incomplete or an error?
-		  return -1
-	      j = m.end()
-	  elif c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
-	      m = declname.match(rawdata, j)
-	      if not m:
+                  return -1
+              j = m.end()
+          elif c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
+              m = declname.match(rawdata, j)
+              if not m:
 		  # incomplete or an error?
-		  return -1
-	      j = m.end()
-	  else:
-	      j += 1
+                  return -1
+              j = m.end()
+          else:
+              j += 1
       # end of buffer between tokens
       return -1
 
@@ -497,7 +500,7 @@ def check_html(msg,savname=None):
   if msgtype == 'application/octet-stream':
     for (attr,name) in msg.getnames():
       if name and name.lower().endswith(".htm"):
-	msgtype = 'text/html'
+        msgtype = 'text/html'
   if msgtype == 'text/html':
     out = StringIO.StringIO()
     htmlfilter = HTMLScriptFilter(out)
