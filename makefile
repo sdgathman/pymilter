@@ -2,8 +2,8 @@ web:
 	doxygen
 	rsync -ravK doc/html/ spidey2.bmsi.com:/Public/pymilter
 
-VERSION=0.9.7
-CVSTAG=pymilter-0_9_7
+VERSION=0.9.8
+CVSTAG=pymilter-0_9_8
 PKG=pymilter-$(VERSION)
 SRCTAR=$(PKG).tar.gz
 

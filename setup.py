@@ -13,7 +13,7 @@ libs = ["milter"]
 libdirs = ["/usr/lib/libmilter"]    # needed for Debian
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
-setup(name = "pymilter", version = '0.9.7',
+setup(name = "pymilter", version = '0.9.8',
 	description="Python interface to sendmail milter API",
 	long_description="""\
 This is a python extension module to enable python scripts to

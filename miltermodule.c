@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.34  2013/03/09 05:42:14  customdesigned
+ * Make TestBase members private, fix getsymlist misspelling.
+ *
  * Revision 1.33  2013/03/09 00:25:23  customdesigned
  * Better untrapped exception message.  const char for doc comments.
  *
@@ -657,7 +660,9 @@ _release_thread(PyThreadState *t) {
 /** Report and clear any python exception before returning to libmilter. 
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
-  char *untrapped_msg = "pymilter: untrapped exception in milter app";
+  char untrapped_msg[80];
+  sprintf(untrapped_msg,"pymilter: untrapped exception in %.40s",
+  	description.xxfi_name);
   if (PyErr_Occurred()) {
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */

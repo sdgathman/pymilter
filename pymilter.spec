@@ -6,8 +6,8 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 0.9.7
-Release: 2%{dist}
+Version: 0.9.8
+Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 License: GPLv2+
 Group: Development/Libraries
