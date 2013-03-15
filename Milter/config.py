@@ -1,4 +1,5 @@
 from ConfigParser import ConfigParser
+import os.path
 
 class MilterConfigParser(ConfigParser):
 
@@ -20,7 +21,7 @@ class MilterConfigParser(ConfigParser):
       return [q.strip() for q in self.get(sect,opt).split(',')]
     return []
 
-  def getaddrset(self,sect,opt):
+  def getaddrset(self,sect,opt,dir=''):
     if not self.has_option(sect,opt):
       return {}
     s = self.get(sect,opt)
@@ -29,13 +30,14 @@ class MilterConfigParser(ConfigParser):
       q = q.strip()
       if q.startswith('file:'):
         domain = q[5:].lower()
-        d[domain] = d.setdefault(domain,[]) + open(domain,'r').read().split()
+        fname = os.path.join(dir,domain)
+        d[domain] = d.setdefault(domain,[]) + open(fname,'r').read().split()
       else:
         user,domain = q.split('@')
         d.setdefault(domain.lower(),[]).append(user)
     return d
   
-  def getaddrdict(self,sect,opt):
+  def getaddrdict(self,sect,opt,dir=''):
     if not self.has_option(sect,opt):
       return {}
     d = {}
@@ -46,7 +48,7 @@ class MilterConfigParser(ConfigParser):
         for addr in l.split(','):
           addr = addr.strip()
           if addr.startswith('file:'):
-            fname = addr[5:]
+            fname = os.path.join(dir,addr[5:])
             for a in open(fname,'r').read().split():
               d[a] = q
           else:
