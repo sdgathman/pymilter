@@ -35,6 +35,9 @@ $ python setup.py help
      libraries=["milter","smutil","resolv"]
 
  * $Log$
+ * Revision 1.35  2013/03/14 22:11:25  customdesigned
+ * Release 0.9.8
+ *
  * Revision 1.34  2013/03/09 05:42:14  customdesigned
  * Make TestBase members private, fix getsymlist misspelling.
  *
@@ -641,7 +644,8 @@ milter_set_exception_policy(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "i:set_exception_policy", &i))
     return NULL;
   switch (i) {
-  case SMFIS_REJECT: case SMFIS_TEMPFAIL: case SMFIS_CONTINUE:
+  case SMFIS_REJECT: case SMFIS_TEMPFAIL:
+  case SMFIS_CONTINUE: case SMFIS_ACCEPT:
     exception_policy = i;
     Py_INCREF(Py_None);
     return Py_None;
@@ -661,9 +665,9 @@ _release_thread(PyThreadState *t) {
   The interpreter is locked when we are called, and we unlock it.  */
 static int _report_exception(milter_ContextObject *self) {
   char untrapped_msg[80];
-  sprintf(untrapped_msg,"pymilter: untrapped exception in %.40s",
-  	description.xxfi_name);
   if (PyErr_Occurred()) {
+    sprintf(untrapped_msg,"pymilter: untrapped exception in %.40s",
+	  description.xxfi_name);
     PyErr_Print();
     PyErr_Clear();	/* must clear since not returning to python */
     _release_thread(self->t);
@@ -675,8 +679,11 @@ static int _report_exception(milter_ContextObject *self) {
 	smfi_setreply(self->ctx, "451", "4.3.0", untrapped_msg);
 	return SMFIS_TEMPFAIL;
     }
-    return SMFIS_CONTINUE;
+    return exception_policy;
   }
+  /* This should never happen, _report_exception is only called when
+   * the caller has already detected a python exception.  If it
+   * does somehow happen, pretend nothing is wrong... */
   _release_thread(self->t);
   return SMFIS_CONTINUE;
 }

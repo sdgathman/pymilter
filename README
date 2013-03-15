@@ -135,8 +135,6 @@ http://www.bmsi.com/linux/sendmail-rh72.spec
 IPv6 Notes
 ----------
 
-IPv6 is still experimental.
-
 The IPv6 protocol is supported if your operation system supports it
 and if sendmail was compiled with IPv6 support.  To determine if your
 sendmail supports IPv6, run "sendmail -d0" and check for the NETINET6

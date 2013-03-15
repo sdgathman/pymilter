@@ -59,6 +59,7 @@ class milterContext(object):
   # M_CONNECT, M_HELO, M_ENVFROM, M_ENVRCPT, M_DATA, M_EOM, M_EOH.
   # Calls <a href="https://www.milter.org/developers/api/smfi_setsymlist">smfi_setsymlist</a>.
   # @param stage protocol stage in which the macro list should be used
+  # @param macrolist a space separated list of macro names
   def setsymlist(self,stage,macrolist): pass
 
 class error(Exception): pass

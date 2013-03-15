@@ -1,5 +1,6 @@
 web:
 	doxygen
+	cd doc/html; zip -r ../../doc .
 	rsync -ravK doc/html/ spidey2.bmsi.com:/Public/pymilter
 
 VERSION=0.9.8
