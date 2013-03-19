@@ -6,7 +6,59 @@
 # A thin wrapper around libmilter.
 #
 
-## Hold context for a milter connection.
+## Continue processing the current connection, message, or recipient.
+CONTINUE  = 0
+##  For a connection-oriented routine, reject this connection; 
+# call Milter.Base.close(). For a message-oriented routine, except
+# Milter.Base.eom() or Milter.Base.abort(), reject this message.  For a
+# recipient-oriented routine, reject the current recipient (but continue
+# processing the current message).
+REJECT    = 1
+
+## For a message- or recipient-oriented routine, accept this message, but
+# silently discard it.  SMFIS_DISCARD should not be returned by a
+# connection-oriented routine.
+DISCARD   = 2
+
+## For a connection-oriented routine, accept this connection without further
+# filter processing; call Milter.Base.close().   For a message- or
+# recipient-oriented routine, accept this message without further filtering.
+ACCEPT    = 3
+
+## Return a temporary failure, i.e., the corresponding SMTP command will return
+# an appropriate 4xx status code. For a message-oriented routine, except
+# Milter.Base.envfrom(), fail for this message.  For a connection-oriented
+# routine, fail for this connection; call Milter.Base.close().  For a recipient-oriented
+# routine, only
+# fail for the current recipient; continue message processing.
+TEMPFAIL  = 4
+
+## Skip further callbacks of the same type in this transaction. 
+# Currently this return value is only allowed in Milter.Base.body(). It can be
+# used if a %milter has received sufficiently many body chunks to make a
+# decision, but still wants to invoke message modification functions that are
+# only allowed to be called from Milter.Base.eom(). Note: the %milter must
+# negotiate this behavior with the MTA, i.e., it must check whether the
+# protocol action SMFIP_SKIP is available and if so, the %milter must request
+# it.
+SKIP      = 5
+
+## Do not send a reply back to the MTA. 
+# The %milter must negotiate this behavior with the MTA, i.e., it must check
+# whether the appropriate protocol action P_NR_* is available and if so,
+# the %milter must request it. If you set the P_NR_* protocol action for a
+# callback, that callback must always reply with NOREPLY. Using any other
+# reply code is a violation of the API. If in some cases your callback may
+# return another value (e.g., due to some resource shortages), then you must
+# not set P_NR_* and you must use CONTINUE as the default return
+# code. (Alternatively you can try to delay reporting the problem to a later
+# callback for which P_NR_* is not set.)
+#
+# This is negotiated and returned automatically by the Milter.noreply 
+# function decorator.
+NOREPLY   = 6
+
+## Hold context for a %milter connection.
 # Each connection to sendmail creates a new <code>SMFICTX</code> struct within
 # libmilter.  The milter module in turn creates a milterContext
 # tied to the <code>SMFICTX</code> struct via <code>smfi_setpriv</code>
@@ -64,8 +116,8 @@ class milterContext(object):
 
 class error(Exception): pass
 
-## Enable optional milter actions.
-# Certain milter actions need to be enabled before calling main()
+## Enable optional %milter actions.
+# Certain %milter actions need to be enabled before calling main()
 # or they throw an exception.  Pymilter enables them all by
 # default (since 0.9.2), but you may wish to disable unneeded
 # actions as an optimization.
@@ -83,24 +135,27 @@ def set_abort_callback(cb): pass
 def set_close_callback(cb): pass
 
 ## Sets the return code for untrapped Python exceptions during a callback.
-# Must be one of TEMPFAIL,REJECT,CONTINUE.  The default is TEMPFAIL.
-# You should not depend on this handler.  Your application should
-# have its own top level exception handler for each callback.  You can
-# then choose your own reply message, log the stack track were you please,
-# and so on.  However, if you miss one, this last ditch handler will
-# print a standard stack trace to sys.stderr, and return to sendmail.
+# The default is TEMPFAIL.  You should not depend on this handler.  Your
+# application should have its own top level exception handler for each
+# callback.  You can then choose your own reply message, log the stack track
+# were you please, and so on.  However, if you miss one, this last ditch
+# handler will print a standard stack trace to sys.stderr, and return to
+# sendmail.  
+# @param code one of #TEMPFAIL,#REJECT,#CONTINUE, or since 1.0, #ACCEPT
 def set_exception_policy(code): pass
 
-## Register python milter with libmilter.
-# The name we pass is used to identify the milter in the MTA configuration.
+## Register python %milter with libmilter.
+# The name we pass is used to identify the %milter in the MTA configuration.
 # Callback functions must be set using the set_*_callback() functions before
-# registering the milter.
+# registering the %milter.
 # Three additional callbacks are specified as keyword parameters.  These
 # were added by recent versions of libmilter.  The keyword parameters is
 # a nicer way to do it, I think, since it makes clear that you have to do
-# it before registering.  I may move all the callbacks 
-# in the future (perhaps keeping the set functions for compatibility).
-# @param name the milter name by which the MTA finds us
+# it before registering.  I may move all the callbacks in the future (perhaps
+# keeping the set functions for compatibility).  Note that Milter.Base
+# automatically maps all callbacks to member functions, and negotiates which
+# member functions are actually overridden by an application class.
+# @param name the %milter name by which the MTA finds us
 # @param negotiate the
 #       <a href="https://www.milter.org/developers/api/xxfi_negotiate">
 #       xxfi_negotiate</a> callback, called to negotiate supported
@@ -123,7 +178,7 @@ def main(): pass
 
 ## Set the libmilter debugging level.
 # <a href="https://www.milter.org/developers/api/smfi_setdbg">smfi_setdbg</a>
-# sets the milter library's internal debugging level to a new level
+# sets the %milter library's internal debugging level to a new level
 # so that code details may be traced. A level of zero turns off debugging. The
 # greater (more positive) the level the more detailed the debugging. Six is the
 # current, highest, useful value.  Must be called before calling main().
@@ -153,7 +208,7 @@ def setbacklog(n): pass
 # </pre>
 def setconn(s): pass
 
-## Stop the milter gracefully.
+## Stop the %milter gracefully.
 def stop(): pass
 
 ## Retrieve diagnostic info.
