@@ -50,4 +50,4 @@
 # You may find the
 # <a href="http://docs.python.org/release/2.6.6/library/multiprocessing.html">
 # multiprocessing</a> module useful.  It can be a drop-in
-# replacement for threading as illustrated in @ref milter-template.py.
+# replacement for threading as illustrated in milter-template.

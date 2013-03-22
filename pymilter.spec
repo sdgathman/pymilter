@@ -78,6 +78,7 @@ rm -rf $RPM_BUILD_ROOT
 * Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 1.0-1
 - Allow ACCEPT as untrapped exception policy
 - Optional dir for getaddrset and getaddrdict in Milter.config
+- Show registered milter name in untrapped exception message.
 
 * Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 0.9.8-1
 - Add Milter.test module for unit testing milters.

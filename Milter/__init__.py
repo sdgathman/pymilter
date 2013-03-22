@@ -21,12 +21,6 @@ from functools import wraps
 _seq_lock = thread.allocate_lock()
 _seq = 0
 
-## @fn set_flags(flags)
-# @brief Enable optional %milter actions.
-# Certain %milter actions need to be enabled before calling milter.runmilter()
-# or they throw an exception. 
-# @param flags Bit ored mask of optional actions to enable
-
 def uniqueID():
   """Return a unique sequence number (incremented on each call).
   """
