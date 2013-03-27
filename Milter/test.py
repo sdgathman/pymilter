@@ -7,7 +7,7 @@ import Milter
 
 Milter.NOREPLY = Milter.CONTINUE
 
-## Test mixin for unit testing milter applications.
+## Test mixin for unit testing %milter applications.
 # This mixin overrides many Milter.MilterBase methods
 # with stub versions that simply record what was done.
 # @since 0.9.8
@@ -24,13 +24,13 @@ class TestBase(object):
     self._macros = { }
     ## The message body.
     self._body = None
-    ## True if the milter replaced the message body.
+    ## True if the %milter replaced the message body.
     self._bodyreplaced = False
-    ## True if the milter changed any headers.
+    ## True if the %milter changed any headers.
     self._headerschanged = False
-    ## Reply codes and messages set by milter
+    ## Reply codes and messages set by the %milter
     self._reply = None
-    ## The rfc822 message object for the current email being fed to the milter.
+    ## The rfc822 message object for the current email being fed to the %milter.
     self._msg = None
     self._symlist = [ None, None, None, None, None, None, None ]
 
@@ -39,7 +39,7 @@ class TestBase(object):
     print >>self.logfp
 
   ## Set a macro value.
-  # These are retrieved by the milter with getsymval.
+  # These are retrieved by the %milter with getsymval.
   # @param name the macro name, as passed to getsymval
   # @param val the macro value
   def setsymval(self,name,val):
@@ -57,7 +57,7 @@ class TestBase(object):
       raise IOError,"replacebody not called from eom()"
 
   # FIXME: rfc822 indexing does not really reflect the way chg/add header
-  # work for a milter
+  # work for a %milter
   def chgheader(self,field,idx,value):
     if not self._body:
       raise IOError,"chgheader not called from eom()"
@@ -103,9 +103,9 @@ class TestBase(object):
       a += m
     self._symlist[stage] = set(a)
 
-  ## Feed a file like object to the milter.  Calls envfrom, envrcpt for
+  ## Feed a file like object to the %milter.  Calls envfrom, envrcpt for
   # each recipient, header for each header field, body for each body 
-  # block, and finally eom.  A return code from the milter other than
+  # block, and finally eom.  A return code from the %milter other than
   # CONTINUE returns immediately with that return code.
   #
   # This is a convenience method, a test could invoke the callbacks
@@ -164,7 +164,7 @@ class TestBase(object):
     self._body.write(body)
     return rc
 
-  ## Feed an email contained in a file to the milter.
+  ## Feed an email contained in a file to the %milter.
   # This is a convenience method that invokes @link #feedFile feedFile @endlink.
   # @param sender MAIL FROM
   # @param rcpts RCPT TO, multiple recipients may be supplied
