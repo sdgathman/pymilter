@@ -1,0 +1,13 @@
+module pymilter 1.0;
+
+require {
+	type sendmail_t;
+	type var_run_t;
+	type initrc_t;
+	class sock_file { write getattr };
+	class unix_stream_socket connectto;
+}
+
+#============= sendmail_t ==============
+allow sendmail_t initrc_t:unix_stream_socket connectto;
+allow sendmail_t var_run_t:sock_file { write getattr };
