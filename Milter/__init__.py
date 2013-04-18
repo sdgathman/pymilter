@@ -718,28 +718,7 @@ def envcallback(c,args):
 # @param socketname the socket to be passed to milter.setconn()
 # @param timeout the time in secs the MTA should wait for a response before 
 #	considering this %milter dead
-def runmilter(name,socketname,timeout = 0):
-  # This bit is here on the assumption that you will be starting this filter
-  # before sendmail.  If sendmail is not running and the socket already exists,
-  # libmilter will throw a warning.  If sendmail is running, this is still
-  # safe if there are no messages currently being processed.  It's safer to
-  # shutdown sendmail, kill the filter process, restart the filter, and then
-  # restart sendmail.
-  pos = socketname.find(':')
-  if pos > 1:
-    s = socketname[:pos]
-    fname = socketname[pos+1:]
-  else:
-    s = "unix"
-    fname = socketname
-  if s == "unix" or s == "local":
-    print "Removing %s" % fname
-    try:
-      os.unlink(fname)
-    except os.error, x:
-      import errno
-      if x.errno != errno.ENOENT:
-        raise milter.error(x)
+def runmilter(name,socketname,timeout = 0,rmsock=True):
 
   # The default flags set include everything
   # milter.set_flags(milter.ADDHDRS)
@@ -770,6 +749,14 @@ def runmilter(name,socketname,timeout = 0):
         unknown=lambda ctx,cmd: ctx.getpriv().unknown(cmd),
         negotiate=ncb
   )
+
+  # We remove the socket here by default on the assumption that you will be
+  # starting this filter before sendmail.  If sendmail is not running and the
+  # socket already exists, libmilter will throw a warning.  If sendmail is
+  # running, this is still safe if there are no messages currently being
+  # processed.  It's safer to shutdown sendmail, kill the filter process,
+  # restart the filter, and then restart sendmail.
+  milter.opensocket(rmsock)
   start_seq = _seq
   try:
     milter.main()
