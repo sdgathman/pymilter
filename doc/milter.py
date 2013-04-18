@@ -3,7 +3,10 @@
 
 ## @package milter
 #
-# A thin wrapper around libmilter.
+# A thin wrapper around libmilter.  Most users will not import
+# milter directly, but will instead import Milter and subclass
+# Milter.Base.  This module gives you ultimate low level control
+# from python.
 #
 
 ## Continue processing the current connection, message, or recipient.
@@ -169,6 +172,16 @@ def set_exception_policy(code): pass
 #       xxfi_data</a> callback, called when the DATA
 #       SMTP command is received.
 def register(name,negotiate=None,unknown=None,data=None): pass
+
+## Attempt to create the socket used to communicate with the MTA.
+# milter.opensocket() attempts to create the socket specified previously by a
+# call to milter.setconn() which will be the interface between MTAs and the
+# %milter.  This allows the calling application to ensure that the socket can be
+# created.  If this is not called, milter.main() will do so implicitly.
+# Calls <a href="https://www.milter.org/developers/api/smfi_opensocket">
+# smfi_opensocket</a>.  While not documented for libmilter, my experiments
+# indicate that you must call register() before calling opensocket().
+# @param rmsock Try to remove an existing unix domain socket if true.
 def opensocket(rmsock): pass
 
 ## Transfer control to libmilter.
@@ -199,12 +212,17 @@ def setbacklog(n): pass
 # unix, inet, or inet6 socket. By default, a unix domain socket
 # is used.  It must not exist,
 # and sendmail will throw warnings if, eg, the file is under a
-# group or world writable directory.
+# group or world writable directory.  milter.setconn() will not fail with
+# an invalid socket - this will be detected only when calling milter.main()
+# or milter.opensocket().
+# @param s the socket address in proto:address format
 # <pre>
-# setconn('unix:/var/run/pythonfilter')
-# setconn('inet:8800') 			# listen on ANY interface
-# setconn('inet:7871@@publichost')	# listen on a specific interface
-# setconn('inet6:8020')
+# milter.setconn('unix:/var/run/pythonfilter')  # a named pipe
+# milter.setconn('local:/var/run/pythonfilter') # a named pipe
+# milter.setconn('inet:8800') 			# listen on ANY interface
+# milter.setconn('inet:7871@@publichost')	# listen on a specific interface
+# milter.setconn('inet6:8020')
+# milter.setconn('inet6:8020@[2001:db8:1234::1]')      # listen on specific IP
 # </pre>
 def setconn(s): pass
 
