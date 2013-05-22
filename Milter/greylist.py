@@ -41,6 +41,15 @@ class Greylist(object):
     self.dbp = shelve.open(dbname,'c',protocol=2)
     self.lock = thread.allocate_lock()
 
+  def export_csv(self,fp):
+    "Export records to csv."
+    import csv
+    dbp = self.dbp
+    w = csv.writer(fp)
+    for key, r in dbp.iteritems():
+      ip,sender,recipient = key.split(':')
+      w.writerow([ip,sender,recipient,r.firstseen,r.lastseen,r.cnt,r.umis])
+
   def clean(self,timeinc=0):
     "Delete records past the retention limit."
     now = time.time() + timeinc
@@ -100,3 +109,10 @@ class Greylist(object):
 
   def close(self):
     self.dbp.close()
+
+if __name__ == '__main__':
+  import sys
+  g = Greylist(sys.argv[1])
+  try:
+    g.export_csv(sys.stdout)
+  finally: g.close()

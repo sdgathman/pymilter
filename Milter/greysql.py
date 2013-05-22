@@ -25,6 +25,19 @@ class Greylist(object):
         primary key (ip,sender,recipient))''')
     except: pass
 
+  def import_csv(self,fp):
+    import csv
+    rdr = csv.reader(fp)
+    cur = self.conn.execute('begin immediate')
+    try:
+      for r in rdr:
+        cur.execute('''insert into 
+          greylist(ip,sender,recipient,firstseen,lastseen,cnt,umis)
+          values(?,?,?,?,?,?,?)''', r)
+      self.conn.commit()
+    finally:
+      cur.close();
+
   def clean(self,timeinc=0):
     "Delete records past the retention limit."
     now = time.time() + timeinc - self.greylist_retain
@@ -84,3 +97,10 @@ class Greylist(object):
 
   def close(self):
     self.conn.close()
+
+if __name__ == '__main__':
+  import sys
+  g = Greylist(sys.argv[1])
+  try:
+    g.import_csv(sys.stdin)
+  finally: g.close()
