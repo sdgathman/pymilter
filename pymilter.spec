@@ -7,7 +7,7 @@
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
 Version: 0.9.8
-Release: 2%{dist}
+Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 Source1: pymilter.te
 License: GPLv2+
@@ -20,7 +20,6 @@ Requires: %{pythonbase} >= 2.6.5, sendmail >= 8.13
 Requires: %{pythonbase}-pydns
 # Needed for callbacks, not a core function but highly useful for milters
 BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
-BuildRequires: policycoreutils
 
 %description
 This is a python extension module to enable python scripts to
@@ -28,12 +27,22 @@ attach to sendmail's libmilter functionality.  Additional python
 modules provide for navigating and modifying MIME parts, sending
 DSNs, and doing CBV.
 
+%package selinux
+Summary: SELinux policy module for pymilter
+Group: System Environment/Base
+Requires: policycoreutils, selinux-policy, %{name} = %{version}-%{release}
+BuildRequires: policycoreutils, checkpolicy
+
+%description selinux
+SELinux policy module for using pymilter with sendmail with selinux enforcing
+
 %prep
 %setup -q -n pymilter-%{version}
+cp %{SOURCE1} pymilter.te
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
-checkmodule -m -M -o pymilter.mod %{SOURCE1}
+checkmodule -m -M -o pymilter.mod pymilter.te
 semodule_package -o pymilter.pp -m pymilter.mod
 
 %install
@@ -65,6 +74,10 @@ q
 EOF
 chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
+# install selinux modules
+mkdir -p %{buildroot}%{_datadir}/selinux/targeted
+cp -p pymilter.pp %{buildroot}%{_datadir}/selinux/targeted
+
 # start.sh is used by spfmilter, srsmilter, and milter, and could be used by
 # other milters using pymilter.
 %files
@@ -75,14 +88,29 @@ chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 %dir %attr(0755,mail,mail) %{_localstatedir}/run/milter
 %dir %attr(0755,mail,mail) %{_localstatedir}/log/milter
 
+%files selinux
+%doc pymilter.te
+%{_datadir}/selinux/targeted/*
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
+%post selinux
+/usr/sbin/semodule -s targeted -i %{_datadir}/selinux/targeted/pymilter.pp \
+	&>/dev/null || :
+
+%postun selinux
+if [ $1 -eq 0 ] ; then
+/usr/sbin/semodule -s targeted -r pymilter &> /dev/null || :
+fi
+
 %changelog
-* Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 1.0-1
+* Wed Jun 26 2013 Stuart Gathman <stuart@gathman.org> 1.0-1
 - Allow ACCEPT as untrapped exception policy
 - Optional dir for getaddrset and getaddrdict in Milter.config
 - Show registered milter name in untrapped exception message.
+- Include selinux subpackage
+- Provide Milter.greylist export and Milter.greylist import to migrate data
 
 * Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 0.9.8-1
 - Add Milter.test module for unit testing milters.
