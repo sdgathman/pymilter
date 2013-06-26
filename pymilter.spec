@@ -7,8 +7,9 @@
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
 Version: 0.9.8
-Release: 1%{dist}
+Release: 2%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
+Source1: pymilter.te
 License: GPLv2+
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
@@ -19,6 +20,7 @@ Requires: %{pythonbase} >= 2.6.5, sendmail >= 8.13
 Requires: %{pythonbase}-pydns
 # Needed for callbacks, not a core function but highly useful for milters
 BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
+BuildRequires: policycoreutils
 
 %description
 This is a python extension module to enable python scripts to
@@ -31,6 +33,8 @@ DSNs, and doing CBV.
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
+checkmodule -m -M -o pymilter.mod %{SOURCE1}
+semodule_package -o pymilter.pp -m pymilter.mod
 
 %install
 rm -rf $RPM_BUILD_ROOT

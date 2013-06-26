@@ -71,6 +71,9 @@ class myMilter(Milter.Base):
     self.fromparms = Milter.dictfromlist(str)	# ESMTP parms
     self.user = self.getsymval('{auth_authen}')	# authenticated user
     self.log("mail from:", mailfrom, *str)
+    # NOTE: self.fp is only an *internal* copy of message data.  You
+    # must use addheader, chgheader, replacebody to change the message
+    # on the MTA.
     self.fp = StringIO.StringIO()
     self.canon_from = '@'.join(parse_addr(mailfrom))
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
