@@ -1,6 +1,2 @@
-Support smfi_negotiate and auto negotiate only those callbacks for which 
-Milter.Milter methods have been overridden.  (Python should be able to
-do that.)
-
 Lookup exact RFC syntax of real name / email and make 
 Milter.utils.parse_addr() pass all unit tests.

@@ -1,12 +1,11 @@
 Jim Niemira (urmane@urmane.org) wrote the original C module and some quick
-and dirty python to use it.  Stuart D. Gathman (stuart@bmsi.com) took that
+and dirty python to use it.  Stuart D. Gathman (stuart@gathman.org) took that
 kludge and added threading and context objects to it, wrote a proper OO
 wrapper (Milter.py) that handles attachments, did lots of testing, packaged
 it with distutils, and generally transformed it from a quick hack to a
 real, usable Python extension.
 
 Other contributors (in random order):
-
 
 Daniel Troeder
   for pointing out a typo in @noreply
@@ -44,4 +43,4 @@ Business Management Systems - http://www.bmsi.com
   for hosting the website, and providing paying clients who need milter service
   so I can work on it as part of my day job.
 
-If I have left anybody out, send me a reminder: stuart@bmsi.com
+If I have left anybody out, send me a reminder: stuart@gathman.org
