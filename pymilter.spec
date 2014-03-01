@@ -6,7 +6,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 0.9.8
+Version: 1.0
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 Source1: pymilter.te
@@ -30,7 +30,7 @@ DSNs, and doing CBV.
 %package selinux
 Summary: SELinux policy module for pymilter
 Group: System Environment/Base
-Requires: policycoreutils, selinux-policy, %{name} = %{version}-%{release}
+Requires: policycoreutils, selinux-policy, %{name}
 BuildRequires: policycoreutils, checkpolicy
 
 %description selinux
@@ -51,35 +51,11 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/milter
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/milter
 mkdir -p $RPM_BUILD_ROOT%{libdir}
-cp start.sh $RPM_BUILD_ROOT%{libdir}
-ed $RPM_BUILD_ROOT%{libdir}/start.sh <<'EOF'
-/^datadir=/
-c
-datadir="%{_localstatedir}/log/milter"
-.
-/^piddir=/
-c
-piddir="%{_localstatedir}/run/milter"
-.
-/^libdir=/
-c
-libdir="%{libdir}"
-.
-/^python=/
-c
-python="%{__python}"
-.
-w
-q
-EOF
-chmod a+x $RPM_BUILD_ROOT%{libdir}/start.sh
 
 # install selinux modules
 mkdir -p %{buildroot}%{_datadir}/selinux/targeted
 cp -p pymilter.pp %{buildroot}%{_datadir}/selinux/targeted
 
-# start.sh is used by spfmilter, srsmilter, and milter, and could be used by
-# other milters using pymilter.
 %files
 %defattr(-,root,root,-)
 %doc README ChangeLog NEWS TODO CREDITS sample.py milter-template.py
@@ -105,6 +81,10 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %changelog
+* Sat Mar  1 2014 Stuart Gathman <stuart@gathman.org> 1.0-2
+- Remove start.sh to track EPEL repository, suggest daemonize as replacement
+- Selinux subpackage should not care about pymilter version
+
 * Wed Jun 26 2013 Stuart Gathman <stuart@gathman.org> 1.0-1
 - Allow ACCEPT as untrapped exception policy
 - Optional dir for getaddrset and getaddrdict in Milter.config
