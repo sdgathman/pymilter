@@ -11,6 +11,7 @@ from email.Header import decode_header
 #import email.Utils
 import rfc822
 
+dnsre = re.compile(r'^[a-z][-a-z\d.]+$', re.IGNORECASE)
 PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
 ip4re = re.compile(PAT_IP4+'$')
 ip6re = re.compile(                 '(?:%(hex4)s:){6}%(ls32)s$'
@@ -67,6 +68,12 @@ def iniplist(ipaddr,iplist):
   True
   >>> iniplist('192.168.0.45',['192.168.0.*'])
   True
+  >>> iniplist('4.2.2.2',['b.resolvers.Level3.net'])
+  True
+  >>> iniplist('2607:f8b0:4004:801::',['google.com/64'])
+  True
+  >>> iniplist('4.2.2.2',['nothing.example.com'])
+  False
   >>> iniplist('2001:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
   True
   >>> iniplist('2G01:610:779:0:223:6cff:fe9a:9cf3',['127.0.0.1','172.20.1.0/24','2001:610:779::/48'])
@@ -75,8 +82,10 @@ def iniplist(ipaddr,iplist):
   ValueError: Invalid ip syntax:2G01:610:779:0:223:6cff:fe9a:9cf3
   """
   if ip4re.match(ipaddr):
+    fam = socket.AF_INET
     ipnum = addr2bin(ipaddr)
   elif ip6re.match(ipaddr):
+    fam = socket.AF_INET6
     ipnum = bin2long6(inet_pton(ipaddr))
   else:
     raise ValueError('Invalid ip syntax:'+ipaddr)
@@ -96,6 +105,13 @@ def iniplist(ipaddr,iplist):
         n = 128
       if cidr(bin2long6(inet_pton(p[0])),n,MASK6) == cidr(ipnum,n,MASK6):
         return True
+    elif dnsre.match(p[0]):
+      try:
+        sfx = '/'.join(['']+p[1:])
+        addrlist = [r[4][0]+sfx for r in socket.getaddrinfo(p[0],25,fam)]
+        if iniplist(ipaddr,addrlist):
+          return True
+      except socket.gaierror: pass
     elif fnmatchcase(ipaddr,pat):
       return True
   return False
@@ -103,6 +119,7 @@ def iniplist(ipaddr,iplist):
 ## Split email into Fullname and address.
 # This replaces <code>email.Utils.parseaddr</code> but fixes
 # some <a href="http://bugs.python.org/issue1025395">tricky test cases</a>.
+# Additional tricky cases are still broken.  Patches welcome.
 #
 def parseaddr(t):
   """Split email into Fullname and address.
