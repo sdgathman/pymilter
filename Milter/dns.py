@@ -73,6 +73,7 @@ class Session(object):
     if name.endswith('.'): name = name[:-1]
     if not reduce(lambda x,y:x and 0 < len(y) < 64, name.split('.'),True):
         return []   # invalid DNS name (too long or empty)
+    name = name.lower()
     result = self.cache.get( (name, qtype) )
     cname = None
     if result: return result
@@ -96,7 +97,7 @@ class Session(object):
             #return result    # if too many == NX_DOMAIN
             raise DNSError('Length of CNAME chain exceeds %d' % MAX_CNAME)
         cnames[name] = cname
-        if cname in cnames:
+	if cname.lower().rstrip('.') in cnames:
             raise DNSError('CNAME loop')
         result = self.dns(cname, qtype, cnames=cnames)
         if result:
