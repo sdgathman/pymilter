@@ -101,7 +101,7 @@ def rejected_recipients(klass):
   return enable_protocols(klass,P_RCPT_REJ)
 
 ## Milter leading space on headers. A class decorator that calls
-# enable_protocols() with the P_HEAD_LEADSPC flag.  By default,
+# enable_protocols() with the P_HDR_LEADSPC flag.  By default,
 # header continuation lines are collected and joined before getting
 # sent to a milter.  Headers modified or added by the milter are
 # folded by the MTA as necessary according to its own standards.
@@ -119,7 +119,7 @@ def rejected_recipients(klass):
 # @param klass the %milter application class to modify
 # @return the modified %milter class
 def header_leading_space(klass):
-  return enable_protocols(klass,P_HEAD_LEADSPC)
+  return enable_protocols(klass,P_HDR_LEADSPC)
 
 ## Function decorator to disable callback methods.
 # If the MTA supports it, tells the MTA not to invoke this callback,

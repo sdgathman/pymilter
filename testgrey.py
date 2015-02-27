@@ -8,7 +8,8 @@ class GreylistTestCase(unittest.TestCase):
 
   def setUp(self):
     self.fname = 'test.db'
-    os.remove(self.fname)
+    if os.path.isfile(self.fname):
+      os.remove(self.fname)
 
   def tearDown(self):
     #os.remove(self.fname)
