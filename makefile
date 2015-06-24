@@ -1,7 +1,8 @@
 web:
 	doxygen
+	test -L doc/html/milter_api || ln -sf /usr/share/doc/sendmail-devel-* doc/html/milter_api
+	rsync -ravKk doc/html/ spidey2.bmsi.com:/Public/pymilter
 	cd doc/html; zip -r ../../doc .
-	rsync -ravK doc/html/ spidey2.bmsi.com:/Public/pymilter
 
 VERSION=1.0
 CVSTAG=pymilter-1_0

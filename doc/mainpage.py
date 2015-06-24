@@ -1,7 +1,7 @@
 ## @mainpage Writing Milters in Python
 #
 # At the lowest level, the <code>milter</code> module provides a thin wrapper
-# around the <a href="https://www.milter.org/developers/api/index"> sendmail
+# around the <a href="milter_api/index.html"> sendmail
 # libmilter API</a>.  This API lets you register callbacks for a number of
 # events in the process of sendmail receiving a message via SMTP.  These
 # events include the initial connection from a MTA, the envelope sender and
@@ -39,10 +39,10 @@
 # @section threading
 #
 # The libmilter library which pymilter wraps 
-# <a href="https://www.milter.org/developers/overview#SignalHandling">handles
+# <a href="milter_overview#SignalHandling">handles
 # all signals</a> itself, and expects to be called from a single main thread.
 # It handles SIGTERM, SIGHUP, and SIGINT, mapping the first two to 
-# <a href="https://www.milter.org/developers/api/smfi_stop">smfi_stop</a>
+# <a href="milter_api/smfi_stop.html">smfi_stop</a>
 # and the last to an internal ABORT.
 #
 # If you use python threads or threading modules, then signal handling gets

@@ -257,7 +257,7 @@ class Base(object):
   ## Defined by subclasses to write log messages.
   def log(self,*msg): pass
   ## Called for each connection to the MTA.  Called by the
-  # <a href="https://www.milter.org/developers/api/xxfi_connect">
+  # <a href="milter_api/xxfi_connect.html">
   # xxfi_connect</a> callback.  
   # The <code>hostname</code> provided by the local MTA is either
   # the PTR name or the IP in the form "[1.2.3.4]" if no PTR is available.
@@ -294,7 +294,7 @@ class Base(object):
   @nocallback
   def hello(self,hostname): return CONTINUE
   ## Called when the SMTP client says MAIL FROM. Called by the
-  # <a href="https://www.milter.org/developers/api/xxfi_envfrom">
+  # <a href="milter_api/xxfi_envfrom.html">
   # xxfi_envfrom</a> callback.  
   # Returning REJECT rejects the message, but not the connection.
   # The sender is the "envelope" from as defined by
@@ -305,7 +305,7 @@ class Base(object):
   @nocallback
   def envfrom(self,f,*str): return CONTINUE
   ## Called when the SMTP client says RCPT TO. Called by the
-  # <a href="https://www.milter.org/developers/api/xxfi_envrcpt">
+  # <a href="milter_api/xxfi_envrcpt.html">
   # xxfi_envrcpt</a> callback.
   # Returning REJECT rejects the current recipient, not the entire message.
   # The recipient is the "envelope" recipient as defined by 
@@ -371,7 +371,7 @@ class Base(object):
       return p
     
   ## Negotiate milter protocol options.  Called by the
-  # <a href="https://www.milter.org/developers/api/xxfi_negotiate">
+  # <a href="milter_api/xxfi_negotiate.html">
   # xffi_negotiate</a> callback.  This is an advanced callback,
   # do not override unless you know what you are doing.  Most
   # negotiation can be done simply by using the supplied 
@@ -402,7 +402,7 @@ class Base(object):
   ## Return the value of an MTA macro.  Sendmail macro names
   # are either single chars (e.g. "j") or multiple chars enclosed
   # in braces (e.g. "{auth_type}").  Macro names are MTA dependent.
-  # See <a href="https://www.milter.org/developers/api/smfi_getsymval">
+  # See <a href="milter_api/smfi_getsymval.html">
   # smfi_getsymval</a> for default sendmail macros.
   # @param sym the macro name
   def getsymval(self,sym):
@@ -416,7 +416,7 @@ class Base(object):
   # head scratching.  What will <i>really</i> irritate you, however,
   # is that if you carefully double any '%%', your message will be
   # sent - but with the '%%' still doubled!
-  # See <a href="https://www.milter.org/developers/api/smfi_setreply">
+  # See <a href="milter_api/smfi_setreply.html">
   # smfi_setreply</a> for more information.
   # @param rcode The three-digit (RFC 821/2821) SMTP reply code as a string. 
   # rcode cannot be None, and <b>must be a valid 4XX or 5XX reply code</b>.
@@ -459,7 +459,7 @@ class Base(object):
   # Milter methods which can only be called from eom callback.
 
   ## Add a mail header field.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_addheader">
+  # Calls <a href="milter_api/smfi_addheader.html">
   # smfi_addheader</a>.  
   # The <code>Milter.ADDHDRS</code> action flag must be set.
   #
@@ -473,7 +473,7 @@ class Base(object):
     return self._ctx.addheader(field,value,idx)
 
   ## Change the value of a mail header field.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_chgheader">
+  # Calls <a href="milter_api/smfi_chgheader.html">
   # smfi_chgheader</a>.  
   # The <code>Milter.CHGHDRS</code> action flag must be set.
   #
@@ -487,7 +487,7 @@ class Base(object):
     return self._ctx.chgheader(field,idx,value)
 
   ## Add a recipient to the message.  
-  # Calls <a href="https://www.milter.org/developers/api/smfi_addrcpt">
+  # Calls <a href="milter_api/smfi_addrcpt.html">
   # smfi_addrcpt</a>.  
   # If no corresponding mail header is added, this is like a Bcc.
   # The syntax of the recipient is the same as used in the SMTP
@@ -507,7 +507,7 @@ class Base(object):
         raise DisabledAction("ADDRCPT_PAR")
     return self._ctx.addrcpt(rcpt,params)
   ## Delete a recipient from the message.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_delrcpt">
+  # Calls <a href="milter_api/smfi_delrcpt.html">
   # smfi_delrcpt</a>.  
   # The recipient should match one passed to the envrcpt callback.
   # The <code>Milter.DELRCPT</code> action flag must be set.
@@ -520,7 +520,7 @@ class Base(object):
     return self._ctx.delrcpt(rcpt)
 
   ## Replace the message body.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_replacebody">
+  # Calls <a href="milter_api/smfi_replacebody.html">
   # smfi_replacebody</a>.  
   # The entire message body must be replaced.  
   # Call repeatedly with blocks of data until the entire body is transferred.
@@ -534,7 +534,7 @@ class Base(object):
     return self._ctx.replacebody(body)
 
   ## Change the SMTP envelope sender address.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_chgfrom">
+  # Calls <a href="milter_api/smfi_chgfrom.html">
   # smfi_chgfrom</a>.  
   # The syntax of the sender is that same as used in the SMTP
   # MAIL FROM command (and as delivered to the envfrom callback),
@@ -551,7 +551,7 @@ class Base(object):
     return self._ctx.chgfrom(sender,params)
 
   ## Quarantine the message.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_quarantine">
+  # Calls <a href="milter_api/smfi_quarantine.html">
   # smfi_quarantine</a>.  
   # When quarantined, a message goes into the mailq as if to be delivered,
   # but delivery is deferred until the message is unquarantined.
@@ -565,7 +565,7 @@ class Base(object):
     return self._ctx.quarantine(reason)
 
   ## Tell the MTA to wait a bit longer.
-  # Calls <a href="https://www.milter.org/developers/api/smfi_progress">
+  # Calls <a href="milter_api/smfi_progress.html">
   # smfi_progress</a>.  
   # Resets timeouts in the MTA that detect a "hung" milter.
   def progress(self):
