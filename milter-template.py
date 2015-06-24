@@ -1,6 +1,6 @@
 ## To roll your own milter, create a class that extends Milter.  
 #  See the pymilter project at http://bmsi.com/python/milter.html
-#  based on Sendmail's milter API http://www.milter.org/milter_api/api.html
+#  based on Sendmail's milter API 
 #  This code is open-source on the same terms as Python.
 
 ## Milter calls methods of your class at milter events.
