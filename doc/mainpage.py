@@ -50,4 +50,25 @@
 # You may find the
 # <a href="http://docs.python.org/release/2.6.6/library/multiprocessing.html">
 # multiprocessing</a> module useful.  It can be a drop-in
-# replacement for threading as illustrated in @ref milter-template.py.
+# replacement for threading as illustrated in 
+# <a href="milter-template_8py-example.html">milter-template.py</a>.
+#
+# @section Useful python packages for milters
+#
+# <a href="https://pypi.python.org/pypi/pyspf">pyspf</a> checks the
+# SMTP envelope sender (MAIL FROM, passed to the Milter.Base.envfrom callback)
+# against a Sender Policy published in DNS by the sending domain.  This
+# can prevent forgery of the MAIL FROM.  SPF is Sender Policy Framework.
+#
+# <a href="https://launchpad.net/dkimpy">pydkim</a> checks a DKIM signature
+# of the email body and headers against a public key published in DNS by
+# the signing domain.  DKIM is DomainKeys Identified Mail.
+#
+# The <a href="https://pypi.python.org/pypi/authres/">authres</a> module 
+# parses and formats the Authentication-Results email header, providing
+# a standard place to summarize the results from DKIM, SPF, rDNS, SMTP AUTH,
+# and other email authentication methods.
+#
+# <a href="https://pypi.python.org/pypi/pydspam/">pydspam</a> wraps 
+# the libdspam API of the <a href="http://dspam.sourceforge.net/">DSPAM</a>
+# project.
