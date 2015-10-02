@@ -38,6 +38,11 @@ class AddrCacheTestCase(unittest.TestCase):
     cache.load(self.fname,30)
     self.failUnless('spammer.com' in cache)
 
+  def testParseHeader(self):
+    s='=?UTF-8?B?TGFzdCBGZXcgQ29sZHBsYXkgQWxidW0gQXJ0d29ya3MgQXZhaWxhYmxlAA?='
+    h = Milter.utils.parse_header(s)
+    self.assertEqual(s,'Last Few Coldplay Album Artworks Available\x00')
+
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')
   s.addTest(doctest.DocTestSuite(Milter.utils))
