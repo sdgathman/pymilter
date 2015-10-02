@@ -6,8 +6,10 @@ import re
 import struct
 import socket
 import email.Errors
+import email.base64mime
 from fnmatch import fnmatchcase
 from email.Header import decode_header
+from binascii import a2b_base64
 #import email.Utils
 import rfc822
 
@@ -70,7 +72,7 @@ def iniplist(ipaddr,iplist):
   True
   >>> iniplist('4.2.2.2',['b.resolvers.Level3.net'])
   True
-  >>> iniplist('2607:f8b0:4004:801::',['google.com/64'])
+  >>> iniplist('2607:f8b0:4004:801::',['google.com/40'])
   True
   >>> iniplist('4.2.2.2',['nothing.example.com'])
   False
@@ -157,7 +159,17 @@ def parseaddr(t):
         addrspec = addrspec[pos1+1:]
       return rfc822.parseaddr('%s<%s>' % (t[:pos].strip(),addrspec))
   return res
+
+## Fix email.base64mime.decode to add any missing padding
+def decode(s, convert_eols=None):
+  if not s: return s
+  while len(s) % 4: s += '='	# add missing padding
+  dec = a2b_base64(s)
+  if convert_eols:
+      return dec.replace(CRLF, convert_eols)
+  return dec
     
+email.base64mime.decode = decode
 
 def parse_addr(t):
   """Split email into user,domain.
@@ -208,7 +220,7 @@ def parse_header(val):
       else:
         u.append(unicode(s))
     u = ''.join(u)
-    for enc in ('us-ascii','iso-8859-1','utf8'):
+    for enc in ('us-ascii','iso-8859-1','utf-8'):
       try:
         return u.encode(enc)
       except UnicodeError: continue
