@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 # A simple milter.
 
 # Author: Stuart D. Gathman <stuart@bmsi.com>
