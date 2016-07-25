@@ -21,9 +21,9 @@ class sampleMilter(Milter.Milter):
   "Milter to replace attachments poisonous to Windows with a WARNING message."
 
   def log(self,*msg):
-    print "%s [%d]" % (strftime('%Y%b%d %H:%M:%S'),self.id),
-    for i in msg: print i,
-    print
+    print("%s [%d]" % (strftime('%Y%b%d %H:%M:%S'),self.id), end=' ')
+    for i in msg: print(i, end=' ')
+    print()
 
   def __init__(self):
     self.tempname = None
@@ -171,13 +171,13 @@ if __name__ == "__main__":
   socketname = os.getenv("HOME") + "/pythonsock"
   Milter.factory = sampleMilter
   Milter.set_flags(Milter.CHGBODY + Milter.CHGHDRS + Milter.ADDHDRS)
-  print """To use this with sendmail, add the following to sendmail.cf:
+  print("""To use this with sendmail, add the following to sendmail.cf:
 
 O InputMailFilters=pythonfilter
 Xpythonfilter,        S=local:%s
 
 See the sendmail README for libmilter.
-sample  milter startup""" % socketname
+sample  milter startup""" % socketname)
   sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,240)
-  print "sample milter shutdown"
+  print("sample milter shutdown")
