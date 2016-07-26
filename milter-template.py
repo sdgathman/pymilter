@@ -136,7 +136,8 @@ def background():
         end=None)
     # 2005Oct13 02:34:11 [1] msg1 msg2 msg3 ...
     for i in msg: print(i,end=None)
-    print(flush=True)
+    print()
+    sys.stdout.flush()
 
 ## ===
     
@@ -151,7 +152,8 @@ def main():
   flags += Milter.ADDRCPT
   flags += Milter.DELRCPT
   Milter.set_flags(flags)       # tell Sendmail which features we use
-  print("%s milter startup" % time.strftime('%Y%b%d %H:%M:%S'),flush=True)
+  print("%s milter startup" % time.strftime('%Y%b%d %H:%M:%S'))
+  sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,timeout)
   logq.put(None)
   bt.join()

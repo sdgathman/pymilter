@@ -37,7 +37,7 @@ class TestBase(object):
 
   def log(self,*msg):
     for i in msg: print(i,file=self.logfp,end=None)
-    print(file=self.logfp,flush=True)
+    print(file=self.logfp)
 
   ## Set a macro value.
   # These are retrieved by the %milter with getsymval.

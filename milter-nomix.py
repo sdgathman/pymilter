@@ -2,6 +2,7 @@
 # Internal is defined as using one of a list of internal top level domains.
 #  This code is open-source on the same terms as Python.
 
+from __future__ import print_function
 import Milter
 import time
 import sys
@@ -68,12 +69,12 @@ def main():
   timeout = 600
   # Register to have the Milter factory create instances of your class:
   Milter.factory = NoMixMilter
-  print "%s milter startup" % time.strftime('%Y%b%d %H:%M:%S')
+  print("%s milter startup" % time.strftime('%Y%b%d %H:%M:%S'))
   sys.stdout.flush()
   Milter.runmilter("nomixfilter",socketname,timeout)
   logq.put(None)
   bt.join()
-  print "%s nomix milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
+  print("%s nomix milter shutdown" % time.strftime('%Y%b%d %H:%M:%S'))
 
 if __name__ == "__main__":
   main()

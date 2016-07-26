@@ -26,6 +26,7 @@
 # Revision 1.20  2004/11/20 16:38:17  stuart
 # Add rcs log
 #
+from __future__ import print_function
 import unittest
 import mime
 import socket
@@ -188,7 +189,7 @@ class MimeTestCase(unittest.TestCase):
     script = "<script lang=javascript> Dangerous script </script>"
     filter.feed(msg + script)
     filter.close()
-    #print result.getvalue()
+    #print(result.getvalue())
     self.failUnless(result.getvalue() == msg + filter.msg)
 
 def suite(): return unittest.makeSuite(MimeTestCase,'test')
@@ -201,4 +202,4 @@ if __name__ == '__main__':
       fp = open(fname,'r')
       msg = mime.message_from_file(fp)
       mime.defang(msg,scan_zip=True)
-      print msg.as_string()
+      print(msg.as_string())

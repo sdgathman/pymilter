@@ -23,7 +23,7 @@ class sampleMilter(Milter.Milter):
   def log(self,*msg):
     print("%s [%d]" % (strftime('%Y%b%d %H:%M:%S'),self.id),end=None)
     for i in msg: print(i,end=None)
-    print(flush=True)
+    print()
 
   def __init__(self):
     self.tempname = None
@@ -177,6 +177,7 @@ O InputMailFilters=pythonfilter
 Xpythonfilter,        S=local:%s
 
 See the sendmail README for libmilter.
-sample  milter startup""" % socketname,flush=True)
+sample  milter startup""" % socketname)
+  sys.stdout.flush()
   Milter.runmilter("pythonfilter",socketname,240)
   print("sample milter shutdown")
