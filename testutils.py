@@ -11,7 +11,8 @@ class AddrCacheTestCase(unittest.TestCase):
     self.fname = 'test.dat'
 
   def tearDown(self):
-    os.remove(self.fname)
+    if os.path.exists(self.fname):
+      os.remove(self.fname)
 
   def testAdd(self):
     cache = AddrCache(fname=self.fname)
