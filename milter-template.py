@@ -9,7 +9,10 @@
 
 from __future__ import print_function
 import Milter
-import StringIO
+try:
+  from StringIO import StringIO
+except:
+  from io import StringIO
 import time
 import email
 import sys
@@ -75,7 +78,7 @@ class myMilter(Milter.Base):
     # NOTE: self.fp is only an *internal* copy of message data.  You
     # must use addheader, chgheader, replacebody to change the message
     # on the MTA.
-    self.fp = StringIO.StringIO()
+    self.fp = StringIO()
     self.canon_from = '@'.join(parse_addr(mailfrom))
     self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
     return Milter.CONTINUE

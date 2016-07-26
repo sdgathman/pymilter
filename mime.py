@@ -94,7 +94,10 @@
 # This code is under the GNU General Public License.  See COPYING for details.
 
 from __future__ import print_function
-import StringIO
+try:
+  from StringIO import StringIO
+except:
+  from io import StringIO
 import socket
 import Milter
 import zipfile
@@ -113,7 +116,7 @@ from types import ListType,StringType
 ## Return a list of filenames in a zip file.
 # Embedded zip files are recursively expanded.
 def zipnames(txt):
-  fp =  StringIO.StringIO(txt)
+  fp =  StringIO(txt)
   zipf = zipfile.ZipFile(fp,'r')
   names = []
   for nm in zipf.namelist():
@@ -241,7 +244,7 @@ class MimeMessage(Message):
 
   def as_string(self, unixfrom=False):
       "Return the entire formatted message as a string."
-      fp = StringIO.StringIO()
+      fp = StringIO()
       self.dump(fp,unixfrom=unixfrom)
       return fp.getvalue()
 
@@ -503,7 +506,7 @@ def check_html(msg,savname=None):
       if name and name.lower().endswith(".htm"):
         msgtype = 'text/html'
   if msgtype == 'text/html':
-    out = StringIO.StringIO()
+    out = StringIO()
     htmlfilter = HTMLScriptFilter(out)
     try:
       htmlfilter.write(msg.get_payload(decode=True))

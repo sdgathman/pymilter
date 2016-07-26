@@ -30,7 +30,10 @@ from __future__ import print_function
 import unittest
 import mime
 import socket
-import StringIO
+try:
+  from StringIO import StringIO
+except:
+  from io import StringIO
 import email
 import sys
 import Milter
@@ -180,7 +183,7 @@ class MimeTestCase(unittest.TestCase):
     self.assertEquals(rc,Milter.CONTINUE)
 
   def testHTML(self,fname=""):
-    result = StringIO.StringIO()
+    result = StringIO()
     filter = mime.HTMLScriptFilter(result)
     msg = """<! Illegal declaration used as comment>
       <![if conditional]> Optional SGML <![endif]>

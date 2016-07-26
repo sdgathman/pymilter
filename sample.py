@@ -7,7 +7,10 @@ from __future__ import print_function
 
 import sys
 import os
-import StringIO
+try:
+  from StringIO import StringIO
+except:
+  from io import StringIO
 import rfc822
 import mime
 import Milter
@@ -39,7 +42,7 @@ class sampleMilter(Milter.Milter):
   def envfrom(self,f,*str):
     "start of MAIL transaction"
     self.log("mail from",f,str)
-    self.fp = StringIO.StringIO()
+    self.fp = StringIO()
     self.tempname = None
     self.mailfrom = f
     self.bodysize = 0

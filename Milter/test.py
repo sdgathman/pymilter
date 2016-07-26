@@ -3,7 +3,10 @@
 
 from __future__ import print_function
 import rfc822
-import StringIO
+try:
+  from StringIO import StringIO
+except:
+  from io import StringIO
 import Milter
 
 Milter.NOREPLY = Milter.CONTINUE
@@ -152,14 +155,14 @@ class TestBase(object):
       rc = self.body(buf)
       if rc != Milter.CONTINUE: return rc
     self._msg = msg
-    self._body = StringIO.StringIO()
+    self._body = StringIO()
     rc = self.eom()
     if self._bodyreplaced:
       body = self._body.getvalue()
     else:
       msg.rewindbody()
       body = msg.fp.read()
-    self._body = StringIO.StringIO()
+    self._body = StringIO()
     self._body.writelines(msg.headers)
     self._body.write('\n')
     self._body.write(body)
