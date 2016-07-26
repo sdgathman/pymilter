@@ -72,7 +72,7 @@ class MimeTestCase(unittest.TestCase):
       # python 2.4 doesn't get exceptions on missing boundaries, and
       # if message is modified, output is readable by mail clients
       if sys.hexversion < 0x02040000:
-	self.fail('should get boundary error parsing bad rfc822 attachment')
+        self.fail('should get boundary error parsing bad rfc822 attachment')
     except Errors.BoundaryError:
       pass
   
@@ -201,4 +201,4 @@ if __name__ == '__main__':
       fp = open(fname,'r')
       msg = mime.message_from_file(fp)
       mime.defang(msg,scan_zip=True)
-      print msg.as_string()
+      print(msg.as_string())

@@ -569,9 +569,9 @@ class Milter(Base):
 
   ## Provide simple logging to sys.stdout
   def log(self,*msg):
-    print 'Milter:',
-    for i in msg: print i,
-    print
+    print('Milter:',end=None)
+    for i in msg: print(i,end=None)
+    print()
 
   @noreply
   def connect(self,hostname,family,hostaddr):
