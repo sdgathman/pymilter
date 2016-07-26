@@ -218,8 +218,8 @@ def parse_header(val):
 	except LookupError:
 	  u.append(unicode(s))
       else:
-	u.append(unicode(s))
-    u = ''.join(u)
+        u.append(unicode(s))
+    u = u''.join(u)
     for enc in ('us-ascii','iso-8859-1','utf-8'):
       try:
 	return u.encode(enc)
