@@ -11,7 +11,8 @@ class AddrCacheTestCase(unittest.TestCase):
     self.fname = 'test.dat'
 
   def tearDown(self):
-    os.remove(self.fname)
+    if os.path.exists(self.fname):
+      os.remove(self.fname)
 
   def testAdd(self):
     cache = AddrCache(fname=self.fname)
@@ -41,7 +42,7 @@ class AddrCacheTestCase(unittest.TestCase):
   def testParseHeader(self):
     s='=?UTF-8?B?TGFzdCBGZXcgQ29sZHBsYXkgQWxidW0gQXJ0d29ya3MgQXZhaWxhYmxlAA?='
     h = Milter.utils.parse_header(s)
-    self.assertEqual(s,'Last Few Coldplay Album Artworks Available\x00')
+    self.assertEqual(h,'Last Few Coldplay Album Artworks Available\x00')
 
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')
