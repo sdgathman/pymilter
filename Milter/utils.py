@@ -219,7 +219,7 @@ def parse_header(val):
           u.append(unicode(s))
       else:
         u.append(unicode(s))
-    u = ''.join(u)
+    u = u''.join(u)
     for enc in ('us-ascii','iso-8859-1','utf-8'):
       try:
         return u.encode(enc)
