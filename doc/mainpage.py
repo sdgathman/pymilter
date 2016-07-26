@@ -72,3 +72,15 @@
 # <a href="https://pypi.python.org/pypi/pydspam/">pydspam</a> wraps 
 # the libdspam API of the <a href="http://dspam.sourceforge.net/">DSPAM</a>
 # project.
+#
+# @section Milters written with pymilter
+#
+# <a href="https://github.com/croessner/vrfydmn">Verify Domain</a> is a
+# Postfix milter that rejects/fixes manipulated From: header
+# on a mail host with multiple virtual domains.
+#
+# <a href="https://pypi.python.org/pypi/milter/">BMS Milter</a> has several
+# milters, a big complicated spam filter that integrates multiple
+# authentication protocols with pydpsm, and two simple ones: spfmilter.py and
+# dkim-milter.py.
+#
