@@ -93,6 +93,7 @@
 # Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
+from __future__ import print_function
 import StringIO
 import socket
 import Milter
@@ -532,7 +533,7 @@ if __name__ == '__main__':
   def _list_attach(msg):
     t = msg.get_content_type()
     p = msg.get_payload(decode=True)
-    print msg.get_filename(),msg.get_content_type(),type(p)
+    print(msg.get_filename(),msg.get_content_type(),type(p))
     msg = msg.get_submsg()
     if isinstance(msg,Message):
       return check_attachments(msg,_list_attach)

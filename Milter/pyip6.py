@@ -6,6 +6,7 @@ This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
 """
+from __future__ import print_function
 import struct
 #from spf import RE_IP4 
 import re
@@ -80,7 +81,7 @@ def inet_pton(p):
   (0, 0, 0, 0, 0, 65535, 258, 772)
 
   >>> try: inet_pton('::1.2.3.4.5')
-  ... except ValueError,x: print x
+  ... except ValueError,x: print(x)
   ::1.2.3.4.5
   """
   if p == '::':

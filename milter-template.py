@@ -7,6 +7,7 @@
 ## Return REJECT,TEMPFAIL,ACCEPT to short circuit processing for a message.
 ## You can also add/del recipients, replacebody, add/del headers, etc.
 
+from __future__ import print_function
 import Milter
 import StringIO
 import time
@@ -131,10 +132,11 @@ def background():
     t = logq.get()
     if not t: break
     msg,id,ts = t
-    print "%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S',time.localtime(ts)),id),
+    print("%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S',time.localtime(ts)),id),
+        end=None)
     # 2005Oct13 02:34:11 [1] msg1 msg2 msg3 ...
-    for i in msg: print i,
-    print
+    for i in msg: print(i,end=None)
+    print(flush=True)
 
 ## ===
     
@@ -149,12 +151,11 @@ def main():
   flags += Milter.ADDRCPT
   flags += Milter.DELRCPT
   Milter.set_flags(flags)       # tell Sendmail which features we use
-  print "%s milter startup" % time.strftime('%Y%b%d %H:%M:%S')
-  sys.stdout.flush()
+  print("%s milter startup" % time.strftime('%Y%b%d %H:%M:%S'),flush=True)
   Milter.runmilter("pythonfilter",socketname,timeout)
   logq.put(None)
   bt.join()
-  print "%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S')
+  print("%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S'))
 
 if __name__ == "__main__":
   main()

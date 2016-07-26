@@ -1,6 +1,7 @@
 ## @package Milter.test
 # A test framework for milters
 
+from __future__ import print_function
 import rfc822
 import StringIO
 import Milter
@@ -35,8 +36,8 @@ class TestBase(object):
     self._symlist = [ None, None, None, None, None, None, None ]
 
   def log(self,*msg):
-    for i in msg: print >>self.logfp, i,
-    print >>self.logfp
+    for i in msg: print(i,file=self.logfp,end=None)
+    print(file=self.logfp,flush=True)
 
   ## Set a macro value.
   # These are retrieved by the %milter with getsymval.

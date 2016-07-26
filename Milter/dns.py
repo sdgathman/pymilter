@@ -1,6 +1,7 @@
 ## @package Milter.dns
 # Provide a higher level interface to pydns.
 
+from __future__ import print_function
 import DNS
 from DNS import DNSError
 
@@ -120,5 +121,5 @@ if __name__ == '__main__':
   import sys
   s = Session()
   for n,t in zip(*[iter(sys.argv[1:])]*2):
-    print n,t
-    print s.dns(n,t)
+    print(n,t)
+    print(s.dns(n,t))

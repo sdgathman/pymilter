@@ -69,6 +69,7 @@
 # a DSN or use a null MAIL FROM with an email address obtained from
 # anywhere else.
 #
+from __future__ import print_function
 import smtplib
 import socket
 from email.Message import Message
@@ -230,6 +231,6 @@ Subject: Test
 Test DSN template
 """
   )
-  print msg.as_string()
-  # print send_dsn(f,msg.as_string())
-  # print send_dsn(q.s,'mail.example.com',msg.as_string())
+  print(msg.as_string())
+  # print(send_dsn(f,msg.as_string()))
+  # print(send_dsn(q.s,'mail.example.com',msg.as_string()))

@@ -8,6 +8,7 @@
 # Copyright 2001,2009 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
+from __future__ import print_function
 __version__ = '0.9.8'
 
 import os
@@ -365,7 +366,7 @@ class Base(object):
       for func,(nr,nc) in OPTIONAL_CALLBACKS.items():
         func = getattr(klass,func)
         ca = getattr(func,'milter_protocol',0)
-        #print func,hex(nr),hex(nc),hex(ca)
+        #print(func,hex(nr),hex(nc),hex(ca))
         p |= (nr|nc) & ~ca
       klass._protocol_mask = p
       return p
@@ -579,9 +580,9 @@ class Milter(Base):
 
   ## Provide simple logging to sys.stdout
   def log(self,*msg):
-    print 'Milter:',
-    for i in msg: print i,
-    print
+    print('Milter:',end=None)
+    for i in msg: print(i,end=None)
+    print()
 
   @noreply
   def connect(self,hostname,family,hostaddr):

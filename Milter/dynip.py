@@ -9,6 +9,7 @@
 # wiley-268-8196.roadrunner.nf.net at ('205.251.174.46', 4810)
 # cbl-sd-02-79.aster.com.do at ('200.88.62.79', 4153)
 
+from __future__ import print_function
 import re
 
 ip3 = re.compile('[0-9]{1,3}')
@@ -91,6 +92,6 @@ if __name__ == '__main__':
       if ip in seen: continue
       seen.add(ip)
       if is_dynip(host,ip):
-        print '%s\t%s DYN' % (ip,host)
+        print('%s\t%s DYN' % (ip,host))
       else:
-        print '%s\t%s' % (ip,host)
+        print('%s\t%s' % (ip,host))

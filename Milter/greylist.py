@@ -1,3 +1,4 @@
+from __future__ import print_function
 import time
 import shelve
 import thread
@@ -58,7 +59,7 @@ class Greylist(object):
     cnt = 0
     dbp = self.dbp
     for key, r in dbp.iteritems():
-      #print key,r,time.ctime(now)
+      #print(key,r,time.ctime(now))
       if now > r.lastseen + self.greylist_retain:
         self.lock.acquire()
         try:

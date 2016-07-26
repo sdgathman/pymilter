@@ -46,6 +46,7 @@
 # Copyright 2001,2002,2003,2004,2005 Business Management Systems, Inc.
 # This code is under the GNU General Public License.  See COPYING for details.
 
+from __future__ import print_function
 import time
 from plock import PLock
 
@@ -147,7 +148,8 @@ class AddrCache(object):
       if not ts: return		# already permanent
     self.cache[lsender] = (None,res)
     if not res:
-      print >>open(self.fname,'a'),sender
+      with open(self.fname,'a') as fp:
+        print(sender,file=fp)
     
   def __setitem__(self,sender,res):
     lsender = sender.lower()
@@ -155,7 +157,8 @@ class AddrCache(object):
     self.cache[lsender] = (now,res)
     if not res and self.fname:
       s = time.strftime(AddrCache.time_format,time.localtime(now))
-      print >>open(self.fname,'a'),sender,s # log refreshed senders
+      with open(self.fname,'a') as fp:
+        print(sender,s,file=fp) # log refreshed senders
 
   def __len__(self):
     return len(self.cache)

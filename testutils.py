@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 import doctest
 import os
@@ -32,9 +33,8 @@ class AddrCacheTestCase(unittest.TestCase):
     self.failUnless(not cache['temp@bar.com'])
 
   def testDomain(self):
-    fp = open(self.fname,'w')
-    print >>fp,'spammer.com'
-    fp.close()
+    with open(self.fname,'w') as fp:
+      print('spammer.com',file=fp)
     cache = AddrCache(fname=self.fname)
     cache.load(self.fname,30)
     self.failUnless('spammer.com' in cache)
