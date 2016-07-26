@@ -1,4 +1,7 @@
 # $Log$
+# Revision 1.5  2011/06/09 17:27:42  customdesigned
+# Documentation updates.
+#
 # Revision 1.4  2005/07/20 14:49:44  customdesigned
 # Handle corrupt and empty ZIP files.
 #
@@ -170,7 +173,7 @@ class MimeTestCase(unittest.TestCase):
     msg = mime.message_from_file(open('test/'+fname,'r'))
     mime.defang(msg,scan_zip=True)
     self.failIf(msg.ismodified())
-    msg = mime.message_from_file(open('test/tmpytgcE5.fail','r'))
+    msg = mime.message_from_file(open('test/test2','r'))
     rc = mime.check_attachments(msg,self._chk_attach)
     self.assertEquals(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
     self.assertEquals(rc,Milter.CONTINUE)
