@@ -32,6 +32,8 @@ class TestBase(object):
     self._bodyreplaced = False
     ## True if the %milter changed any headers.
     self._headerschanged = False
+    ## True if the %milter changed the envelope from.
+    self._envfromchanged = False
     ## Reply codes and messages set by the %milter
     self._reply = None
     ## The rfc822 message object for the current email being fed to the %milter.
@@ -59,6 +61,12 @@ class TestBase(object):
       self._bodyreplaced = True
     else:
       raise IOError,"replacebody not called from eom()"
+
+  def chgfrom(self,sender,params=None):
+    if not self._body:
+      raise IOError,"chgheader not called from eom()"
+    self.log('chgfrom: sender=%s' % (sender))
+    self._envfromchanged = True
 
   # FIXME: rfc822 indexing does not really reflect the way chg/add header
   # work for a %milter
