@@ -64,9 +64,10 @@ class TestBase(object):
 
   def chgfrom(self,sender,params=None):
     if not self._body:
-      raise IOError,"chgheader not called from eom()"
+      raise IOError,"chgfrom not called from eom()"
     self.log('chgfrom: sender=%s' % (sender))
     self._envfromchanged = True
+    self._sender = sender
 
   # FIXME: rfc822 indexing does not really reflect the way chg/add header
   # work for a %milter
@@ -131,8 +132,9 @@ class TestBase(object):
     self._bodyreplaced = False
     self._headerschanged = False
     self._reply = None
+    self._sender = '<%s>'%sender
     msg = rfc822.Message(fp)
-    rc = self.envfrom('<%s>'%sender)
+    rc = self.envfrom(self._sender)
     if rc != Milter.CONTINUE: return rc
     for rcpt in (rcpt,) + rcpts:
       rc = self.envrcpt('<%s>'%rcpt)
