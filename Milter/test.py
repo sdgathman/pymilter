@@ -20,6 +20,8 @@ class TestBase(object):
   def __init__(self,logfile='test/milter.log'):
     self._protocol = 0
     self.logfp = open(logfile,"a")
+    ## The MAIL FROM for the current email being fed to the %milter
+    self._sender = None
     ## List of recipients deleted
     self._delrcpt = []
     ## List of recipients added
