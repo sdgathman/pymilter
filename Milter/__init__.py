@@ -9,7 +9,7 @@
 # This code is under the GNU General Public License.  See COPYING for details.
 
 from __future__ import print_function
-__version__ = '0.9.8'
+__version__ = '1.0.1'
 
 import os
 import re

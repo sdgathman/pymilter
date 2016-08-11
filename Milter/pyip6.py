@@ -81,7 +81,7 @@ def inet_pton(p):
   (0, 0, 0, 0, 0, 65535, 258, 772)
 
   >>> try: inet_pton('::1.2.3.4.5')
-  ... except ValueError,x: print(x)
+  ... except ValueError as x: print(x)
   ::1.2.3.4.5
   """
   if p == '::':
@@ -115,4 +115,4 @@ def inet_pton(p):
         return struct.pack('!HHHHHHHH',
 	    *[int(s,16) for s in a[0].split(':')])
   except ValueError: pass
-  raise ValueError,p
+  raise ValueError(p)

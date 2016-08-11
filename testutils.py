@@ -5,6 +5,7 @@ import os
 import Milter.utils
 from Milter.cache import AddrCache
 from Milter.dynip import is_dynip
+from Milter.pyip6 import inet_ntop
 
 class AddrCacheTestCase(unittest.TestCase):
 
@@ -48,6 +49,7 @@ def suite():
   s = unittest.makeSuite(AddrCacheTestCase,'test')
   s.addTest(doctest.DocTestSuite(Milter.utils))
   s.addTest(doctest.DocTestSuite(Milter.dynip))
+  s.addTest(doctest.DocTestSuite(Milter.pyip6))
   return s
 
 if __name__ == '__main__':

@@ -1,0 +1,4 @@
+*.pyc
+build/
+test/*.out
+test/*.tstout
