@@ -71,6 +71,14 @@ class TestBase(object):
     self._envfromchanged = True
     self._sender = sender
 
+  # TODO: write implement quaratine()
+  def quarantine(self,reason):
+    raise NotImplemented
+
+  # TODO: write implement progress()
+  def progress(self):
+    raise NotImplemented
+
   # FIXME: rfc822 indexing does not really reflect the way chg/add header
   # work for a %milter
   def chgheader(self,field,idx,value):
