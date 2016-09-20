@@ -1,5 +1,5 @@
-%define __python python2.6
-%define pythonbase python
+%define pythonbase python3
+%define __python python3
 
 %define libdir %{_libdir}/pymilter
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
@@ -10,8 +10,8 @@ Version: 1.1
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 Source1: pymilter.te
-# Patch miltermodule to python3
-# FIXME: replace with reverse patch at some point (make py3 the default)
+# Patch miltermodule to be python3
+# FIXME: replace with reverse at some point
 Patch: milter.patch
 License: GPLv2+
 Group: Development/Libraries
@@ -41,6 +41,7 @@ SELinux policy module for using pymilter with sendmail with selinux enforcing
 
 %prep
 %setup -q -n pymilter-%{version}
+%patch -b .py3
 cp %{SOURCE1} pymilter.te
 
 %build
