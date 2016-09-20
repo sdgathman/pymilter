@@ -158,14 +158,3 @@ index aa10a08..af9a144 100644
     setitem(d,"TEMPFAIL",  SMFIS_TEMPFAIL);
 +   return m;
  }
-diff --git a/setup.cfg b/setup.cfg
-index 123f837..96821bb 100644
---- a/setup.cfg
-+++ b/setup.cfg
-@@ -1,5 +1,5 @@
- [bdist_rpm]
--python=python2
-+python=python3
- doc_files=README NEWS TODO COPYING CREDITS
- packager=Stuart D. Gathman <stuart@gathman.org>
- release=1

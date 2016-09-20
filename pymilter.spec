@@ -34,7 +34,7 @@ DSNs, and doing CBV.
 Summary: SELinux policy module for pymilter
 Group: System Environment/Base
 Requires: policycoreutils, selinux-policy, %{name}
-BuildRequires: policycoreutils, checkpolicy
+BuildRequires: policycoreutils, checkpolicy, policycoreutils-python-utils
 
 %description selinux
 SELinux policy module for using pymilter with sendmail with selinux enforcing
