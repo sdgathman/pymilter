@@ -14,7 +14,11 @@ __version__ = '1.0.1'
 import os
 import re
 import milter
-import thread
+try:
+  import thread
+except:
+  # libmilter uses posix threads
+  import _thread as thread
 
 from milter import *
 from functools import wraps
