@@ -14,7 +14,7 @@ internal_tlds = ["corp", "personal"]
 # True if internal, False otherwise
 def is_internal(hostname):
     components = hostname.split(".")
-    return components.pop() in internal_tlds:
+    return components.pop() in internal_tlds
 
 # Determine if internal and external hosts are mixed based on a list
 # of hostnames

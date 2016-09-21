@@ -98,7 +98,7 @@ class Session(object):
             #return result    # if too many == NX_DOMAIN
             raise DNSError('Length of CNAME chain exceeds %d' % MAX_CNAME)
         cnames[name] = cname
-	if cname.lower().rstrip('.') in cnames:
+        if cname.lower().rstrip('.') in cnames:
             raise DNSError('CNAME loop')
         result = self.dns(cname, qtype, cnames=cnames)
         if result:
