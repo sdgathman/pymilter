@@ -22,9 +22,11 @@ Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 Url: http://www.bmsi.com/python/milter.html
 # python-2.6.4 gets RuntimeError: not holding the import lock
-Requires: %{pythonbase} >= 2.6.5, sendmail >= 8.13
+Requires: %{pythonbase} >= 2.6.5, sendmail-milter >= 8.13
+%if 0%{?fedora} >= 23
 # Need python2.6 specific pydns, not the version for system python
-Requires: %{pythonbase}-pydns
+Recommends: %{pythonbase}-pydns
+%endif
 # Needed for callbacks, not a core function but highly useful for milters
 BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
 
