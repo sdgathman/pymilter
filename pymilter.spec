@@ -12,7 +12,7 @@ Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
 Version: 1.0.1
 Release: 1%{dist}
-Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
+Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
 Source1: pymilter.te
 # Patch miltermodule to python3
 # FIXME: replace with reverse patch at some point (make py3 the default)
