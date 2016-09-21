@@ -2,7 +2,7 @@
 # A test framework for milters
 
 from __future__ import print_function
-import rfc822
+import mime
 try:
   from StringIO import StringIO
 except:
@@ -62,11 +62,11 @@ class TestBase(object):
       self._body.write(chunk)
       self._bodyreplaced = True
     else:
-      raise IOError,"replacebody not called from eom()"
+      raise IOError("replacebody not called from eom()")
 
   def chgfrom(self,sender,params=None):
     if not self._body:
-      raise IOError,"chgfrom not called from eom()"
+      raise IOError("chgfrom not called from eom()")
     self.log('chgfrom: sender=%s' % (sender))
     self._envfromchanged = True
     self._sender = sender
@@ -83,7 +83,7 @@ class TestBase(object):
   # work for a %milter
   def chgheader(self,field,idx,value):
     if not self._body:
-      raise IOError,"chgheader not called from eom()"
+      raise IOError("chgheader not called from eom()")
     self.log('chgheader: %s[%d]=%s' % (field,idx,value))
     if value == '':
       del self._msg[field]
@@ -93,19 +93,19 @@ class TestBase(object):
 
   def addheader(self,field,value,idx=-1):
     if not self._body:
-      raise IOError,"addheader not called from eom()"
+      raise IOError("addheader not called from eom()")
     self.log('addheader: %s=%s' % (field,value))
     self._msg[field] = value
     self._headerschanged = True
 
   def delrcpt(self,rcpt):
     if not self._body:
-      raise IOError,"delrcpt not called from eom()"
+      raise IOError("delrcpt not called from eom()")
     self._delrcpt.append(rcpt)
 
   def addrcpt(self,rcpt):
     if not self._body:
-      raise IOError,"addrcpt not called from eom()"
+      raise IOError("addrcpt not called from eom()")
     self._addrcpt.append(rcpt)
 
   ## Save the reply codes and messages in self._reply.
@@ -143,34 +143,21 @@ class TestBase(object):
     self._headerschanged = False
     self._reply = None
     self._sender = '<%s>'%sender
-    msg = rfc822.Message(fp)
+    msg = mime.message_from_file(fp)
     rc = self.envfrom(self._sender)
     if rc != Milter.CONTINUE: return rc
     for rcpt in (rcpt,) + rcpts:
       rc = self.envrcpt('<%s>'%rcpt)
       if rc != Milter.CONTINUE: return rc
-    line = None
-    for h in msg.headers:
-      if h[:1].isspace():
-        line = line + h
-        continue
-      if not line:
-        line = h
-        continue
-      s = line.split(': ',1)
-      if len(s) > 1: val = s[1].strip()
-      else: val = ''
-      rc = self.header(s[0],val)
-      if rc != Milter.CONTINUE: return rc
-      line = h
-    if line:
-      s = line.split(': ',1)
-      rc = self.header(s[0],s[1])
+    for h,val in msg.items():
+      rc = self.header(h,val)
       if rc != Milter.CONTINUE: return rc
     rc = self.eoh()
     if rc != Milter.CONTINUE: return rc
+    header,body = msg.as_bytes().split(b'\n\n',1)
+    bfp = StringIO(body)
     while 1:
-      buf = fp.read(8192)
+      buf = bfp.read(8192)
       if len(buf) == 0: break
       rc = self.body(buf)
       if rc != Milter.CONTINUE: return rc
@@ -179,12 +166,9 @@ class TestBase(object):
     rc = self.eom()
     if self._bodyreplaced:
       body = self._body.getvalue()
-    else:
-      msg.rewindbody()
-      body = msg.fp.read()
     self._body = StringIO()
-    self._body.writelines(msg.headers)
-    self._body.write('\n')
+    self._body.write(header)
+    self._body.write('\n\n')
     self._body.write(body)
     return rc
 

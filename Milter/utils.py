@@ -5,13 +5,11 @@
 import re
 import struct
 import socket
-import email.Errors
+import email.errors
+from email.header import decode_header
 import email.base64mime
 from fnmatch import fnmatchcase
-from email.Header import decode_header
 from binascii import a2b_base64
-#import email.Utils
-import rfc822
 
 dnsre = re.compile(r'^[a-z][-a-z\d.]+$', re.IGNORECASE)
 PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
@@ -56,8 +54,8 @@ if hasattr(socket,'has_ipv6') and socket.has_ipv6:
 else:
     from pyip6 import inet_ntop, inet_pton
 
-MASK = 0xFFFFFFFFL
-MASK6 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFL
+MASK = 0xFFFFFFFF
+MASK6 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 def cidr(i,n,mask=MASK):
   return ~(mask >> n) & mask & i
@@ -119,7 +117,7 @@ def iniplist(ipaddr,iplist):
   return False
 
 ## Split email into Fullname and address.
-# This replaces <code>email.Utils.parseaddr</code> but fixes
+# This replaces <code>email.utils.parseaddr</code> but fixes
 # some <a href="http://bugs.python.org/issue1025395">tricky test cases</a>.
 # Additional tricky cases are still broken.  Patches welcome.
 #
@@ -139,8 +137,8 @@ def parseaddr(t):
   >>> parseaddr('a(WRONG)@b')
   ('WRONG', 'a@b')
   """
-  #return email.Utils.parseaddr(t)
-  res = rfc822.parseaddr(t)
+  #return email.utils.parseaddr(t)
+  res = email.utils.parseaddr(t)
   # dirty fix for some broken cases
   if not res[0]:
     pos = t.find('<')
@@ -149,7 +147,7 @@ def parseaddr(t):
       pos1 = addrspec.rfind(':')
       if pos1 > 0:
         addrspec = addrspec[pos1+1:]
-      return rfc822.parseaddr('"%s" <%s>' % (t[:pos].strip(),addrspec))
+      return email.utils.parseaddr('"%s" <%s>' % (t[:pos].strip(),addrspec))
   if not res[1]:
     pos = t.find('<')
     if pos > 0 and t[-1] == '>':
@@ -157,7 +155,7 @@ def parseaddr(t):
       pos1 = addrspec.rfind(':')
       if pos1 > 0:
         addrspec = addrspec[pos1+1:]
-      return rfc822.parseaddr('%s<%s>' % (t[:pos].strip(),addrspec))
+      return email.utils.parseaddr('%s<%s>' % (t[:pos].strip(),addrspec))
   return res
 
 ## Fix email.base64mime.decode to add any missing padding
@@ -227,5 +225,5 @@ def parse_header(val):
   except UnicodeDecodeError: pass
   except LookupError: pass
   except ValueError: pass
-  except email.Errors.HeaderParseError: pass
+  except email.errors.HeaderParseError: pass
   return val

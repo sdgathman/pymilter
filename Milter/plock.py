@@ -11,7 +11,7 @@ class PLock(object):
     self.basename = basename
     self.fp = None
 
-  def lock(self,lockname=None,mode=0660,strict_perms=False):
+  def lock(self,lockname=None,mode=0o660,strict_perms=False):
     "Start an update transaction.  Return FILE to write new version."
     self.unlock()
     if not lockname:
@@ -21,7 +21,7 @@ class PLock(object):
       st = os.stat(self.basename)
       mode |= st.st_mode
     except OSError: pass
-    u = os.umask(0002)
+    u = os.umask(0o2)
     try:
       fd = os.open(lockname,os.O_WRONLY+os.O_CREAT+os.O_EXCL,mode)
     finally:
@@ -46,7 +46,7 @@ class PLock(object):
   def commit(self,backname=None):
     "Commit update transaction with optional backup file."
     if not self.fp:
-      raise IOError,"File not locked"
+      raise IOError("File not locked")
     self.fp.close()
     self.fp = None
     if backname:

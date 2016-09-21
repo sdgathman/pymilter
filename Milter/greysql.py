@@ -2,7 +2,10 @@ import time
 import logging
 import urllib
 import sqlite3
-import thread
+try:
+  import thread
+except:
+  import _thread as thread
 from datetime import datetime
 
 log = logging.getLogger('milter.greylist')

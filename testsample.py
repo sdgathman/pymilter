@@ -2,7 +2,6 @@ import unittest
 import Milter
 import sample
 import mime
-import rfc822
 from Milter.test import TestBase
 
 class TestMilter(TestBase,sample.sampleMilter):

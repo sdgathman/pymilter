@@ -11,7 +11,6 @@ try:
   from StringIO import StringIO
 except:
   from io import StringIO
-import rfc822
 import mime
 import Milter
 import tempfile
@@ -141,19 +140,16 @@ class sampleMilter(Milter.Milter):
     self.log("Temp file:",self.tempname)
     self.tempname = None	# prevent removal of original message copy
     # copy defanged message to a temp file 
-    out = tempfile.TemporaryFile()
-    try:
+    with tempfile.TemporaryFile() as out:
       msg.dump(out)
       out.seek(0)
-      msg = rfc822.Message(out)
-      msg.rewindbody()
+      msg = mime.message_from_file(out)
+      fp = StringIO(msg.as_bytes().split(b'\n\n',1)[1])
       while 1:
-        buf = out.read(8192)
+        buf = fp.read(8192)
         if len(buf) == 0: break
         self.replacebody(buf)	# feed modified message to sendmail
       return Milter.ACCEPT	# ACCEPT modified message
-    finally:
-      out.close()
     return Milter.TEMPFAIL
 
   def close(self):

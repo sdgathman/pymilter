@@ -103,15 +103,12 @@ import Milter
 import zipfile
 
 import email
-import email.Message
-from email.Message import Message
-from email.Generator import Generator
-from email.Utils import quote
-from email import Utils
-from email.Parser import Parser
-from email import Errors
+from email.message import Message
+from email.generator import Generator
+from email.utils import quote
 
-from types import ListType,StringType
+if not getattr(Message,'as_bytes',None):
+  Message.as_bytes = Message.as_string
 
 ## Return a list of filenames in a zip file.
 # Embedded zip files are recursively expanded.
@@ -154,19 +151,17 @@ def unquote(s):
           return s[1:-1]
     return s
 
-from types import TupleType
-
 def _unquotevalue(value):
-  if isinstance(value, TupleType):
+  if isinstance(value, tuple):
       return value[0], value[1], unquote(value[2])
   else:
       return unquote(value)
 
 #email.Message._unquotevalue = _unquotevalue
 
-from email.Message import _parseparam
+from email.message import _parseparam
 
-## Enhance email.Message 
+## Enhance email.message.Message
 #
 # Tracks modifications to headers of body or any part independently.
 
@@ -207,7 +202,7 @@ class MimeMessage(Message):
        interpret as a name - and hence decide to execute this message."""
     names = []
     for attr,val in self._get_params_preserve([],'content-type'):
-      if isinstance(val, TupleType):
+      if isinstance(val, tuple):
 	  # It's an RFC 2231 encoded parameter
           newvalue = _unquotevalue(val)
           if val[0]:
@@ -355,8 +350,6 @@ def check_name(msg,savname=None,ckname=check_ext,scan_zip=False):
   msg["Content-Type"] = "text/plain; name="+name
   return Milter.CONTINUE
 
-import email.Iterators
-
 def check_attachments(msg,check):
   """Scan attachments.
 msg	MimeMessage
@@ -402,18 +395,21 @@ class _defang:
 # emulate old defang function
 defang = _defang()
 
-import sgmllib
+try:
+  from html.parser import HTMLParser
+except:
+  from sgmllib import SGMLParser as HTMLParser
 
 import re
 declname = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*')
 declstringlit = re.compile(r'(\'[^\']*\'|"[^"]*")\s*')
 
-class SGMLFilter(sgmllib.SGMLParser):
+class SGMLFilter(HTMLParser):
   """Parse HTML and pass through all constructs unchanged.  It is intended for
      derived classes to implement exceptional processing for selected cases.
   """
   def __init__(self,out):
-    sgmllib.SGMLParser.__init__(self)
+    HTMLParser.__init__(self)
     self.out = out
 
   def handle_comment(self,comment):
@@ -444,7 +440,7 @@ class SGMLFilter(sgmllib.SGMLParser):
     self.out.write("<!%s>" % data)
 
   def write(self,buf):
-    "Act like a writer.  Why doesn't SGMLParser do this by default?"
+    "Act like a writer.  Why doesn't HTMLParser do this by default?"
     self.feed(buf)
 
   # Python-2.1 sgmllib rejects illegal declarations.  Since various Microsoft
@@ -545,5 +541,5 @@ if __name__ == '__main__':
   for fname in sys.argv[1:]:
     fp = open(fname)
     msg = message_from_file(fp)
-    email.Iterators._structure(msg)
+    email.iterators._structure(msg)
     check_attachments(msg,_list_attach)

@@ -85,7 +85,7 @@ def inet_pton(p):
   ::1.2.3.4.5
   """
   if p == '::':
-    return '\0'*16
+    return b'\0'*16
   s = p
   m = RE_IP4.search(s)
   try:

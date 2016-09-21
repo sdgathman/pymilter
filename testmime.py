@@ -37,7 +37,10 @@ except:
 import email
 import sys
 import Milter
-from email import Errors
+try:
+  from email import Errors as errors
+except:
+  from email import errors
 
 samp1_txt1 = """Dear Agent 1
 I hope you can read this.  Whenever you write label it  P.B.S kids.
@@ -77,7 +80,7 @@ class MimeTestCase(unittest.TestCase):
       # if message is modified, output is readable by mail clients
       if sys.hexversion < 0x02040000:
         self.fail('should get boundary error parsing bad rfc822 attachment')
-    except Errors.BoundaryError:
+    except errors.BoundaryError:
       pass
   
   def testDefang(self,vname='virus1',part=1,

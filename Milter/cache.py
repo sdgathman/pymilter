@@ -48,7 +48,7 @@
 
 from __future__ import print_function
 import time
-from plock import PLock
+from Milter.plock import PLock
 
 class AddrCache(object):
   time_format = '%Y%b%d %H:%M:%S %Z'
@@ -132,8 +132,8 @@ class AddrCache(object):
       if not ts or ts > too_old:
         return res
       del self.cache[lsender]
-      raise KeyError, sender
-    except KeyError,x:
+      raise KeyError(sender)
+    except KeyError as x:
       try:
         user,host = sender.split('@',1)
         return self.__getitem__(host)
