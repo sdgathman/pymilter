@@ -1,4 +1,8 @@
+%if 0%{?rhel} == 7
+%define pythonbase python34
+%else
 %define pythonbase python3
+%endif
 %define __python python3
 
 %define libdir %{_libdir}/pymilter
@@ -6,7 +10,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 1.1
+Version: 1.0.1
 Release: 1%{dist}
 Source: http://downloads.sourceforge.net/pymilter/pymilter-%{version}.tar.gz
 Source1: pymilter.te
@@ -34,7 +38,12 @@ DSNs, and doing CBV.
 Summary: SELinux policy module for pymilter
 Group: System Environment/Base
 Requires: policycoreutils, selinux-policy, %{name}
-BuildRequires: policycoreutils, checkpolicy, policycoreutils-python-utils
+BuildRequires: policycoreutils, checkpolicy
+%if 0%{?epel} >= 6
+BuildRequires: policycoreutils-python
+%else
+BuildRequires: policycoreutils-python-utils
+%endif
 
 %description selinux
 SELinux policy module for using pymilter with sendmail with selinux enforcing
@@ -85,7 +94,7 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %changelog
-* Tue Sep 20 2016 Stuart Gathman <stuart@gathman.org> 1.1-1
+* Tue Sep 20 2016 Stuart Gathman <stuart@gathman.org> 1.0.1-1
 - Support python3
 
 * Sat Mar  1 2014 Stuart Gathman <stuart@gathman.org> 1.0-2
