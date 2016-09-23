@@ -8,9 +8,9 @@ from __future__ import print_function
 import sys
 import os
 try:
-  from StringIO import StringIO
+  from io import BytesIO
 except:
-  from io import StringIO
+  from StringIO import StringIO as BytesIO
 import mime
 import Milter
 import tempfile
@@ -41,7 +41,7 @@ class sampleMilter(Milter.Milter):
   def envfrom(self,f,*str):
     "start of MAIL transaction"
     self.log("mail from",f,str)
-    self.fp = StringIO()
+    self.fp = BytesIO()
     self.tempname = None
     self.mailfrom = f
     self.bodysize = 0
@@ -97,12 +97,12 @@ class sampleMilter(Milter.Milter):
     if lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
     if self.fp:
-      self.fp.write("%s: %s\n" % (name,val))	# add header to buffer
+      self.fp.write(("%s: %s\n" % (name,val)).encode())	# add header to buffer
     return Milter.CONTINUE
 
   def eoh(self):
     if not self.fp: return Milter.TEMPFAIL	# not seen by envfrom
-    self.fp.write("\n")
+    self.fp.write(b'\n')
     self.fp.seek(0)
     # copy headers to a temp file for scanning the body
     headers = self.fp.getvalue()
@@ -144,7 +144,7 @@ class sampleMilter(Milter.Milter):
       msg.dump(out)
       out.seek(0)
       msg = mime.message_from_file(out)
-      fp = StringIO(msg.as_bytes().split(b'\n\n',1)[1])
+      fp = BytesIO(msg.as_bytes().split(b'\n\n',1)[1])
       while 1:
         buf = fp.read(8192)
         if len(buf) == 0: break

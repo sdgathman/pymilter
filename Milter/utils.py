@@ -212,11 +212,11 @@ def parse_header(val):
     for s,enc in h:
       if enc:
         try:
-          u.append(unicode(s,enc,'replace'))
+          u.append(s.decode(enc,'replace'))
         except LookupError:
-          u.append(unicode(s))
+          u.append(s.decode())
       else:
-        u.append(unicode(s))
+        u.append(s.decode())
     u = u''.join(u)
     for enc in ('us-ascii','iso-8859-1','utf-8'):
       try:

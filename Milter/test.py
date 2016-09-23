@@ -4,9 +4,9 @@
 from __future__ import print_function
 import mime
 try:
-  from StringIO import StringIO
+  from io import BytesIO
 except:
-  from io import StringIO
+  from StringIO import StringIO as BytesIO
 import Milter
 
 Milter.NOREPLY = Milter.CONTINUE
@@ -155,20 +155,20 @@ class TestBase(object):
     rc = self.eoh()
     if rc != Milter.CONTINUE: return rc
     header,body = msg.as_bytes().split(b'\n\n',1)
-    bfp = StringIO(body)
+    bfp = BytesIO(body)
     while 1:
       buf = bfp.read(8192)
       if len(buf) == 0: break
       rc = self.body(buf)
       if rc != Milter.CONTINUE: return rc
     self._msg = msg
-    self._body = StringIO()
+    self._body = BytesIO()
     rc = self.eom()
     if self._bodyreplaced:
       body = self._body.getvalue()
-    self._body = StringIO()
+    self._body = BytesIO()
     self._body.write(header)
-    self._body.write('\n\n')
+    self._body.write(b'\n\n')
     self._body.write(body)
     return rc
 
@@ -177,7 +177,7 @@ class TestBase(object):
   # @param sender MAIL FROM
   # @param rcpts RCPT TO, multiple recipients may be supplied
   def feedMsg(self,fname,sender="spam@adv.com",*rcpts):
-    with open('test/'+fname,'r') as fp:
+    with open('test/'+fname,'rb') as fp:
       return self.feedFile(fp,sender,*rcpts)
 
   ## Call the connect and helo callbacks.

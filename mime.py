@@ -95,16 +95,20 @@
 
 from __future__ import print_function
 try:
-  from StringIO import StringIO
+  from io import BytesIO, StringIO
 except:
-  from io import StringIO
+  from StringIO import StringIO 
+  BytesIO = StringIO
 import socket
 import Milter
 import zipfile
 
 import email
 from email.message import Message
-from email.generator import Generator
+try:
+  from email.generator import BytesGenerator
+except:
+  from email.generator import Generator as BytesGenerator
 from email.utils import quote
 
 if not getattr(Message,'as_bytes',None):
@@ -113,7 +117,7 @@ if not getattr(Message,'as_bytes',None):
 ## Return a list of filenames in a zip file.
 # Embedded zip files are recursively expanded.
 def zipnames(txt):
-  fp =  StringIO(txt)
+  fp =  BytesIO(txt)
   zipf = zipfile.ZipFile(fp,'r')
   names = []
   for nm in zipf.namelist():
@@ -124,7 +128,7 @@ def zipnames(txt):
 
 ## Fix multipart handling in email.Generator.
 #
-class MimeGenerator(Generator):
+class MimeGenerator(BytesGenerator):
     def _dispatch(self, msg):
         # Get the Content-Type: for the message, then try to dispatch to
         # self._handle_<maintype>_<subtype>().  If there's no handler for the
@@ -134,7 +138,7 @@ class MimeGenerator(Generator):
         if msg.is_multipart() and main.lower() != 'multipart':
           self._handle_multipart(msg)
         else:
-          Generator._dispatch(self,msg)
+          BytesGenerator._dispatch(self,msg)
 
 def unquote(s):
     """Remove quotes from a string."""
@@ -237,9 +241,9 @@ class MimeMessage(Message):
     g = MimeGenerator(file)
     g.flatten(self,unixfrom=unixfrom)
 
-  def as_string(self, unixfrom=False):
+  def as_bytes(self, unixfrom=False):
       "Return the entire formatted message as a string."
-      fp = StringIO()
+      fp = BytesIO()
       self.dump(fp,unixfrom=unixfrom)
       return fp.getvalue()
 
@@ -300,7 +304,7 @@ class MimeMessage(Message):
     return None
 
 def message_from_file(fp):
-  msg = email.message_from_file(fp,MimeMessage)
+  msg = email.message_from_binary_file(fp,MimeMessage)
   for part in msg.walk():
     part.modified = False
   assert not msg.ismodified()
@@ -509,7 +513,7 @@ def check_html(msg,savname=None):
       htmlfilter.close()
     #except sgmllib.SGMLParseError:
     except:
-      #mimetools.copyliteral(msg.get_payload(),open('debug.out','w')
+      mimetools.copyliteral(msg.get_payload(),open('debug.out','wb'))
       htmlfilter.close()
       hostname = socket.gethostname()
       msg.set_payload(
@@ -539,7 +543,7 @@ if __name__ == '__main__':
     return Milter.CONTINUE
 
   for fname in sys.argv[1:]:
-    fp = open(fname)
+    fp = open(fname,'rb')
     msg = message_from_file(fp)
     email.iterators._structure(msg)
     check_attachments(msg,_list_attach)
