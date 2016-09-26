@@ -84,7 +84,7 @@
 
 ## @package mime
 # This module provides a "defang" function to replace naughty attachments.
-# 
+#
 # We also provide workarounds for bugs in the email module that comes 
 # with python.  The "bugs" fixed mostly come up only with malformed
 # messages - but that is what you have when dealing with spam.
@@ -107,8 +107,10 @@ import email
 from email.message import Message
 try:
   from email.generator import BytesGenerator
+  from email import message_from_binary_file
 except:
   from email.generator import Generator as BytesGenerator
+  from email import message_from_file as message_from_binary_file
 from email.utils import quote
 
 if not getattr(Message,'as_bytes',None):
@@ -304,7 +306,7 @@ class MimeMessage(Message):
     return None
 
 def message_from_file(fp):
-  msg = email.message_from_binary_file(fp,MimeMessage)
+  msg = message_from_binary_file(fp,MimeMessage)
   for part in msg.walk():
     part.modified = False
   assert not msg.ismodified()
@@ -315,7 +317,7 @@ ade,adp,asd,asx,asp,bas,bat,chm,cmd,com,cpl,crt,dll,exe,hlp,hta,inf,ins,isp,js,
 jse,lnk,mdb,mde,msc,msi,msp,mst,ocx,pcd,pif,reg,scr,sct,shs,url,vb,vbe,vbs,wsc,
 wsf,wsh 
 """.split())
-bad_extensions = map(lambda x:'.' + x,extlist.split(','))
+bad_extensions = ['.' + x for x in extlist.split(',')]
 
 def check_ext(name):
   "Check a name for dangerous Winblows extensions."
@@ -471,7 +473,7 @@ class SGMLFilter(HTMLParser):
           elif c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
               m = declname.match(rawdata, j)
               if not m:
-		  # incomplete or an error?
+                  # incomplete or an error?
                   return -1
               j = m.end()
           else:
@@ -487,11 +489,14 @@ class HTMLScriptFilter(SGMLFilter):
     self.modified = False
     self.msg = "<!-- WARNING: embedded script removed -->"
   def start_script(self,unused):
+    #print('beg script',unused)
     self.ignoring += 1
     self.modified = True
-    self.out.write(self.msg)
   def end_script(self):
+    #print('end script')
     self.ignoring -= 1
+    if not self.ignoring:
+      self.out.write(self.msg)
   def handle_data(self,data):
     if not self.ignoring: SGMLFilter.handle_data(self,data)
   def handle_comment(self,comment):
@@ -509,7 +514,7 @@ def check_html(msg,savname=None):
     out = StringIO()
     htmlfilter = HTMLScriptFilter(out)
     try:
-      htmlfilter.write(msg.get_payload(decode=True))
+      htmlfilter.write(msg.get_payload(decode=True).decode())
       htmlfilter.close()
     #except sgmllib.SGMLParseError:
     except:
