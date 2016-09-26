@@ -15,9 +15,9 @@ MAX_CNAME = 10
 # @return a list of ((name,type),data) tuples
 def DNSLookup(name, qtype):
     try:
-	# To be thread safe, we create a fresh DnsRequest with
-	# each call.  It would be more efficient to reuse
-	# a req object stored in a Session.
+        # To be thread safe, we create a fresh DnsRequest with
+        # each call.  It would be more efficient to reuse
+        # a req object stored in a Session.
         req = DNS.DnsRequest(name, qtype=qtype)
         resp = req.req()
         #resp.show()
@@ -98,7 +98,7 @@ class Session(object):
             #return result    # if too many == NX_DOMAIN
             raise DNSError('Length of CNAME chain exceeds %d' % MAX_CNAME)
         cnames[name] = cname
-	if cname.lower().rstrip('.') in cnames:
+        if cname.lower().rstrip('.') in cnames:
             raise DNSError('CNAME loop')
         result = self.dns(cname, qtype, cnames=cnames)
         if result:
