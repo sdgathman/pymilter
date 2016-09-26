@@ -62,18 +62,22 @@ class MimeTestCase(unittest.TestCase):
     self.failUnless(plist[0] == 'name="Jim&amp;amp;Girlz.jpg"')
 
   def testParse(self,fname='samp1'):
-    msg = mime.message_from_file(open('test/'+fname,"rb"))
+    with open('test/'+fname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     self.failUnless(msg.ismultipart())
     parts = msg.get_payload()
     self.failUnless(len(parts) == 2)
     txt1 = parts[0].get_payload()
     self.failUnless(txt1.rstrip() == samp1_txt1,txt1)
-    msg = mime.message_from_file(open('test/missingboundary',"rb"))
+    with open('test/missingboundary',"rb") as fp:
+      msg = mime.message_from_file(fp)
     # should get no exception as long as we don't try to parse
     # message attachments
     mime.defang(msg,scan_rfc822=False)
-    msg.dump(open('test/missingboundary.out','wb'))
-    msg = mime.message_from_file(open('test/missingboundary',"rb"))
+    with open('test/missingboundary.out','wb') as fp:
+      msg.dump(fp)
+    with open('test/missingboundary',"rb") as fp:
+      msg = mime.message_from_file(fp)
     try:
       mime.defang(msg)
       # python 2.4 doesn't get exceptions on missing boundaries, and
@@ -85,12 +89,15 @@ class MimeTestCase(unittest.TestCase):
   
   def testDefang(self,vname='virus1',part=1,
 	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
-    msg = mime.message_from_file(open('test/'+vname,"rb"))
+    with open('test/'+vname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
     self.failUnless(msg.ismodified(),"virus not removed")
     oname = vname + '.out'
-    msg.dump(open('test/'+oname,"wb"))
-    msg = mime.message_from_file(open('test/'+oname,"rb"))
+    with open('test/'+oname,"wb") as fp:
+      msg.dump(fp)
+    with open('test/'+oname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     txt2 = msg.get_payload()
     if type(txt2) == list:
       txt2 = txt2[part].get_payload()
@@ -110,11 +117,14 @@ class MimeTestCase(unittest.TestCase):
 
   # virus6 has no parts - the virus is directly inline
   def testDefang6(self,vname="virus6",fname='FAX20.exe'):
-    msg = mime.message_from_file(open('test/'+vname,"rb"))
+    with open('test/'+vname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg)
     oname = vname + '.out'
-    msg.dump(open('test/'+oname,"wb"))
-    msg = mime.message_from_file(open('test/'+oname,"rb"))
+    with open('test/'+oname,"wb") as fp:
+      msg.dump(fp)
+    with open('test/'+oname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     self.failIf(msg.ismultipart())
     txt2 = msg.get_payload()
     self.failUnless(txt2 == mime.virus_msg % \
@@ -123,11 +133,14 @@ class MimeTestCase(unittest.TestCase):
   # honey virus has a sneaky ASP payload which is parsed correctly
   # by email package in python-2.2.2, but not by mime.MimeMessage or 2.2.1
   def testDefang7(self,vname="honey",fname='story[1].scr'):
-    msg = mime.message_from_file(open('test/'+vname,"rb"))
+    with open('test/'+vname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg)
     oname = vname + '.out'
-    msg.dump(open('test/'+oname,"wb"))
-    msg = mime.message_from_file(open('test/'+oname,"rb"))
+    with open('test/'+oname,"wb") as fp:
+      msg.dump(fp)
+    with open('test/'+oname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     parts = msg.get_payload()
     txt2 = parts[1].get_payload()
     txt3 = parts[2].get_payload()
@@ -138,7 +151,8 @@ class MimeTestCase(unittest.TestCase):
 	  ('story[1].asp',hostname,None),txt3)
 
   def testParse2(self,fname="spam7"):
-    msg = mime.message_from_file(open('test/'+fname,"rb"))
+    with open('test/'+fname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     self.failUnless(msg.ismultipart())
     parts = msg.get_payload()
     self.failUnless(len(parts) == 2)
@@ -148,11 +162,13 @@ class MimeTestCase(unittest.TestCase):
   def testZip(self,vname="zip1",fname='zip.zip'):
     self.testDefang(vname,1,'zip.zip')
     # test scan_zip flag
-    msg = mime.message_from_file(open('test/'+vname,"rb"))
+    with open('test/'+vname,"rb") as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=False)
     self.failIf(msg.ismodified())
     # test ignoring empty zip (often found in DSNs)
-    msg = mime.message_from_file(open('test/zip2','rb'))
+    with open('test/zip2','rb') as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
     self.failIf(msg.ismodified())
     # test corrupt zip (often an EXE named as a ZIP)
@@ -171,16 +187,18 @@ class MimeTestCase(unittest.TestCase):
     mime.check_html(msg)
     # don't let a tricky virus slip one past us
     msg = msg.get_submsg()
-    if isinstance(msg,email.Message.Message):
+    if isinstance(msg,email.message.Message):
       return mime.check_attachments(msg,self._chk_attach)
     return Milter.CONTINUE
 
   def testCheckAttach(self,fname="test1"):
     # test1 contains a very long filename
-    msg = mime.message_from_file(open('test/'+fname,'rb'))
+    with open('test/'+fname,'rb') as fp:
+      msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
     self.failIf(msg.ismodified())
-    msg = mime.message_from_file(open('test/test2','rb'))
+    with open('test/test2','rb') as fp:
+      msg = mime.message_from_file(fp)
     rc = mime.check_attachments(msg,self._chk_attach)
     self.assertEquals(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
     self.assertEquals(rc,Milter.CONTINUE)
@@ -195,7 +213,9 @@ class MimeTestCase(unittest.TestCase):
     script = "<script lang=javascript> Dangerous script </script>"
     filter.feed(msg + script)
     filter.close()
-    #print(result.getvalue())
+    print(result.getvalue())
+    print('---')
+    print(msg + filter.msg)
     self.failUnless(result.getvalue() == msg + filter.msg)
 
 def suite(): return unittest.makeSuite(MimeTestCase,'test')
@@ -205,7 +225,7 @@ if __name__ == '__main__':
     unittest.main()
   else:
     for fname in sys.argv[1:]:
-      fp = open(fname,'rb')
-      msg = mime.message_from_file(fp)
+      with open(fname,'rb') as fp:
+        msg = mime.message_from_file(fp)
       mime.defang(msg,scan_zip=True)
       print(msg.as_string())
