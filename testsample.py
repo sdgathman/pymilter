@@ -19,7 +19,7 @@ class BMSMilterTestCase(unittest.TestCase):
     self.failUnless(rc == Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open('test/'+fname+".tstout","w").write(fp.getvalue())
+    open('test/'+fname+".tstout","wb").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
     msg = mime.message_from_file(fp)
@@ -34,7 +34,7 @@ class BMSMilterTestCase(unittest.TestCase):
     self.failUnless(rc == Milter.ACCEPT)
     self.failIf(milter._bodyreplaced,"Milter needlessly replaced body.")
     fp = milter._body
-    open('test/'+fname+".tstout","w").write(fp.getvalue())
+    open('test/'+fname+".tstout","wb").write(fp.getvalue())
     milter.close()
 
   def testDefang2(self):
@@ -47,14 +47,14 @@ class BMSMilterTestCase(unittest.TestCase):
     self.failUnless(rc == Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open("test/virus3.tstout","w").write(fp.getvalue())
+    open("test/virus3.tstout","wb").write(fp.getvalue())
     #self.failUnless(fp.getvalue() == open("test/virus3.out","r").read())
     rc = milter.feedMsg("virus6")
     self.failUnless(rc == Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     self.failUnless(milter._headerschanged,"Message headers not adjusted")
     fp = milter._body
-    open("test/virus6.tstout","w").write(fp.getvalue())
+    open("test/virus6.tstout","wb").write(fp.getvalue())
     milter.close()
 
 def suite(): return unittest.makeSuite(BMSMilterTestCase,'test')
