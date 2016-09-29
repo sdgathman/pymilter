@@ -11,6 +11,10 @@ if sys.version < '2.6.5':
 #libs = ["milter", "smutil"]
 libs = ["milter"]
 libdirs = ["/usr/lib/libmilter"]    # needed for Debian
+modules = ["mime"]
+if sys.version >= '3':
+  modules.append("sgmllib")
+  print("modules=",modules)
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
 setup(name = "pymilter", version = '1.0.1',
@@ -27,7 +31,7 @@ sending DSNs or doing CBVs.
 	maintainer_email="stuart@bmsi.com",
 	license="GPL",
 	url="http://www.bmsi.com/python/milter.html",
-	py_modules=["mime"],
+	py_modules=modules,
 	packages = ['Milter'],
 	ext_modules=[
 	  Extension("milter", ["miltermodule.c"],
