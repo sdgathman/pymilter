@@ -133,7 +133,7 @@ def parseaddr(t):
   >>> parseaddr('God@heaven <@hop1.org,@hop2.net:jeff@spec.org>')
   ('God@heaven', 'jeff@spec.org')
   >>> parseaddr('Real Name ((comment)) <addr...@example.com>')
-  ('Real Name', 'addr...@example.com')
+  ('Real Name (comment)', 'addr...@example.com')
   >>> parseaddr('a(WRONG)@b')
   ('WRONG', 'a@b')
   """

@@ -54,11 +54,11 @@ def is_dynip(host,addr):
     if host.find(addr) >= 0: return True
     if addr.find(':') >= 0: return False        # IP6
     a = addr.split('.')
-    ia = map(int,a)
+    ia = list(map(int,a))
     h = host
     m = ip3.findall(host)
     if m:
-      g = map(int,m)[:4]
+      g = list(map(int,m))[:4]
       ia3 = (ia[1:],ia[:3])
       if g[-3:] in ia3: return True
       if g[0] == ia[3] and g[1:3] == ia[:2]: return True

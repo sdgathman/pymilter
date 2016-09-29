@@ -43,7 +43,7 @@ class AddrCacheTestCase(unittest.TestCase):
   def testParseHeader(self):
     s='=?UTF-8?B?TGFzdCBGZXcgQ29sZHBsYXkgQWxidW0gQXJ0d29ya3MgQXZhaWxhYmxlAA?='
     h = Milter.utils.parse_header(s)
-    self.assertEqual(h,'Last Few Coldplay Album Artworks Available\x00')
+    self.assertEqual(h,b'Last Few Coldplay Album Artworks Available\x00')
 
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')
