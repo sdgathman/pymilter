@@ -53,22 +53,23 @@ class MimeTestCase(unittest.TestCase):
 
   # test mime parameter parsing
   def testParam(self):
-    plist = mime._parseparam(
-      '; boundary="----=_NextPart_000_4e56_490d_48e3"')
-    self.failUnless(len(plist)==1)
-    self.failUnless(plist[0] == 'boundary="----=_NextPart_000_4e56_490d_48e3"')
+    plist = mime._parseparam('; boundary="----=_NextPart_000_4e56_490d_48e3"')
+    plist = [ x for x in plist if x ] # py2 doesn't include empty params
+    self.assertEqual(1,len(plist))
+    self.assertTrue(plist[0] == 'boundary="----=_NextPart_000_4e56_490d_48e3"')
     plist = mime._parseparam('; name="Jim&amp;amp;Girlz.jpg"')
-    self.failUnless(len(plist)==1)
-    self.failUnless(plist[0] == 'name="Jim&amp;amp;Girlz.jpg"')
+    plist = [ x for x in plist if x ] # py2 doesn't include empty params
+    self.assertEqual(1,len(plist))
+    self.assertTrue(plist[0] == 'name="Jim&amp;amp;Girlz.jpg"')
 
   def testParse(self,fname='samp1'):
     with open('test/'+fname,"rb") as fp:
       msg = mime.message_from_file(fp)
-    self.failUnless(msg.ismultipart())
+    self.assertTrue(msg.ismultipart())
     parts = msg.get_payload()
-    self.failUnless(len(parts) == 2)
+    self.assertTrue(len(parts) == 2)
     txt1 = parts[0].get_payload()
-    self.failUnless(txt1.rstrip() == samp1_txt1,txt1)
+    self.assertTrue(txt1.rstrip() == samp1_txt1,txt1)
     with open('test/missingboundary',"rb") as fp:
       msg = mime.message_from_file(fp)
     # should get no exception as long as we don't try to parse
@@ -92,7 +93,7 @@ class MimeTestCase(unittest.TestCase):
     with open('test/'+vname,"rb") as fp:
       msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
-    self.failUnless(msg.ismodified(),"virus not removed")
+    self.assertTrue(msg.ismodified(),"virus not removed")
     oname = vname + '.out'
     with open('test/'+oname,"wb") as fp:
       msg.dump(fp)
@@ -101,7 +102,7 @@ class MimeTestCase(unittest.TestCase):
     txt2 = msg.get_payload()
     if type(txt2) == list:
       txt2 = txt2[part].get_payload()
-    self.failUnless(
+    self.assertTrue(
       txt2.rstrip()+'\n' == mime.virus_msg % (fname,hostname,None),txt2)
 
   def testDefang3(self):
@@ -125,9 +126,9 @@ class MimeTestCase(unittest.TestCase):
       msg.dump(fp)
     with open('test/'+oname,"rb") as fp:
       msg = mime.message_from_file(fp)
-    self.failIf(msg.ismultipart())
+    self.assertFalse(msg.ismultipart())
     txt2 = msg.get_payload()
-    self.failUnless(txt2 == mime.virus_msg % \
+    self.assertTrue(txt2 == mime.virus_msg % \
 	(fname,hostname,None),txt2)
 
   # honey virus has a sneaky ASP payload which is parsed correctly
@@ -144,20 +145,20 @@ class MimeTestCase(unittest.TestCase):
     parts = msg.get_payload()
     txt2 = parts[1].get_payload()
     txt3 = parts[2].get_payload()
-    self.failUnless(txt2.rstrip()+'\n' == mime.virus_msg % \
+    self.assertTrue(txt2.rstrip()+'\n' == mime.virus_msg % \
 	(fname,hostname,None),txt2)
     if txt3 != '':
-      self.failUnless(txt3.rstrip()+'\n' == mime.virus_msg % \
+      self.assertTrue(txt3.rstrip()+'\n' == mime.virus_msg % \
 	  ('story[1].asp',hostname,None),txt3)
 
   def testParse2(self,fname="spam7"):
     with open('test/'+fname,"rb") as fp:
       msg = mime.message_from_file(fp)
-    self.failUnless(msg.ismultipart())
+    self.assertTrue(msg.ismultipart())
     parts = msg.get_payload()
-    self.failUnless(len(parts) == 2)
+    self.assertTrue(len(parts) == 2)
     name = parts[1].getname()
-    self.failUnless(name == "Jim&amp;amp;Girlz.jpg","name=%s"%name)
+    self.assertTrue(name == "Jim&amp;amp;Girlz.jpg","name=%s"%name)
 
   def testZip(self,vname="zip1",fname='zip.zip'):
     self.testDefang(vname,1,'zip.zip')
@@ -165,12 +166,12 @@ class MimeTestCase(unittest.TestCase):
     with open('test/'+vname,"rb") as fp:
       msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=False)
-    self.failIf(msg.ismodified())
+    self.assertFalse(msg.ismodified())
     # test ignoring empty zip (often found in DSNs)
     with open('test/zip2','rb') as fp:
       msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
-    self.failIf(msg.ismodified())
+    self.assertFalse(msg.ismodified())
     # test corrupt zip (often an EXE named as a ZIP)
     self.testDefang('zip3',1,'zip.zip')
     # test zip within zip
@@ -196,12 +197,12 @@ class MimeTestCase(unittest.TestCase):
     with open('test/'+fname,'rb') as fp:
       msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
-    self.failIf(msg.ismodified())
+    self.assertFalse(msg.ismodified())
     with open('test/test2','rb') as fp:
       msg = mime.message_from_file(fp)
     rc = mime.check_attachments(msg,self._chk_attach)
-    self.assertEquals(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
-    self.assertEquals(rc,Milter.CONTINUE)
+    self.assertEqual(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
+    self.assertEqual(rc,Milter.CONTINUE)
 
   def testHTML(self,fname=""):
     result = StringIO()
@@ -213,10 +214,10 @@ class MimeTestCase(unittest.TestCase):
     script = "<script lang=javascript> Dangerous script </script>"
     filter.feed(msg + script)
     filter.close()
-    print(result.getvalue())
-    print('---')
-    print(msg + filter.msg)
-    self.failUnless(result.getvalue() == msg + filter.msg)
+    #print(result.getvalue())
+    #print('---')
+    #print(msg + filter.msg)
+    self.assertTrue(result.getvalue() == msg + filter.msg)
 
 def suite(): return unittest.makeSuite(MimeTestCase,'test')
 
