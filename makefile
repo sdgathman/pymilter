@@ -4,14 +4,11 @@ web:
 	rsync -ravKk doc/html/ spidey2.bmsi.com:/Public/pymilter
 	cd doc/html; zip -r ../../doc .
 
-VERSION=1.0
-CVSTAG=pymilter-1_0
+VERSION=1.0.1
 PKG=pymilter-$(VERSION)
 SRCTAR=$(PKG).tar.gz
 
 $(SRCTAR):
-	cvs export -r$(CVSTAG) -d $(PKG) pymilter
-	tar cvfz $(PKG).tar.gz $(PKG)
-	rm -r $(PKG)
+	git archive --format=tar.gz --prefix=$(PKG)/ -o $(SRCTAR) $(PKG)
 
-cvstar: $(SRCTAR)
+gittar: $(SRCTAR)
