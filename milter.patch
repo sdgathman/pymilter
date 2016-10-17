@@ -1,5 +1,5 @@
 diff --git a/miltermodule.c b/miltermodule.c
-index aa10a08..af9a144 100644
+index aa10a08..b085bad 100644
 --- a/miltermodule.c
 +++ b/miltermodule.c
 @@ -343,7 +343,7 @@ static struct MilterCallback {
@@ -94,8 +94,9 @@ index aa10a08..af9a144 100644
  static PyTypeObject milter_ContextType = {
 -  PyObject_HEAD_INIT(&PyType_Type)
 -  0,
+-  "milterContext",
 +  PyVarObject_HEAD_INIT(&PyType_Type,0)
-   "milterContext",
++  "milter.Context",
    sizeof(milter_ContextObject),
    0,
          milter_Context_dealloc,            /* tp_dealloc */
@@ -119,7 +120,7 @@ index aa10a08..af9a144 100644
  };
  
  static const char milter_documentation[] =
-@@ -1634,17 +1635,27 @@ Libmilter is currently marked FFR, and needs to be explicitly installed.\n\
+@@ -1634,17 +1635,31 @@ Libmilter is currently marked FFR, and needs to be explicitly installed.\n\
  See <sendmailsource>/libmilter/README for details on setting it up.\n";
  
  static void setitem(PyObject *d,const char *name,long val) {
@@ -148,11 +149,15 @@ index aa10a08..af9a144 100644
  
 -   m = Py_InitModule4("milter", milter_methods, milter_documentation,
 -		      (PyObject*)NULL, PYTHON_API_VERSION);
++   if (PyType_Ready(&milter_ContextType) < 0)
++          return NULL;
++
 +   m = PyModule_Create(&moduledef);
++   if (m == NULL) return NULL;
     d = PyModule_GetDict(m);
     MilterError = PyErr_NewException("milter.error", NULL, NULL);
     PyDict_SetItemString(d,"error", MilterError);
-@@ -1710,4 +1721,5 @@ initmilter(void) {
+@@ -1710,4 +1725,5 @@ initmilter(void) {
     setitem(d,"DISCARD",  SMFIS_DISCARD);
     setitem(d,"ACCEPT",  SMFIS_ACCEPT);
     setitem(d,"TEMPFAIL",  SMFIS_TEMPFAIL);
