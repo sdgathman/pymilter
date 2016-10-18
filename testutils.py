@@ -45,6 +45,11 @@ class AddrCacheTestCase(unittest.TestCase):
     h = Milter.utils.parse_header(s)
     self.assertEqual(h,b'Last Few Coldplay Album Artworks Available\x00')
 
+  @unittest.expectedFailure
+  def testParseAddress(self):
+    s = Milter.utils.parseaddr('a(WRONG)@b')
+    self.assertEqual(s,('WRONG', 'a@b'))
+
 def suite(): 
   s = unittest.makeSuite(AddrCacheTestCase,'test')
   s.addTest(doctest.DocTestSuite(Milter.utils))
