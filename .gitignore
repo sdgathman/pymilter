@@ -2,3 +2,7 @@
 build/
 test/*.out
 test/*.tstout
+test/*.log
+test.db
+dist
+MANIFEST
