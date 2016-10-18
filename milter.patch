@@ -1,5 +1,5 @@
 diff --git a/miltermodule.c b/miltermodule.c
-index aa10a08..b085bad 100644
+index aa10a08..4d5a93d 100644
 --- a/miltermodule.c
 +++ b/miltermodule.c
 @@ -343,7 +343,7 @@ static struct MilterCallback {
@@ -67,6 +67,15 @@ index aa10a08..b085bad 100644
       if (o == NULL) {	/* out of memory */
         Py_DECREF(arglist);
         return _report_exception(self);
+@@ -889,7 +889,7 @@ milter_wrap_body(SMFICTX *ctx, u_char *bodyp, size_t bodylen) {
+    c = _get_context(ctx);
+    if (!c) return SMFIS_TEMPFAIL;
+    /* Unclear whether this should be s#, z#, or t# */
+-   arglist = Py_BuildValue("(Os#)", c, bodyp, bodylen);
++   arglist = Py_BuildValue("(Oy#)", c, bodyp, bodylen);
+    return _generic_wrapper(c, body_callback, arglist);
+ }
+ 
 @@ -963,7 +963,7 @@ milter_wrap_negotiate(SMFICTX *ctx,
      int i;
      for (i = 0; i < 4; ++i) {
