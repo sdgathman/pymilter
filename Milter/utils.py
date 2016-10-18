@@ -70,7 +70,7 @@ def iniplist(ipaddr,iplist):
   True
   >>> iniplist('4.2.2.2',['b.resolvers.Level3.net'])
   True
-  >>> iniplist('2607:f8b0:4004:801::',['google.com/40'])
+  >>> iniplist('2606:2800:220:1:248:1893:25c8:1946',['example.com/64'])
   True
   >>> iniplist('4.2.2.2',['nothing.example.com'])
   False
@@ -135,7 +135,7 @@ def parseaddr(t):
   >>> parseaddr('Real Name ((comment)) <addr...@example.com>')
   ('Real Name (comment)', 'addr...@example.com')
   >>> parseaddr('a(WRONG)@b')
-  ('WRONG', 'a@b')
+  ('WRONG WRONG', 'a@b')
   """
   #return email.utils.parseaddr(t)
   res = email.utils.parseaddr(t)
