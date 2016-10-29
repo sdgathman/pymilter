@@ -1,6 +1,6 @@
 /* Copyright (C) 2001  James Niemira (niemira@colltech.com, urmane@urmane.org)
  * Portions Copyright (C) 2001,2002,2003,2004,2005,2006,2007
- *   Stuart Gathman (stuart@bmsi.com)
+ *   Stuart Gathman (stuart@gathman.org)
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
