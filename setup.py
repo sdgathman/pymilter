@@ -28,9 +28,9 @@ sending DSNs or doing CBVs.
 	author="Jim Niemira",
 	author_email="urmane@urmane.org",
 	maintainer="Stuart D. Gathman",
-	maintainer_email="stuart@bmsi.com",
+	maintainer_email="stuart@gathman.org",
 	license="GPL",
-	url="http://www.bmsi.com/python/milter.html",
+	url="https://pythonhosted.org/milter/",
 	py_modules=modules,
 	packages = ['Milter'],
 	ext_modules=[
