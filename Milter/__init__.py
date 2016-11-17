@@ -459,7 +459,7 @@ class Base(object):
         m = m.split(' ')
       except: pass
       a += m
-    return self._ctx.setsmlist(stage,' '.join(a))
+    return self._ctx.setsymlist(stage,' '.join(a))
 
   # Milter methods which can only be called from eom callback.
 
