@@ -48,6 +48,12 @@ OPTIONAL_CALLBACKS = {
   'header':(P_NR_HDR,P_NOHDRS)
 }
 
+MACRO_CALLBACKS = {
+  'connect': M_CONNECT,
+  'hello': M_HELO, 'envfrom': M_ENVFROM, 'envrcpt': M_ENVRCPT,
+  'data': M_DATA, 'eom': M_EOM, 'eoh': M_EOH
+}
+
 ## @private
 R = re.compile(r'%+')
 
@@ -141,6 +147,7 @@ def nocallback(func):
   except KeyError:
     raise ValueError(
       '@nocallback applied to non-optional method: '+func.__name__)
+  @wraps(func)
   def wrapper(self,*args):
     if func(self,*args) != CONTINUE:
       raise RuntimeError('%s return code must be CONTINUE with @nocallback'
@@ -172,6 +179,19 @@ def noreply(func):
     return rc
   wrapper.milter_protocol = nr_mask
   return wrapper
+
+## Function decorator to set macros used in a callback.
+# By default, the MTA sends all macros defined for a callback.
+# If some or all of these are unused, the bandwidth can be saved
+# by listing the ones that are used.
+# @since 1.0.2
+def symlist(func,*syms):
+  if func.__name__ not in MACRO_CALLBACKS:
+    raise ValueError('@symlist applied to non-symlist method: '+func.__name__)
+  if len(syms) > 5:
+    raise ValueError('@symlist limited to 5 macros by MTA: '+func.__name__)
+  func._symlist = syms
+  return func
 
 ## Disabled action exception.
 # set_flags() can tell the MTA that this application will not use certain
@@ -393,6 +413,11 @@ class Base(object):
   def negotiate(self,opts):
     try:
       self._actions,p,f1,f2 = opts
+      for func,stage in MACRO_CALLBACKS.items():
+        func = getattr(self,func)
+        syms = getattr(func,'_symlist',None)
+        if syms is not None:
+          self.setsymlist(stage,syms)
       opts[1] = self._protocol = p & ~self.protocol_mask()
       opts[2] = 0
       opts[3] = 0
@@ -443,23 +468,27 @@ class Base(object):
   # set.  The protocol stages are M_CONNECT, M_HELO, M_ENVFROM, M_ENVRCPT,
   # M_DATA, M_EOM, M_EOH.
   #
-  # May only be called from negotiate callback.
+  # May only be called from negotiate callback.  Hence, this is an advanced
+  # feature.  Use the @@symlist function decorator to conviently set
+  # the macros used by a callback.
   # @since 0.9.8, previous version was misspelled!
   # @param stage the protocol stage to set to macro list for, 
   # one of the M_* constants defined in Milter
   # @param macros space separated and/or lists of strings
   def setsymlist(self,stage,*macros):
     if not self._actions & SETSYMLIST: raise DisabledAction("SETSYMLIST")
+    if len(macros) > 5:
+      raise ValueError('setsymlist limited to 5 macros by MTA')
     a = []
     for m in macros:
       try:
         m = m.encode('utf8')
       except: pass
       try:
-        m = m.split(' ')
+        m = m.split(b' ')
+        a += m
       except: pass
-      a += m
-    return self._ctx.setsymlist(stage,' '.join(a))
+    return self._ctx.setsymlist(stage,b' '.join(a))
 
   # Milter methods which can only be called from eom callback.
 

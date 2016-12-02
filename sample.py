@@ -33,18 +33,24 @@ class sampleMilter(Milter.Milter):
     self.fp = None
     self.bodysize = 0
     self.id = Milter.uniqueID()
+    self.user = None
 
   # multiple messages can be received on a single connection
   # envfrom (MAIL FROM in the SMTP protocol) seems to mark the start
   # of each message.
+  @Milter.symlist('{auth_authen}')
   @Milter.noreply
   def envfrom(self,f,*str):
     "start of MAIL transaction"
-    self.log("mail from",f,str)
     self.fp = BytesIO()
     self.tempname = None
     self.mailfrom = f
     self.bodysize = 0
+    self.user = self.getsymval('{auth_authen}')
+    if self.user:
+      self.log("user",self.user,"sent mail from",f,str)
+    else:
+      self.log("mail from",f,str)
     return Milter.CONTINUE
 
   def envrcpt(self,to,*str):

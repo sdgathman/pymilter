@@ -40,6 +40,9 @@ class TestBase(object):
     self._reply = None
     ## The rfc822 message object for the current email being fed to the %milter.
     self._msg = None
+    ## The protocol stage for macros returned
+    self._stage = None
+    ## The macros returned by protocol stage
     self._symlist = [ None, None, None, None, None, None, None ]
 
   def log(self,*msg):
@@ -54,8 +57,12 @@ class TestBase(object):
     self._macros[name] = val
     
   def getsymval(self,name):
-    # FIXME: track stage, and use _symlist
-    return self._macros.get(name,'')
+    stage = self._stage
+    if stage >= 0:
+      syms = self._symlist[stage]
+      if syms is not None and name not in syms:
+        return None
+    return self._macros.get(name,None)
 
   def replacebody(self,chunk):
     if self._body:
@@ -113,7 +120,10 @@ class TestBase(object):
     self._reply = (rcode,xcode) + msg
 
   def setsymlist(self,stage,macros):
-    if not self._actions & SETSYMLIST: raise DisabledAction("SETSYMLIST")
+    if not self._actions & SETSYMLIST:
+      raise DisabledAction("SETSYMLIST")
+    if self._stage != -1:
+      raise RuntimeError("setsymlist may only be called from negotiate")
     # not used yet, but just for grins we save the data
     a = []
     for m in macros:
@@ -121,9 +131,13 @@ class TestBase(object):
         m = m.encode('utf8')
       except: pass
       try:
-        m = m.split(' ')
+        m = m.split(b' ')
       except: pass
       a += m
+    if len(a) > 5:
+      raise ValueError('setsymlist limited to 5 macros by MTA')
+    if self._symlist[stage] is not None:
+      raise ValueError('setsymlist already called for stage:'+stage)
     self._symlist[stage] = set(a)
 
   ## Feed a file like object to the %milter.  Calls envfrom, envrcpt for
@@ -144,16 +158,32 @@ class TestBase(object):
     self._reply = None
     self._sender = '<%s>'%sender
     msg = mime.message_from_file(fp)
+    # envfrom
+    self._stage = Milter.M_ENVFROM
     rc = self.envfrom(self._sender)
+    self._stage = None
     if rc != Milter.CONTINUE: return rc
+    # envrcpt
     for rcpt in (rcpt,) + rcpts:
+      self._stage = Milter.M_ENVRCPT
       rc = self.envrcpt('<%s>'%rcpt)
+      self._stage = None
       if rc != Milter.CONTINUE: return rc
+    # data
+    self._stage = Milter.M_DATA
+    rc = self.data()
+    self._stage = None
+    if rc != Milter.CONTINUE: return rc
+    # header
     for h,val in msg.items():
       rc = self.header(h,val)
       if rc != Milter.CONTINUE: return rc
+    # eoh
+    self._stage = Milter.M_EOH
     rc = self.eoh()
+    self._stage = None
     if rc != Milter.CONTINUE: return rc
+    # body
     header,body = msg.as_bytes().split(b'\n\n',1)
     bfp = BytesIO(body)
     while 1:
@@ -163,7 +193,9 @@ class TestBase(object):
       if rc != Milter.CONTINUE: return rc
     self._msg = msg
     self._body = BytesIO()
+    self._stage = Milter.M_EOM
     rc = self.eom()
+    self._stage = None
     if self._bodyreplaced:
       body = self._body.getvalue()
     self._body = BytesIO()
@@ -189,12 +221,17 @@ class TestBase(object):
     self._body = None
     self._bodyreplaced = False
     opts = [ Milter.CURR_ACTS,~0,0,0 ]
+    self._stage = -1
     rc = self.negotiate(opts)
+    self._stage = Milter.M_CONNECT
     rc =  super(TestBase,self).connect(host,1,(ip,1234)) 
     if rc != Milter.CONTINUE:
+      self._stage = None
       self.close()
       return rc
+    self._stage = Milter.M_HELO
     rc = self.hello(helo)
+    self._stage = None
     if rc != Milter.CONTINUE:
       self.close()
     return rc

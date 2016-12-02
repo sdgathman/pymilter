@@ -13,9 +13,14 @@ class BMSMilterTestCase(unittest.TestCase):
 
   def testDefang(self,fname='virus1'):
     milter = TestMilter()
+    milter.setsymval('{auth_authen}','batman')
+    milter.setsymval('{auth_type}','batcomputer')
+    milter.setsymval('j','mailhost')
     rc = milter.connect()
     self.failUnless(rc == Milter.CONTINUE)
     rc = milter.feedMsg(fname)
+    self.failUnless(milter.user == 'batman',"getsymval failed")
+    self.failUnless(milter.auth_type != 'batcomputer',"setsymlist failed")
     self.failUnless(rc == Milter.ACCEPT)
     self.failUnless(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
