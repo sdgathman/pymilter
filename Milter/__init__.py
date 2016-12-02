@@ -185,13 +185,15 @@ def noreply(func):
 # If some or all of these are unused, the bandwidth can be saved
 # by listing the ones that are used.
 # @since 1.0.2
-def symlist(func,*syms):
-  if func.__name__ not in MACRO_CALLBACKS:
-    raise ValueError('@symlist applied to non-symlist method: '+func.__name__)
+def symlist(*syms):
   if len(syms) > 5:
     raise ValueError('@symlist limited to 5 macros by MTA: '+func.__name__)
-  func._symlist = syms
-  return func
+  def setsyms(func):
+    if func.__name__ not in MACRO_CALLBACKS:
+      raise ValueError('@symlist applied to non-symlist method: '+func.__name__)
+    func._symlist = syms
+    return func
+  return setsyms
 
 ## Disabled action exception.
 # set_flags() can tell the MTA that this application will not use certain

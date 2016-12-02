@@ -120,7 +120,7 @@ class TestBase(object):
     self._reply = (rcode,xcode) + msg
 
   def setsymlist(self,stage,macros):
-    if not self._actions & SETSYMLIST:
+    if not self._actions & Milter.SETSYMLIST:
       raise DisabledAction("SETSYMLIST")
     if self._stage != -1:
       raise RuntimeError("setsymlist may only be called from negotiate")
@@ -220,6 +220,7 @@ class TestBase(object):
   def connect(self,host='localhost',helo='spamrelay',ip='1.2.3.4'):
     self._body = None
     self._bodyreplaced = False
+    self._setctx(None)
     opts = [ Milter.CURR_ACTS,~0,0,0 ]
     self._stage = -1
     rc = self.negotiate(opts)

@@ -47,6 +47,7 @@ class sampleMilter(Milter.Milter):
     self.mailfrom = f
     self.bodysize = 0
     self.user = self.getsymval('{auth_authen}')
+    self.auth_type = self.getsymval('{auth_type}')
     if self.user:
       self.log("user",self.user,"sent mail from",f,str)
     else:
