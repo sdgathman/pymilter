@@ -10,7 +10,7 @@
 
 Summary: Python interface to sendmail milter API
 Name: %{pythonbase}-pymilter
-Version: 1.0.1
+Version: 1.0.2
 Release: 1%{dist}
 Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
 Source1: pymilter.te
