@@ -4,7 +4,7 @@ web:
 	rsync -ravKk doc/html/ spidey2.bmsi.com:/Public/pymilter
 	cd doc/html; zip -r ../../doc .
 
-VERSION=1.0.1
+VERSION=1.0.2
 PKG=pymilter-$(VERSION)
 SRCTAR=$(PKG).tar.gz
 

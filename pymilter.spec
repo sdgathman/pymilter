@@ -95,6 +95,11 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %changelog
+* Tue Dec 13 2016 Stuart Gathman <stuart@gathman.org> 1.0.2-1
+- Fix the last setsymlist misspelling.  Support in test framework and tests.
+- Add @symlist decorator.
+- Change body callback and a few other APIs to use bytes instead of str.
+
 * Tue Sep 20 2016 Stuart Gathman <stuart@gathman.org> 1.0.1-1
 - Support python3
 
