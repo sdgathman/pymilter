@@ -38,7 +38,9 @@ sending DSNs or doing CBVs.
             library_dirs=libdirs,
 	    libraries=libs,
 	    # set MAX_ML_REPLY to 1 for sendmail < 8.13
-	    define_macros = [ ('MAX_ML_REPLY',32) ]
+	    define_macros = [ ('MAX_ML_REPLY',32) ],
+            # save lots of debugging time testing rfc2553 compliance
+            extra_compile_args = [ "-Werror=implicit-function-declaration" ]
 	  ),
 	],
 	keywords = ['sendmail','milter'],
