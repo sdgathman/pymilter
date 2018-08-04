@@ -57,7 +57,9 @@
 #
 # @section Useful python packages for milters
 #
-# <a href="https://pypi.python.org/pypi/pyspf">pyspf</a> checks the
+# <a href="https://github.com/sdgathman/pymilter">pymilter</a> - this package.
+#
+# <a href="https://github.com/sdgathman/pyspf">pyspf</a> checks the
 # SMTP envelope sender (MAIL FROM, passed to the Milter.Base.envfrom callback)
 # against a Sender Policy published in DNS by the sending domain.  This
 # can prevent forgery of the MAIL FROM.  SPF is Sender Policy Framework.
@@ -71,9 +73,17 @@
 # a standard place to summarize the results from DKIM, SPF, rDNS, SMTP AUTH,
 # and other email authentication methods.
 #
-# <a href="https://pypi.python.org/pypi/pydspam/">pydspam</a> wraps 
+# <a href="https://github.com/sdgathman/pydspam/">pydspam</a> wraps 
 # the libdspam API of the <a href="http://dspam.sourceforge.net/">DSPAM</a>
 # project.
+#
+# <a href="https://github.com/sdgathman/pysrs/">pysrs</a> rewrites
+# MAIL FROM to include a timestamped signature so that "bounce spam"
+# can be immediately rejected.
+#
+# <a href="https://github.com/sdgathman/pygossip/">pygossip</a> is a 
+# system to track reputation by domain and authentication level and type,
+# and a simple protocol to gossip about reputations with other mail servers.
 #
 # @section Milters written with pymilter
 #
@@ -81,8 +91,8 @@
 # Postfix milter that rejects/fixes manipulated From: header
 # on a mail host with multiple virtual domains.
 #
-# <a href="https://pypi.python.org/pypi/milter/">BMS Milter</a> has several
+# <a href="https://github.com/sdgathman/milter/">BMS Milter</a> has several
 # milters, a big complicated spam filter that integrates multiple
-# authentication protocols with pydpsm, and two simple ones: spfmilter.py and
+# authentication protocols with pydspam, and two simple ones: spfmilter.py and
 # dkim-milter.py.
 #
