@@ -21,24 +21,24 @@ class AddrCacheTestCase(unittest.TestCase):
     cache['foo@bar.com'] = None
     cache.addperm('baz@bar.com')
     cache['temp@bar.com'] = 'testing'
-    self.failUnless(cache.has_key('foo@bar.com'))
-    self.failUnless(not cache.has_key('hello@bar.com'))
-    self.failUnless('baz@bar.com' in cache)
+    self.assertTrue(cache.has_key('foo@bar.com'))
+    self.assertTrue(not cache.has_key('hello@bar.com'))
+    self.assertTrue('baz@bar.com' in cache)
     self.assertEquals(cache['temp@bar.com'],'testing')
     s = open(self.fname).readlines()
-    self.failUnless(len(s) == 2)
-    self.failUnless(s[0].startswith('foo@bar.com '))
+    self.assertTrue(len(s) == 2)
+    self.assertTrue(s[0].startswith('foo@bar.com '))
     self.assertEquals(s[1].strip(),'baz@bar.com')
     # check that new result overrides old
     cache['temp@bar.com'] = None
-    self.failUnless(not cache['temp@bar.com'])
+    self.assertTrue(not cache['temp@bar.com'])
 
   def testDomain(self):
     with open(self.fname,'w') as fp:
       print('spammer.com',file=fp)
     cache = AddrCache(fname=self.fname)
     cache.load(self.fname,30)
-    self.failUnless('spammer.com' in cache)
+    self.assertTrue('spammer.com' in cache)
 
   def testParseHeader(self):
     s='=?UTF-8?B?TGFzdCBGZXcgQ29sZHBsYXkgQWxidW0gQXJ0d29ya3MgQXZhaWxhYmxlAA?='
