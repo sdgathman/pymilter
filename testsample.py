@@ -3,6 +3,7 @@ import Milter
 import sample
 import mime
 from Milter.test import TestBase
+from Milter.testctx import TestCtx
 
 class TestMilter(TestBase,sample.sampleMilter):
   def __init__(self):
@@ -10,6 +11,31 @@ class TestMilter(TestBase,sample.sampleMilter):
     sample.sampleMilter.__init__(self)
 
 class BMSMilterTestCase(unittest.TestCase):
+
+  def testCtx(self,fname='virus1'):
+    ctx = TestCtx()
+    Milter.factory = sample.sampleMilter
+    ctx._setsymval('{auth_authen}','batman')
+    ctx._setsymval('{auth_type}','batcomputer')
+    ctx._setsymval('j','mailhost')
+    rc = ctx._connect()
+    self.assertTrue(rc == Milter.CONTINUE)
+    rc = ctx._feedMsg(fname)
+    milter = ctx.getpriv()
+#    self.assertTrue(milter.user == 'batman',"getsymval failed: "+
+#        "%s != %s"%(milter.user,'batman'))
+    self.assertEquals(milter.user,'batman')
+    self.assertTrue(milter.auth_type != 'batcomputer',"setsymlist failed")
+    self.assertTrue(rc == Milter.ACCEPT)
+    self.assertTrue(ctx._bodyreplaced,"Message body not replaced")
+    fp = ctx._body
+    open('test/'+fname+".tstout","wb").write(fp.getvalue())
+    #self.assertTrue(fp.getvalue() == open("test/virus1.out","r").read())
+    fp.seek(0)
+    msg = mime.message_from_file(fp)
+    s = msg.get_payload(1).get_payload()
+    milter.log(s)
+    ctx._close()
 
   def testDefang(self,fname='virus1'):
     milter = TestMilter()

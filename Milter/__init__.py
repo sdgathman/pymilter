@@ -9,7 +9,7 @@
 # This code is under the GNU General Public License.  See COPYING for details.
 
 from __future__ import print_function
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 import os
 import re
@@ -419,12 +419,12 @@ class Base(object):
         func = getattr(self,func)
         syms = getattr(func,'_symlist',None)
         if syms is not None:
-          self.setsymlist(stage,syms)
+          self.setsymlist(stage,*syms)
       opts[1] = self._protocol = p & ~self.protocol_mask()
       opts[2] = 0
       opts[3] = 0
       #self.log("Negotiated:",opts)
-    except:
+    except Exception as x:
       # don't change anything if something went wrong
       return ALL_OPTS 
     return CONTINUE

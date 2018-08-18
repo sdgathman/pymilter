@@ -14,6 +14,7 @@ Milter.NOREPLY = Milter.CONTINUE
 ## Test mixin for unit testing %milter applications.
 # This mixin overrides many Milter.MilterBase methods
 # with stub versions that simply record what was done.
+# @deprecated Use Milter.test.TestCtx
 # @since 0.9.8
 class TestBase(object):
 
@@ -138,6 +139,7 @@ class TestBase(object):
       raise ValueError('setsymlist limited to 5 macros by MTA')
     if self._symlist[stage] is not None:
       raise ValueError('setsymlist already called for stage:'+stage)
+    print('setsymlist',stage,a)
     self._symlist[stage] = set(a)
 
   ## Feed a file like object to the %milter.  Calls envfrom, envrcpt for
