@@ -63,13 +63,13 @@ class TestCtx(object):
   def getsymval(self,name):
     stage = self._stage
     if stage >= 0:
+      try:
+        s = name.encode('utf8')
+      except: pass
       syms = self._symlist[stage]
-      if syms is not None and name not in syms:
+      if syms is not None and s not in syms:
         return None
-    r = self._macros.get(name,None)
-    if r is not None:
-      return r.decode()
-    return r
+    return self._macros.get(name,None)
 
   def _setsymval(self,name,val):
     self._macros[name] = val
