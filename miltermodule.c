@@ -343,7 +343,11 @@ static struct MilterCallback {
       { NULL , NULL }
     };
 
-staticforward struct smfiDesc description; /* forward declaration */
+#if PY_MAJOR_VERSION >= 3
+        static struct smfiDesc description; /* forward declaration */
+#else
+        staticforward struct smfiDesc description; /* forward declaration */
+#endif
 
 static PyObject *MilterError;
 /* The interpreter instance that called milter.main */
@@ -355,7 +359,11 @@ typedef struct {
 
 static milter_Diag diag;
 
-staticforward PyTypeObject milter_ContextType;
+#if PY_MAJOR_VERSION >= 3
+        static PyTypeObject milter_ContextType;
+#else
+        staticforward PyTypeObject milter_ContextType;
+#endif
 
 typedef struct {
   PyObject_HEAD
@@ -700,7 +708,11 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
   result = PyEval_CallObject(cb, arglist);
   Py_DECREF(arglist);
   if (result == NULL) return _report_exception(self);
+#if PY_MAJOR_VERSION >= 3
+  if (!PyLong_Check(result)) {
+#else
   if (!PyInt_Check(result)) {
+#endif
     const struct MilterCallback *p;
     const char *cbname = "milter";
     char buf[40];
@@ -715,7 +727,11 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
     PyErr_SetString(MilterError,buf);
     return _report_exception(self);
   }
+#if PY_MAJOR_VERSION >= 3
+  retval = PyLong_AS_LONG(result);
+#else
   retval = PyInt_AS_LONG(result);
+#endif
   Py_DECREF(result);
   _release_thread(self->t);
   return retval;
@@ -732,7 +748,11 @@ makeipaddr(struct sockaddr_in *addr) {
 	sprintf(buf, "%d.%d.%d.%d",
 		(int) (x>>24) & 0xff, (int) (x>>16) & 0xff,
 		(int) (x>> 8) & 0xff, (int) (x>> 0) & 0xff);
+#if PY_MAJOR_VERSION >= 3
+	return PyUnicode_FromString(buf);
+#else
 	return PyString_FromString(buf);
+#endif
 }
 
 #ifdef HAVE_IPV6_SUPPORT
@@ -740,8 +760,13 @@ static PyObject *
 makeip6addr(struct sockaddr_in6 *addr) {
 	char buf[100]; /* must be at least INET6_ADDRSTRLEN + 1 */
 	const char *s = inet_ntop(AF_INET6, &addr->sin6_addr, buf, sizeof buf);
-	if (s) return PyString_FromString(s);
-	return PyString_FromString("inet6:unknown");
+#if PY_MAJOR_VERSION >= 3
+       if (s) return PyUnicode_FromString(s);
+       return PyUnicode_FromString("inet6:unknown");
+#else
+       if (s) return PyString_FromString(s);
+       return PyString_FromString("inet6:unknown");
+#endif
 }
 #endif
 
@@ -832,7 +857,11 @@ generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv) {
    for (i=0;i<count;i++) {
      /* There's some error checking performed in do_mkvalue() for a string */
      /* that's not currently done here - it probably should be */
+#if PY_MAJOR_VERSION >= 3
+     PyObject *o = PyUnicode_FromStringAndSize(argv[i], strlen(argv[i]));
+#else
      PyObject *o = PyString_FromStringAndSize(argv[i], strlen(argv[i]));
+#endif
      if (o == NULL) {	/* out of memory */
        Py_DECREF(arglist);
        return _report_exception(self);
@@ -889,7 +918,11 @@ milter_wrap_body(SMFICTX *ctx, u_char *bodyp, size_t bodylen) {
    c = _get_context(ctx);
    if (!c) return SMFIS_TEMPFAIL;
    /* Unclear whether this should be s#, z#, or t# */
+#if PY_MAJOR_VERSION >= 3
+   arglist = Py_BuildValue("(Oy#)", c, bodyp, bodylen);
+#else
    arglist = Py_BuildValue("(Os#)", c, bodyp, bodylen);
+#endif
    return _generic_wrapper(c, body_callback, arglist);
 }
 
@@ -963,7 +996,11 @@ milter_wrap_negotiate(SMFICTX *ctx,
     int i;
     for (i = 0; i < 4; ++i) {
       *pa[i] = (i <= len)
-      	? PyInt_AsUnsignedLongMask(PyList_GET_ITEM(optlist,i))
+#if PY_MAJOR_VERSION >= 3
+       ? PyLong_AsUnsignedLongMask(PyList_GET_ITEM(optlist,i))
+#else
+       ? PyInt_AsUnsignedLongMask(PyList_GET_ITEM(optlist,i))
+#endif
 	: fa[i];
     }
     if (PyErr_Occurred()) {
@@ -1551,10 +1588,12 @@ static PyMethodDef context_methods[] = {
   { NULL, NULL }
 };
 
+#if PY_MAJOR_VERSION < 3
 static PyObject *
 milter_Context_getattr(PyObject *self, char *name) {
   return Py_FindMethod(context_methods, self, name);
 }
+#endif
 
 static struct smfiDesc description = {  /* Set some reasonable defaults */
   "pythonfilter",
@@ -1604,14 +1643,23 @@ static PyMethodDef milter_methods[] = {
 };
 
 static PyTypeObject milter_ContextType = {
+#if PY_MAJOR_VERSION >= 3
+  PyVarObject_HEAD_INIT(&PyType_Type,0)
+  "milter.Context",
+#else
   PyObject_HEAD_INIT(&PyType_Type)
   0,
   "milterContext",
+#endif
   sizeof(milter_ContextObject),
   0,
         milter_Context_dealloc,            /* tp_dealloc */
         0,               /* tp_print */
+#if PY_MAJOR_VERSION >= 3
+        0,           /* tp_getattr */
+#else
         milter_Context_getattr,           /* tp_getattr */
+#endif
         0,			/* tp_setattr */
         0,                                      /* tp_compare */
         0,                 /* tp_repr */
@@ -1625,6 +1673,15 @@ static PyTypeObject milter_ContextType = {
         0,                                      /* tp_setattro */
         0,                                      /* tp_as_buffer */
         Py_TPFLAGS_DEFAULT,                     /* tp_flags */
+#if PY_MAJOR_VERSION >= 3
+        NULL,   /* Documentation string */
+        0,      /* call function for all accessible objects */
+        0,      /* delete references to contained objects */
+        0,      /* rich comparisons */
+        0,      /* weak reference enabler */
+        0, 0,   /* Iterators */
+        context_methods, /* Attribute descriptor and subclassing stuff */
+#endif
 };
 
 static const char milter_documentation[] =
@@ -1634,17 +1691,45 @@ Libmilter is currently marked FFR, and needs to be explicitly installed.\n\
 See <sendmailsource>/libmilter/README for details on setting it up.\n";
 
 static void setitem(PyObject *d,const char *name,long val) {
+#if PY_MAJOR_VERSION >= 3
+  PyObject *v = PyLong_FromLong(val);
+  PyDict_SetItemString(d,name,v);
+  Py_DECREF(v);
+}
+ 
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "milter",           /* m_name */
+    milter_documentation,/* m_doc */
+    -1,                  /* m_size */
+    milter_methods,      /* m_methods */
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+};
+
+PyMODINIT_FUNC PyInit_milter(void) {
+    PyObject *m, *d;
+ 
+   if (PyType_Ready(&milter_ContextType) < 0)
+          return NULL;
+
+   m = PyModule_Create(&moduledef);
+   if (m == NULL) return NULL;
+#else
   PyObject *v = PyInt_FromLong(val);
   PyDict_SetItemString(d,name,v);
   Py_DECREF(v);
 }
-
+ 
 void
 initmilter(void) {
    PyObject *m, *d;
 
    m = Py_InitModule4("milter", milter_methods, milter_documentation,
-		      (PyObject*)NULL, PYTHON_API_VERSION);
+	              (PyObject*)NULL, PYTHON_API_VERSION);
+#endif
    d = PyModule_GetDict(m);
    MilterError = PyErr_NewException("milter.error", NULL, NULL);
    PyDict_SetItemString(d,"error", MilterError);
@@ -1710,4 +1795,7 @@ initmilter(void) {
    setitem(d,"DISCARD",  SMFIS_DISCARD);
    setitem(d,"ACCEPT",  SMFIS_ACCEPT);
    setitem(d,"TEMPFAIL",  SMFIS_TEMPFAIL);
+#if PY_MAJOR_VERSION >= 3
+   return m;
+#endif
 }
