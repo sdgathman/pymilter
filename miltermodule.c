@@ -134,8 +134,10 @@ static struct MilterCallback {
 
 #if PY_MAJOR_VERSION >= 3
         static struct smfiDesc description; /* forward declaration */
+        static PyTypeObject milter_ContextType;
 #else
         staticforward struct smfiDesc description; /* forward declaration */
+        staticforward PyTypeObject milter_ContextType;
 #endif
 
 static PyObject *MilterError;
@@ -147,12 +149,6 @@ typedef struct {
 } milter_Diag;
 
 static milter_Diag diag;
-
-#if PY_MAJOR_VERSION >= 3
-        static PyTypeObject milter_ContextType;
-#else
-        staticforward PyTypeObject milter_ContextType;
-#endif
 
 typedef struct {
   PyObject_HEAD
@@ -772,13 +768,6 @@ milter_wrap_negotiate(SMFICTX *ctx,
   rc = _generic_wrapper(c, negotiate_callback, arglist);
   c->t = t;
   if (rc == SMFIS_CONTINUE) {
-#if 0	// PyArgs_Parse deprecated and going away
-    if (!PyArgs_Parse(optlist,"[kkkk]",pf0,pf1,pf2,pf3)) {
-      PyErr_Print();
-      PyErr_Clear();	/* must clear since not returning to python */
-      rc = SMFIS_REJECT;
-    }
-#else
     unsigned long *pa[4] = { pf0,pf1,pf2,pf3 };
     unsigned long fa[4] = { f0,f1,f2,f3 };
     int len = PyList_Size(optlist);
@@ -797,7 +786,6 @@ milter_wrap_negotiate(SMFICTX *ctx,
       PyErr_Clear();
       rc = SMFIS_REJECT;
     }
-#endif
   }
   else if (rc != SMFIS_ALL_OPTS)
     rc = SMFIS_REJECT;

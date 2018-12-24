@@ -10,7 +10,6 @@ include testmime.py
 include testutils.py
 include test.py
 include sample.py
-include sgmllib.py
 include milter-template.py
 include test/*
 include Milter/*.py
