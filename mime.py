@@ -102,6 +102,7 @@ except:
 import socket
 import Milter
 import zipfile
+import sys
 
 import email
 from email.message import Message
@@ -537,7 +538,6 @@ def check_html(msg,savname=None):
   return Milter.CONTINUE
 
 if __name__ == '__main__':
-  import sys
   def _list_attach(msg):
     t = msg.get_content_type()
     p = msg.get_payload(decode=True)

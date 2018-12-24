@@ -4,7 +4,7 @@ web:
 	rsync -ravKk doc/html/ bmsi.com:/var/www/html/pymilter
 	cd doc/html; zip -r ../../doc .
 
-VERSION=1.0.2
+VERSION=1.0.3
 PKG=pymilter-$(VERSION)
 SRCTAR=$(PKG).tar.gz
 
