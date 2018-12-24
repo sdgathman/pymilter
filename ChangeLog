@@ -1,3 +1,213 @@
+# Revision 1.35  2013/03/14 22:11:25  customdesigned
+# Release 0.9.8
+#
+# Revision 1.34  2013/03/09 05:42:14  customdesigned
+# Make TestBase members private, fix getsymlist misspelling.
+#
+# Revision 1.33  2013/03/09 00:25:23  customdesigned
+# Better untrapped exception message.  const char for doc comments.
+#
+# Revision 1.32  2013/01/13 01:46:16  customdesigned
+# Doc updates.
+#
+# Revision 1.31  2012/04/12 23:32:50  customdesigned
+# Replace redundant callback array with macros.  If this doesn't break anything,
+# macros can be eliminated with code changes.
+#
+# Revision 1.30  2012/04/12 23:08:06  customdesigned
+# Support RFC2553 on BSD
+#
+# Revision 1.29  2011/06/09 15:45:27  customdesigned
+# Print callback name for non-int return error.
+#
+# Revision 1.28  2011/06/08 23:13:48  customdesigned
+# Generate special exception when callback return not int.
+#
+# Revision 1.27  2009/07/28 21:45:54  customdesigned
+# Add getversion() to return runtime version.
+#
+# Revision 1.26  2009/07/28 21:08:20  customdesigned
+# Increment del count.
+#
+# Revision 1.25  2009/07/28 20:58:55  customdesigned
+# getdiag method
+#
+# Revision 1.24  2009/06/09 01:54:44  customdesigned
+# Forgot to initialize optional parameter.
+#
+# Revision 1.23  2009/05/29 20:44:58  customdesigned
+# Typo SMFIP_NO constants.
+#
+# Revision 1.22  2009/05/29 19:53:36  customdesigned
+# Typo SMFIS_ALL_OPTS
+#
+# Revision 1.21  2009/05/29 19:49:40  customdesigned
+# Typo calling helo instead of negotiate.
+#
+# Revision 1.20  2009/05/29 18:25:59  customdesigned
+# Null terminate keyword list.
+#
+# Revision 1.19  2009/05/28 18:36:42  customdesigned
+# Support new callbacks, including negotiate
+#
+# Revision 1.18  2009/05/21 21:53:05  customdesigned
+# First cut at support unknown, data, negotiate callbacks.
+#
+# Revision 1.17  2009/02/06 04:28:08  customdesigned
+# Oops!  Missing options argument pointer for addrcpt.
+#
+# Revision 1.16  2008/12/16 04:21:05  customdesigned
+# Fedora release
+#
+# Revision 1.15  2008/12/13 20:29:56  customdesigned
+# Split off milter applications.
+#
+# Revision 1.14  2008/12/04 19:43:00  customdesigned
+# Doc updates.
+#
+# Revision 1.13  2008/11/23 03:06:47  customdesigned
+# Milter support for chgfrom.
+#
+# Revision 1.12  2008/11/21 20:42:52  customdesigned
+# Support smfi_chgfrom and smfi_addrcpt_par.
+#
+# Revision 1.11  2007/09/25 02:26:29  customdesigned
+# Update license.
+#
+# Revision 1.10  2006/02/12 02:00:42  customdesigned
+# Resolve FIXME for wrap_close.
+#
+# Revision 1.9  2005/12/23 21:46:36  customdesigned
+# Compile on sendmail-8.12 (ifdef SMFIR_INSHEADER)
+#
+# Revision 1.8  2005/10/20 23:23:36  customdesigned
+# Include smfi_progress is SMFIR_PROGRESS defined
+#
+# Revision 1.7  2005/10/20 23:04:46  customdesigned
+# Add optional idx for position of added header.
+#
+# Revision 1.6  2005/07/15 22:18:17  customdesigned
+# Support callback exception policy
+#
+# Revision 1.5  2005/06/24 04:20:07  customdesigned
+# Report context allocation error.
+#
+# Revision 1.4  2005/06/24 04:12:43  customdesigned
+# Remove unused name argument to generic wrappers.
+#
+# Revision 1.3  2005/06/24 03:57:35  customdesigned
+# Handle close called before connect.
+#
+# Revision 1.2  2005/06/02 04:18:55  customdesigned
+# Update copyright notices after reading article on /.
+#
+# Revision 1.1.1.2  2005/05/31 18:09:06  customdesigned
+# Release 0.7.1
+#
+# Revision 2.31  2004/08/23 02:24:36  stuart
+# Support setbacklog
+#
+# Revision 2.30  2004/08/21 20:29:53  stuart
+# Support option of 11 lines max for mlreply.
+#
+# Revision 2.29  2004/08/21 04:14:29  stuart
+# mlreply support
+#
+# Revision 2.28  2004/08/21 02:45:21  stuart
+# Don't leak int constants if module unloaded.
+#
+# Revision 2.27  2004/04/06 03:19:59  stuart
+# Release 0.6.8
+#
+# Revision 2.26  2004/03/04 21:43:06  stuart
+# Fix memory leak by removing unused dynamic template buffer,
+# thanks again to Alexander Kourakos.
+#
+# Revision 2.25  2004/03/01 19:45:03  stuart
+# Release 0.6.5
+#
+# Revision 2.24  2004/03/01 18:56:50  stuart
+# Support progress reporting.
+#
+# Revision 2.23  2004/03/01 18:36:09  stuart
+# Plug memory leak.  Thanks to Alexander Kourakos.
+#
+# Revision 2.22  2003/11/02 03:01:46  stuart
+# Adjust SMTP error codes after careful reading of standard.
+#
+# Revision 2.21  2003/06/24 19:57:04  stuart
+# Allow removing a python milter callback by setting to None.
+#
+# Revision 2.20  2003/02/13 17:08:57  stuart
+# IPV6 support
+#
+# Revision 2.19  2003/02/13 16:58:29  stuart
+# Support passing None to setreply and chgheader.
+#
+# Revision 2.18  2002/12/11 16:44:06  stuart
+# Support QUARANTINE if supported by libmilter.
+#
+# Revision 2.17  2002/04/18 20:20:35  stuart
+# Fix for NULL hostaddr in connect callback from Jason Erickson.
+#
+# Revision 2.16  2001/09/26 13:29:09  stuart
+# sa_len not supported by linux.
+#
+# Revision 2.15  2001/09/25 17:28:40  stuart
+# Copyrights, documentation, release 0.3.1
+#
+# Revision 2.14  2001/09/25 00:36:57  stuart
+# Pass hostaddr to python code in format used by standard socket module.
+#
+# Revision 2.13  2001/09/24 23:44:55  stuart
+# Return old callback from setcallback functions.
+#
+# Revision 2.12  2001/09/24 20:02:30  stuart
+# Remove redundant setpriv
+#
+# Revision 2.11  2001/09/23 22:26:35  stuart
+# Update docs.  Streamline Milter.py
+# update testbms.py to reflect actual sendmail behaviour with multiple
+# messages per connection.
+#
+# Revision 2.10  2001/09/22 15:33:42  stuart
+# More doc comment updates.
+#
+# Revision 2.9  2001/09/22 14:52:27  stuart
+# Actually return retval in _generic_return.
+# Go over doc comments.
+#
+# Revision 2.8  2001/09/22 01:59:32  stuart
+# Prevent reentrant call of milter_main, which libmilter doesn't support.
+#
+# Revision 2.7  2001/09/22 01:47:37  stuart
+# Forgot to set milter interp.
+#
+# Revision 2.6  2001/09/22 01:23:53  stuart
+# Added proper threading after research in python docs.
+#
+# Revision 2.5  2001/09/21 20:08:51  stuart
+# Release 0.2.3
+#
+# Revision 2.4  2001/09/20 16:18:16  stuart
+# libmilter checks in_eom state, so we don't have to.
+#
+# Revision 2.3  2001/09/19 06:02:33  stuart
+# Make more stuff static.
+#
+# Revision 2.1  2001/09/19 04:24:13  stuart
+# Use extension type to track context in python.
+#
+# Revision 1.4  2001/09/18 18:48:28  stuart
+# clear private data reference in _clear_context
+#
+# Revision 1.3  2001/09/15  04:19:37  stuart
+# nasty off by 1 mem overwrite bugs in wrap_env
+# generic_set_callback
+#
+# Revision 1.2  2001/09/15  03:15:39  stuart
+# several bugs fixed, works smoothly
+#
 # Revision 1.69  2006/11/04 22:09:39  customdesigned
 # Another lame DSN heuristic.  Block PTR cache poisoning attack.
 #
