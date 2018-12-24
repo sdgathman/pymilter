@@ -63,7 +63,10 @@ class TestBase(object):
       syms = self._symlist[stage]
       if syms is not None and name not in syms:
         return None
-    return self._macros.get(name,None)
+    r = self._macros.get(name,None)
+    if r is not None:
+      return r.decode()
+    return r
 
   def replacebody(self,chunk):
     if self._body:

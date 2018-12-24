@@ -65,8 +65,11 @@ class TestCtx(object):
     if stage >= 0:
       syms = self._symlist[stage]
       if syms is not None and name not in syms:
-        return syms
-    return self._macros.get(name,'notfound')
+        return None
+    r = self._macros.get(name,None)
+    if r is not None:
+      return r.decode()
+    return r
 
   def _setsymval(self,name,val):
     self._macros[name] = val
