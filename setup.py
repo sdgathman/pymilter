@@ -12,9 +12,6 @@ if sys.version < '2.6.5':
 libs = ["milter"]
 libdirs = ["/usr/lib/libmilter"]    # needed for Debian
 modules = ["mime"]
-if sys.version >= '3':
-  modules.append("sgmllib")
-  print("modules=",modules)
 
 # NOTE: importing Milter to obtain version fails when milter.so not built
 setup(name = "pymilter", version = '1.0.2',

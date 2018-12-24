@@ -401,7 +401,10 @@ class _defang:
 # emulate old defang function
 defang = _defang()
 
-from sgmllib import SGMLParser as HTMLParser
+if sys.version < '3.0.0':
+    from sgmllib import SGMLParser as HTMLParser
+else:
+    from Milter.sgmllib import SGMLParser as HTMLParser
 
 import re
 declname = re.compile(r'[a-zA-Z][-_.a-zA-Z0-9]*\s*')
