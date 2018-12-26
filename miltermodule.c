@@ -1145,7 +1145,7 @@ Change/delete a header in the message. \n\
 It is not checked for standards compliance; the mail filter\n\
 must ensure that no protocols are violated as a result of adding this header.\n\
 field - header field name\n\
-int - the Nth occurence of this header\n\
+int - the Nth occurrence of this header\n\
 value - header field value\n\
 field and value are strings.\n\
 This function can only be called from the EOM callback.";
