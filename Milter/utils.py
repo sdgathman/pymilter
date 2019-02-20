@@ -8,6 +8,7 @@ import socket
 import email.errors
 from email.header import decode_header
 import email.base64mime
+import email.utils
 from fnmatch import fnmatchcase
 from binascii import a2b_base64
 
