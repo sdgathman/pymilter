@@ -379,7 +379,7 @@ Sets the Python function invoked for each body chunk. There may\n\
 be multiple body chunks passed to the filter. End-of-lines are\n\
 represented as received from SMTP (normally Carriage-Return/Line-Feed).\n\
 Function takes args (ctx, chunk) -> int\n\
-chunk -> String - body data";
+chunk -> bytes - body data";
 
 static PyObject *
 milter_set_body_callback(PyObject *self, PyObject *args) {
