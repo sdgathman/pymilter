@@ -1,4 +1,4 @@
-## A very simple milter to prevent mixing of internal and external mail.  
+## A very simple sample milter to prevent mixing of internal and external mail.
 # Internal is defined as using one of a list of internal top level domains.
 #  This code is open-source on the same terms as Python.
 

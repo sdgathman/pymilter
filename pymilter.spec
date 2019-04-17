@@ -9,7 +9,7 @@
 
 Summary: %{sum}
 Name: python-pymilter
-Version: 1.0.3
+Version: 1.0.4
 Release: 1%{?dist}
 Url: http://bmsi.com/pymilter
 Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
@@ -138,6 +138,10 @@ if [ $1 -eq 0 ] ; then
 fi
 
 %changelog
+* Wed Apr 17 2019 Stuart Gathman <stuart@gathman.org> - 1.0.4-1
+- New upstream release: cleanup unused files, additional platform support
+- Minor doc updates
+
 * Sun Dec 23 2018 Stuart Gathman <stuart@gathman.org> - 1.0.3-1
 - New upstream release
 - patch step for python3 no longer required in build
