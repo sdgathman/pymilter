@@ -1,46 +1,72 @@
-%define __python python2
-%if 0%{?rhel} == 6
-%define pythonbase python
+# we don't want to provide private python extension libs
+%global sum Python interface to sendmail milter API
+%global __provides_exclude_from ^(%{python2_sitearch})/.*\\.so$
+%if 0%{?epel} == 7
+%global python3 python34
 %else
-%define pythonbase python2
+%global python3 python3
 %endif
 
-%define libdir %{_libdir}/pymilter
-%{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
-
-Summary: Python interface to sendmail milter API
-Name: %{pythonbase}-pymilter
-Version: 1.0.2
-Release: 1%{dist}
+Summary: %{sum}
+Name: python-pymilter
+Version: 1.0.3
+Release: 1%{?dist}
+Url: http://bmsi.com/pymilter
 Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
-Source1: pymilter.te
-# Patch miltermodule to python3
-# FIXME: replace with reverse patch at some point (make py3 the default)
-Patch: milter.patch
+Source1: tmpfiles-python-pymilter.conf
+# remove unit tests that require network for check
+Patch: pymilter-check.patch
 License: GPLv2+
 Group: Development/Libraries
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Url: http://www.bmsi.com/python/milter.html
+BuildRequires: python2-devel, %{python3}-devel, sendmail-devel >= 8.13
 # python-2.6.4 gets RuntimeError: not holding the import lock
-Requires: %{pythonbase} >= 2.6.5, sendmail-milter >= 8.13
-%if 0%{?fedora} >= 23
 # Need python2.6 specific pydns, not the version for system python
-Recommends: %{pythonbase}-pydns
-%endif
-# Needed for callbacks, not a core function but highly useful for milters
-BuildRequires: ed, %{pythonbase}-devel, sendmail-devel >= 8.13
+BuildRequires:  gcc
 
-%description
-This is a python extension module to enable python scripts to
-attach to sendmail's libmilter functionality.  Additional python
-modules provide for navigating and modifying MIME parts, sending
+%global _description\
+This is a python extension module to enable python scripts to\
+attach to sendmail's libmilter functionality.  Additional python\
+modules provide for navigating and modifying MIME parts, sending\
 DSNs, and doing CBV.
+
+%description %_description
+
+%package -n python2-pymilter
+Summary: %{sum}
+%if 0%{?epel} >= 6
+Requires: python-pydns
+%else
+Requires: python2-pydns
+%endif
+Requires: %{name}-common = %{version}-%{release}
+%{?python_provide:%python_provide python2-pymilter}
+
+%description -n python2-pymilter %_description
+
+%package -n %{python3}-pymilter
+Summary: %{sum}
+%if 0%{?fedora} >= 26
+Requires: %{python3}-py3dns
+%endif
+Requires: %{name}-common = %{version}-%{release}
+%{?python_provide:%python_provide %{python3}-pymilter}
+
+%description -n %{python3}-pymilter %_description
+
+%package common
+Summary: Common files and directories for python milters
+BuildArch: noarch
+
+%description common
+Common files and directories used for python milters
 
 %package selinux
 Summary: SELinux policy module for pymilter
 Group: System Environment/Base
-Requires: policycoreutils, selinux-policy, %{name}
-BuildRequires: policycoreutils, checkpolicy
+Requires: policycoreutils, selinux-policy-targeted
+Requires: %{name} = %{version}-%{release}
+BuildArch: noarch
+BuildRequires: policycoreutils, checkpolicy, selinux-policy-devel
 %if 0%{?epel} >= 6
 BuildRequires: policycoreutils-python
 %else
@@ -48,71 +74,146 @@ BuildRequires: policycoreutils-python-utils
 %endif
 
 %description selinux
-SELinux policy module for using pymilter with sendmail with selinux enforcing
+Give sendmail_t additional access to stream sockets used to communicate
+with milters.
 
 %prep
-%setup -q -n pymilter-%{version}
-cp %{SOURCE1} pymilter.te
+%setup -q -n pymilter-pymilter-%{version}
+%patch -p1 -b .check
 
 %build
-env CFLAGS="$RPM_OPT_FLAGS" %{__python} setup.py build
+%py2_build
+#patch -p1 -b -z .py3 <milter.patch # not needed since 1.0.3
+%py3_build
 checkmodule -m -M -o pymilter.mod pymilter.te
 semodule_package -o pymilter.pp -m pymilter.mod
 
 %install
-rm -rf $RPM_BUILD_ROOT
-%{__python} setup.py install --root=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/milter
-mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/milter
-mkdir -p $RPM_BUILD_ROOT%{libdir}
+%py2_install 
+%py3_install 
+
+mkdir -p %{buildroot}/run/milter
+mkdir -p %{buildroot}%{_localstatedir}/log/milter
+mkdir -p %{buildroot}%{_libexecdir}/milter
+mkdir -p %{buildroot}%{_prefix}/lib/tmpfiles.d
+install -m 0644 %{SOURCE1} %{buildroot}%{_prefix}/lib/tmpfiles.d/%{name}.conf
 
 # install selinux modules
 mkdir -p %{buildroot}%{_datadir}/selinux/targeted
 cp -p pymilter.pp %{buildroot}%{_datadir}/selinux/targeted
 
-%files
-%defattr(-,root,root,-)
+%check
+py2path=$(ls -d build/lib.linux-*-2.*)
+py3path=$(ls -d build/lib.linux-*-3.*)
+PYTHONPATH=${py2path}:. python2 test.py &&
+PYTHONPATH=${py3path}:. python3 test.py
+
+%files -n python2-pymilter
+%license COPYING
 %doc README ChangeLog NEWS TODO CREDITS sample.py milter-template.py
-%{python_sitearch}/*
-%{libdir}
-%dir %attr(0755,mail,mail) %{_localstatedir}/run/milter
+%{python2_sitearch}/*
+
+%files -n %{python3}-pymilter
+%license COPYING
+%doc README ChangeLog NEWS TODO CREDITS sample.py milter-template.py
+%{python3_sitearch}/*
+
+%files common
+%dir %{_libexecdir}/milter
+%{_prefix}/lib/tmpfiles.d/%{name}.conf
 %dir %attr(0755,mail,mail) %{_localstatedir}/log/milter
+%dir %attr(0755,mail,mail) /run/milter
 
 %files selinux
 %doc pymilter.te
 %{_datadir}/selinux/targeted/*
 
-%clean
-rm -rf $RPM_BUILD_ROOT
-
 %post selinux
-/usr/sbin/semodule -s targeted -i %{_datadir}/selinux/targeted/pymilter.pp \
-	&>/dev/null || :
+%{_sbindir}/semodule -s targeted -i %{_datadir}/selinux/targeted/pymilter.pp \
+        &>/dev/null || :
 
 %postun selinux
 if [ $1 -eq 0 ] ; then
-/usr/sbin/semodule -s targeted -r pymilter &> /dev/null || :
+%{_sbindir}/semodule -s targeted -r pymilter &> /dev/null || :
 fi
 
 %changelog
-* Tue Dec 13 2016 Stuart Gathman <stuart@gathman.org> 1.0.2-1
-- Fix the last setsymlist misspelling.  Support in test framework and tests.
-- Add @symlist decorator.
-- Change body callback and a few other APIs to use bytes instead of str.
+* Sun Dec 23 2018 Stuart Gathman <stuart@gathman.org> - 1.0.3-1
+- New upstream release
+- patch step for python3 no longer required in build
 
-* Tue Sep 20 2016 Stuart Gathman <stuart@gathman.org> 1.0.1-1
-- Support python3
+* Sat Aug  4 2018 Stuart Gathman <stuart@gathman.org> - 1.0.2-4
+- Add unit tests to %%check
 
-* Sat Mar  1 2014 Stuart Gathman <stuart@gathman.org> 1.0-2
-- Remove start.sh to track EPEL repository, suggest daemonize as replacement
-- Selinux subpackage should not care about pymilter version
+* Sat Aug  4 2018 Stuart Gathman <stuart@gathman.org> - 1.0.2-3
+- use libexec instead of libdir
 
-* Wed Jun 26 2013 Stuart Gathman <stuart@gathman.org> 1.0-1
-- Allow ACCEPT as untrapped exception policy
-- Optional dir for getaddrset and getaddrdict in Milter.config
-- Show registered milter name in untrapped exception message.
-- Include selinux subpackage
-- Provide Milter.greylist export and Milter.greylist import to migrate data
+* Sat Aug  4 2018 Stuart Gathman <stuart@gathman.org> - 1.0.2-2
+- add python34 subpackage on el7
+
+* Sat Aug  4 2018 Stuart Gathman <stuart@gathman.org> - 1.0.2-1
+- build for both python2 and python3
+- add selinux policy allowing sendmail_t access to milters
+
+* Tue Jul 17 2018 Miro Hrončok <mhroncok@redhat.com> - 1.0-13
+- Update Python macros to new packaging standards
+  (See https://fedoraproject.org/wiki/Changes/Move_usr_bin_python_into_separate_package)
+
+* Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
+* Fri Feb 09 2018 Iryna Shcherbina <ishcherb@redhat.com> - 1.0-11
+- Update Python 2 dependency declarations to new packaging standards
+  (See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3)
+
+* Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-10
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
+* Fri Feb 09 2018 Igor Gnatenko <ignatenkobrain@fedoraproject.org> - 1.0-9
+- Escape macros in %%changelog
+
+* Sat Aug 19 2017 Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl> - 1.0-8
+- Python 2 binary package renamed to python2-pymilter
+  See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3
+
+* Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-7
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
+
+* Thu Jul 27 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
+>>>>>>> 021796e51e5919812f1c300d1830ef9ed378db2d
+
+* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
+* Tue Jul 19 2016 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-4
+- https://fedoraproject.org/wiki/Changes/Automatic_Provides_for_Python_RPM_Packages
+
+* Thu Feb 04 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Thu Jun 18 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
+* Sat Sep 27 2014 Paul Wouters <pwouters@redhat.com> - 1.0-1
+- Updated to 1.0
+- Use tmpfiles and /run
+
+* Sun Aug 17 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.9.8-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 0.9.8-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
+* Fri Jan 10 2014 Paul Wouters <pwouters@redhat.com> - 0.9.8-4
+- Add COPYING
+- Fix buildroot macros and dist macro
+
+* Fri Jan 10 2014 Paul Wouters <pwouters@redhat.com> - 0.9.8-3
+- rebuilt with proper file permission
+
+* Tue Jan 07 2014 Paul Wouters <pwouters@redhat.com> - 0.9.8-2
+- Fixup for fedora release
 
 * Sat Mar  9 2013 Stuart Gathman <stuart@bmsi.com> 0.9.8-1
 - Add Milter.test module for unit testing milters.
@@ -120,13 +221,13 @@ fi
 - Change untrapped exception message to:
 - "pymilter: untrapped exception in milter app"
 
-* Thu Apr 12 2012 Stuart Gathman <stuart@bmsi.com> 0.9.7-1
+* Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.7-1
 - Raise RuntimeError when result != CONTINUE for @noreply and @nocallback
 - Remove redundant table in miltermodule
 - Fix CNAME chain duplicating TXT records in Milter.dns (from pyspf).
 
 * Sat Feb 25 2012 Stuart Gathman <stuart@bmsi.com> 0.9.6-1
-- Raise ValueError on unescaped '%' passed to setreply
+- Raise ValueError on unescaped '%%' passed to setreply
 - Grace time at end of Greylist window
 
 * Fri Aug 19 2011 Stuart Gathman <stuart@bmsi.com> 0.9.5-1
