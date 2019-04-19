@@ -2,7 +2,7 @@
 %global sum Python interface to sendmail milter API
 %global __provides_exclude_from ^(%{python2_sitearch})/.*\\.so$
 %if 0%{?epel} == 7
-%global python3 python34
+%global python3 python36
 %else
 %global python3 python3
 %endif
@@ -13,7 +13,7 @@ Version: 1.0.4
 Release: 1%{?dist}
 Url: http://bmsi.com/pymilter
 Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
-Source1: tmpfiles-python-pymilter.conf
+#Source1: tmpfiles-python-pymilter.conf
 # remove unit tests that require network for check
 Patch: pymilter-check.patch
 License: GPLv2+
@@ -79,11 +79,10 @@ with milters.
 
 %prep
 %setup -q -n pymilter-pymilter-%{version}
-%patch -p1 -b .check
+#patch -p1 -b .check
 
 %build
 %py2_build
-#patch -p1 -b -z .py3 <milter.patch # not needed since 1.0.3
 %py3_build
 checkmodule -m -M -o pymilter.mod pymilter.te
 semodule_package -o pymilter.pp -m pymilter.mod
@@ -95,8 +94,8 @@ semodule_package -o pymilter.pp -m pymilter.mod
 mkdir -p %{buildroot}/run/milter
 mkdir -p %{buildroot}%{_localstatedir}/log/milter
 mkdir -p %{buildroot}%{_libexecdir}/milter
-mkdir -p %{buildroot}%{_prefix}/lib/tmpfiles.d
-install -m 0644 %{SOURCE1} %{buildroot}%{_prefix}/lib/tmpfiles.d/%{name}.conf
+#mkdir -p %{buildroot}%{_prefix}/lib/tmpfiles.d
+#install -m 0644 %{SOURCE1} %{buildroot}%{_prefix}/lib/tmpfiles.d/%{name}.conf
 
 # install selinux modules
 mkdir -p %{buildroot}%{_datadir}/selinux/targeted

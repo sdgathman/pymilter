@@ -11,4 +11,8 @@ SRCTAR=$(PKG).tar.gz
 $(SRCTAR):
 	git archive --format=tar.gz --prefix=$(PKG)/ -o $(SRCTAR) $(PKG)
 
+# add extra copy of name like github so annoyingly does...
+github:
+	git archive --format=tar.gz --prefix=pymilter-$(PKG)/ -o $(SRCTAR) $(PKG)
+
 gittar: $(SRCTAR)
