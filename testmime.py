@@ -29,6 +29,7 @@
 from __future__ import print_function
 import unittest
 import mime
+import zipfile
 import socket
 try:
   from StringIO import StringIO
@@ -50,6 +51,14 @@ agent one."""
 hostname = socket.gethostname()
 
 class MimeTestCase(unittest.TestCase):
+
+  def setUp(self):
+    self.zf = zipfile.ZipFile('test/virus.zip','r')
+    self.zf.setpassword('denatured')
+
+  def tearDown(self):
+    self.zf.close()
+    self.zf = None
 
   # test mime parameter parsing
   def testParam(self):
@@ -90,8 +99,12 @@ class MimeTestCase(unittest.TestCase):
   
   def testDefang(self,vname='virus1',part=1,
 	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
-    with open('test/'+vname,"rb") as fp:
-      msg = mime.message_from_file(fp)
+    try:
+      with self.zf.open(vname,"r") as fp:
+        msg = mime.message_from_file(fp)
+    except KeyError:
+      with open('test/'+vname,"rb") as fp:
+        msg = mime.message_from_file(fp)
     mime.defang(msg,scan_zip=True)
     self.assertTrue(msg.ismodified(),"virus not removed")
     oname = vname + '.out'
@@ -118,7 +131,7 @@ class MimeTestCase(unittest.TestCase):
 
   # virus6 has no parts - the virus is directly inline
   def testDefang6(self,vname="virus6",fname='FAX20.exe'):
-    with open('test/'+vname,"rb") as fp:
+    with self.zf.open(vname,"r") as fp:
       msg = mime.message_from_file(fp)
     mime.defang(msg)
     oname = vname + '.out'

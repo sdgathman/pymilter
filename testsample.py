@@ -2,6 +2,7 @@ import unittest
 import Milter
 import sample
 import mime
+import zipfile
 from Milter.test import TestBase
 from Milter.testctx import TestCtx
 
@@ -12,6 +13,14 @@ class TestMilter(TestBase,sample.sampleMilter):
 
 class BMSMilterTestCase(unittest.TestCase):
 
+  def setUp(self):
+    self.zf = zipfile.ZipFile('test/virus.zip','r')
+    self.zf.setpassword('denatured')
+
+  def tearDown(self):
+    self.zf.close()
+    self.zf = None
+
   def testCtx(self,fname='virus1'):
     ctx = TestCtx()
     Milter.factory = sample.sampleMilter
@@ -20,7 +29,8 @@ class BMSMilterTestCase(unittest.TestCase):
     ctx._setsymval('j','mailhost')
     rc = ctx._connect()
     self.assertTrue(rc == Milter.CONTINUE)
-    rc = ctx._feedMsg(fname)
+    with self.zf.open(fname) as fp:
+      rc = ctx._feedFile(fp)
     milter = ctx.getpriv()
 #    self.assertTrue(milter.user == 'batman',"getsymval failed: "+
 #        "%s != %s"%(milter.user,'batman'))
@@ -44,7 +54,8 @@ class BMSMilterTestCase(unittest.TestCase):
     milter.setsymval('j','mailhost')
     rc = milter.connect()
     self.assertTrue(rc == Milter.CONTINUE)
-    rc = milter.feedMsg(fname)
+    with self.zf.open(fname) as fp:
+      rc = milter.feedFile(fp)
     self.assertTrue(milter.user == 'batman',"getsymval failed")
     # setsymlist not working in TestBase
     #self.assertTrue(milter.auth_type != 'batcomputer',"setsymlist failed")
@@ -75,13 +86,15 @@ class BMSMilterTestCase(unittest.TestCase):
     rc = milter.feedMsg('samp1')
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
-    rc = milter.feedMsg("virus3")
+    with self.zf.open("virus3") as fp:
+      rc = milter.feedFile(fp)
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
     open("test/virus3.tstout","wb").write(fp.getvalue())
     #self.assertTrue(fp.getvalue() == open("test/virus3.out","r").read())
-    rc = milter.feedMsg("virus6")
+    with self.zf.open("virus6") as fp:
+      rc = milter.feedFile(fp)
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     self.assertTrue(milter._headerschanged,"Message headers not adjusted")
