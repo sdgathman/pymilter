@@ -54,7 +54,7 @@ class MimeTestCase(unittest.TestCase):
 
   def setUp(self):
     self.zf = zipfile.ZipFile('test/virus.zip','r')
-    self.zf.setpassword('denatured')
+    self.zf.setpassword(b'denatured')
 
   def tearDown(self):
     self.zf.close()
