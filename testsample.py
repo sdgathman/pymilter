@@ -21,6 +21,23 @@ class BMSMilterTestCase(unittest.TestCase):
     self.zf.close()
     self.zf = None
 
+  def testHeader(self,fname='utf8'):
+    ctx = TestCtx()
+    Milter.factory = sample.sampleMilter
+    ctx._setsymval('{auth_authen}','batman')
+    ctx._setsymval('{auth_type}','batcomputer')
+    ctx._setsymval('j','mailhost')
+    rc = ctx._connect()
+    self.assertTrue(rc == Milter.CONTINUE)
+    with open('test/'+fname) as fp:
+      rc = ctx._feedFile(fp)
+    milter = ctx.getpriv()
+    self.assertFalse(ctx._bodyreplaced,"Message body not replaced")
+    fp = ctx._body
+    with open('test/'+fname+".tstout","wb") as ofp:
+      ofp.write(fp.getvalue())
+    ctx._close()
+
   def testCtx(self,fname='virus1'):
     ctx = TestCtx()
     Milter.factory = sample.sampleMilter
