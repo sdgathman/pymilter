@@ -29,10 +29,10 @@ class BMSMilterTestCase(unittest.TestCase):
     ctx._setsymval('j','mailhost')
     rc = ctx._connect()
     self.assertTrue(rc == Milter.CONTINUE)
-    with open('test/'+fname) as fp:
+    with open('test/'+fname,'rb') as fp:
       rc = ctx._feedFile(fp)
     milter = ctx.getpriv()
-    self.assertFalse(ctx._bodyreplaced,"Message body not replaced")
+    self.assertFalse(ctx._bodyreplaced,"Message body replaced")
     fp = ctx._body
     with open('test/'+fname+".tstout","wb") as ofp:
       ofp.write(fp.getvalue())

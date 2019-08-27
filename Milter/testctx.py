@@ -270,6 +270,7 @@ class TestCtx(object):
     if rc != Milter.CONTINUE: return rc
     # header
     for h,val in msg.items():
+      # val is a Header object for invalid header values 
       rc = self._header(h,val)
       if rc != Milter.CONTINUE: return rc
     # eoh
