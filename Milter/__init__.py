@@ -14,6 +14,7 @@ __version__ = '1.0.4'
 import os
 import re
 import milter
+import sys
 try:
   import thread
 except:
@@ -773,7 +774,10 @@ def runmilter(name,socketname,timeout = 0,rmsock=True):
   # dictfromlist to make parsing the ESMTP args convenient.
   milter.set_envfrom_callback(lambda ctx,*str: ctx.getpriv().envfrom(*str))
   milter.set_envrcpt_callback(lambda ctx,*str: ctx.getpriv().envrcpt(*str))
-  milter.set_header_callback(lambda ctx,fld,val: ctx.getpriv().header(fld,val))
+  if sys.version < '3.0.0':
+    milter.set_header_callback(lambda ctx,f,v: ctx.getpriv().header(f,v))
+  else:
+    milter.set_header_callback(header_callback)
   milter.set_eoh_callback(lambda ctx: ctx.getpriv().eoh())
   milter.set_body_callback(lambda ctx,chunk: ctx.getpriv().body(chunk))
   milter.set_eom_callback(lambda ctx: ctx.getpriv().eom())

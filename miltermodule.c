@@ -674,7 +674,11 @@ milter_wrap_header(SMFICTX *ctx, char *headerf, char *headerv) {
    if (header_callback == NULL) return SMFIS_CONTINUE;
    c = _get_context(ctx);
    if (!c) return SMFIS_TEMPFAIL;
-   arglist = Py_BuildValue("(Oyy)", c, headerf, headerv);
+#if PY_MAJOR_VERSION >= 3
+   arglist = Py_BuildValue("(Osy)", c, headerf, headerv);
+#else
+   arglist = Py_BuildValue("(Oss)", c, headerf, headerv);
+#endif
    return _generic_wrapper(c, header_callback, arglist);
 }
 

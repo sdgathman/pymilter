@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 from socket import AF_INET,AF_INET6
+from sys import version as VERSION
 import time
 import mime
 try:
@@ -14,8 +15,6 @@ except:
   from StringIO import StringIO as BytesIO
 import Milter
 from Milter import utils
-import mime
-import email
 
 ## Milter context for unit testing %milter applications.
 # A substitute for milter.milterContext that can be passed to
@@ -220,6 +219,8 @@ class TestCtx(object):
     return rc
 
   def _header(self,fld,val):
+    if VERSION < '3.0.0':
+      return self._priv.header(fld,val)
     # email.message_from_binary_file uses surrogateescape to 
     # preserve original bytes in unicode string for decoding errors.
     # convert str or Header back to original bytes
