@@ -702,6 +702,13 @@ def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   return m.connect(hostname,family,hostaddr)
 
 ## @private
+# @brief check str/bytes decorator and invoke header method.
+def header_callback(ctx,fld,val):
+  m = ctx.getpriv()
+  s = val.decode(encoding='ascii',errors='surrogateescape')
+  return m.header(fld,s)
+
+## @private
 # @brief Disconnect milterContext and call close method.
 def close_callback(ctx):
   m = ctx.getpriv()

@@ -15,6 +15,7 @@ except:
 import Milter
 from Milter import utils
 import mime
+import email
 
 ## Milter context for unit testing %milter applications.
 # A substitute for milter.milterContext that can be passed to
@@ -219,7 +220,20 @@ class TestCtx(object):
     return rc
 
   def _header(self,fld,val):
-    return self._priv.header(fld,val)
+    # email.message_from_binary_file uses surrogateescape to 
+    # preserve original bytes in unicode string for decoding errors.
+    # convert str or Header back to original bytes
+    if hasattr(val, '_chunks'):
+      # val is a Header object for invalid header values 
+      v = b''
+      for s,charset in val._chunks:
+        # recover the original bytes
+        b = s.encode(encoding='ascii',errors='surrogateescape')
+        v += b
+    else:
+      v = val.encode(encoding='ascii',errors='surrogateescape')
+    # invoke the Milter header_callback
+    return Milter.header_callback(self,fld,v)
 
   def _eoh(self):
     if self._protocol & Milter.P_NOEOH:
@@ -270,7 +284,6 @@ class TestCtx(object):
     if rc != Milter.CONTINUE: return rc
     # header
     for h,val in msg.items():
-      # val is a Header object for invalid header values 
       rc = self._header(h,val)
       if rc != Milter.CONTINUE: return rc
     # eoh
