@@ -27,7 +27,7 @@ sending DSNs or doing CBVs.
 	maintainer="Stuart D. Gathman",
 	maintainer_email="stuart@gathman.org",
 	license="GPL",
-	url="https://pythonhosted.org/milter/",
+	url="https://www.pymilter.org/",
 	py_modules=modules,
 	packages = ['Milter'],
 	ext_modules=[
