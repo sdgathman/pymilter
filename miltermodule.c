@@ -675,6 +675,7 @@ milter_wrap_header(SMFICTX *ctx, char *headerf, char *headerv) {
    c = _get_context(ctx);
    if (!c) return SMFIS_TEMPFAIL;
 #if PY_MAJOR_VERSION >= 3
+   /* pass val as bytes so Milter.Base.header_bytes can do surrogate escape. */
    arglist = Py_BuildValue("(Osy)", c, headerf, headerv);
 #else
    arglist = Py_BuildValue("(Oss)", c, headerf, headerv);

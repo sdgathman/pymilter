@@ -349,13 +349,18 @@ class Base(object):
   # @since 0.9.2
   @nocallback
   def data(self): return CONTINUE
-  ## Called with bytes for header callback.
-  # Converts to unicode with surrogate escape.  Can be overriden 
-  # to pass bytes to @link #header the header callback @endlink.
+  ## Called with bytes by default global header callback.
+  # @param fld name decoded as ascii
+  # @param val field value as bytes
+  # @since 1.0.5
+  # Converts from utf-8 to unicode with surrogate escape.  Can be overriden 
+  # to pass bytes to @link #header the header callback @endlink instead.
   def header_bytes(self,fld,val):
     s = val.decode(encoding='utf-8',errors='surrogateescape')
     return self.header(fld,s)
   ## Called for each header field in the message body.
+  # @param field name decoded as ascii
+  # @param value field value decoded as utf-8 on python3
   @nocallback
   def header(self,field,value): return CONTINUE
   ## Called at the blank line that terminates the header fields.

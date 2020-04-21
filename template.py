@@ -1,6 +1,7 @@
 ## To roll your own milter, create a class that extends Milter.  
-#  See the pymilter project at http://bmsi.com/python/milter.html
-#  based on Sendmail's milter API 
+#  This is a useless example to show basic features of Milter. 
+#  See the pymilter project at https://pymilter.org based 
+#  on Sendmail's milter API 
 #  This code is open-source on the same terms as Python.
 
 ## Milter calls methods of your class at milter events.
@@ -10,21 +11,22 @@
 from __future__ import print_function
 import Milter
 try:
-  from StringIO import StringIO
+  from StringIO import StringIO as BytesIO
 except:
-  from io import StringIO
+  from io import BytesIO
 import time
 import email
 import sys
 from socket import AF_INET, AF_INET6
 from Milter.utils import parse_addr
 if True:
+  # for logging process - usually not needed
   from multiprocessing import Process as Thread, Queue
 else:
   from threading import Thread
   from Queue import Queue
 
-logq = Queue(maxsize=4)
+logq = None
 
 class myMilter(Milter.Base):
 
@@ -78,9 +80,10 @@ class myMilter(Milter.Base):
     # NOTE: self.fp is only an *internal* copy of message data.  You
     # must use addheader, chgheader, replacebody to change the message
     # on the MTA.
-    self.fp = StringIO()
+    self.fp = BytesIO()
     self.canon_from = '@'.join(parse_addr(mailfrom))
-    self.fp.write('From %s %s\n' % (self.canon_from,time.ctime()))
+    self.fp.write(b'From %s %s\n' % (self.canon_from.encode(),
+        time.ctime().encode()))
     return Milter.CONTINUE
 
 
@@ -95,12 +98,12 @@ class myMilter(Milter.Base):
 
   @Milter.noreply
   def header(self, name, hval):
-    self.fp.write("%s: %s\n" % (name,hval))	# add header to buffer
+    self.fp.write(b'%s: %s\n' % (name.encode(),hval.encode()))	# add header to buffer
     return Milter.CONTINUE
 
   @Milter.noreply
   def eoh(self):
-    self.fp.write("\n")				# terminate headers
+    self.fp.write(b'\n')				# terminate headers
     return Milter.CONTINUE
 
   @Milter.noreply
@@ -110,7 +113,7 @@ class myMilter(Milter.Base):
 
   def eom(self):
     self.fp.seek(0)
-    msg = email.message_from_file(self.fp)
+    msg = email.message_from_binary_file(self.fp)
     # many milter functions can only be called from eom()
     # example of adding a Bcc:
     self.addrcpt('<%s>' % 'spy@example.com')
@@ -128,19 +131,26 @@ class myMilter(Milter.Base):
   ## === Support Functions ===
 
   def log(self,*msg):
-    logq.put((msg,self.id,time.time()))
+    t = (msg,self.id,time.time())
+    if logq:
+      logq.put(t)
+    else:
+      # logmsg(*t)
+      pass
 
-def background():
-  while True:
-    t = logq.get()
-    if not t: break
-    msg,id,ts = t
+def logmsg(msg,id,ts):
     print("%s [%d]" % (time.strftime('%Y%b%d %H:%M:%S',time.localtime(ts)),id),
         end=None)
     # 2005Oct13 02:34:11 [1] msg1 msg2 msg3 ...
     for i in msg: print(i,end=None)
     print()
     sys.stdout.flush()
+
+def background():
+  while True:
+    t = logq.get()
+    if not t: break
+    logmsg(*t)
 
 ## ===
     
@@ -163,4 +173,7 @@ def main():
   print("%s bms milter shutdown" % time.strftime('%Y%b%d %H:%M:%S'))
 
 if __name__ == "__main__":
+  # You probably do not need a logging process, but if you do, this
+  # is one way to do it.
+  logq = Queue(maxsize=4)
   main()

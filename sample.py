@@ -24,7 +24,12 @@ class sampleMilter(Milter.Milter):
 
   def log(self,*msg):
     print("%s [%d]" % (strftime('%Y%b%d %H:%M:%S'),self.id),end=None)
-    for i in msg: print(i,end=None)
+    for i in msg:
+      try:
+        print(i,end=None)
+      except UnicodeEncodeError:
+        s = i.encode(encoding='utf-8',errors='surrogateescape')
+        print(s,end=None)
     print()
 
   def __init__(self):
@@ -104,7 +109,7 @@ class sampleMilter(Milter.Milter):
     if lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
     if self.fp:
-      self.fp.write(("%s: %s\n" % (name,val)).encode())	# add header to buffer
+      self.fp.write(("%s: %s\n" % (name,val)).encode(errors='surrogateescape'))	# add header to buffer
     return Milter.CONTINUE
 
   def eoh(self):

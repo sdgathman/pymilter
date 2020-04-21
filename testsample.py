@@ -1,6 +1,7 @@
 import unittest
 import Milter
 import sample
+import template
 import mime
 import zipfile
 from Milter.test import TestBase
@@ -21,6 +22,23 @@ class BMSMilterTestCase(unittest.TestCase):
     self.zf.close()
     self.zf = None
 
+  def testTemplate(self,fname='test2'):
+    ctx = TestCtx()
+    Milter.factory = template.myMilter
+    ctx._setsymval('{auth_authen}','batman')
+    ctx._setsymval('{auth_type}','batcomputer')
+    ctx._setsymval('j','mailhost')
+    count = 10
+    while count > 0:
+      rc = ctx._connect(helo='milter-template.example.org')
+      self.assertEquals(rc,Milter.CONTINUE)
+      with open('test/'+fname,'rb') as fp:
+        rc = ctx._feedFile(fp)
+      milter = ctx.getpriv()
+      self.assertFalse(ctx._bodyreplaced,"Message body replaced")
+      ctx._close()
+      count -= 1
+
   def testHeader(self,fname='utf8'):
     ctx = TestCtx()
     Milter.factory = sample.sampleMilter
@@ -28,7 +46,7 @@ class BMSMilterTestCase(unittest.TestCase):
     ctx._setsymval('{auth_type}','batcomputer')
     ctx._setsymval('j','mailhost')
     rc = ctx._connect()
-    self.assertTrue(rc == Milter.CONTINUE)
+    self.assertEquals(rc,Milter.CONTINUE)
     with open('test/'+fname,'rb') as fp:
       rc = ctx._feedFile(fp)
     milter = ctx.getpriv()
