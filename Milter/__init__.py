@@ -349,6 +349,12 @@ class Base(object):
   # @since 0.9.2
   @nocallback
   def data(self): return CONTINUE
+  ## Called with bytes for header callback.
+  # Converts to unicode with surrogate escape.  Can be overriden 
+  # to pass bytes to @link #header the header callback @endlink.
+  def header_bytes(self,fld,val):
+    s = val.decode(encoding='utf-8',errors='surrogateescape')
+    return self.header(fld,s)
   ## Called for each header field in the message body.
   @nocallback
   def header(self,field,value): return CONTINUE
@@ -706,8 +712,7 @@ def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
 # @brief check str/bytes decorator and invoke header method.
 def header_callback(ctx,fld,val):
   m = ctx.getpriv()
-  s = val.decode(encoding='ascii',errors='surrogateescape')
-  return m.header(fld,s)
+  return m.header_bytes(fld,val)
 
 ## @private
 # @brief Disconnect milterContext and call close method.
