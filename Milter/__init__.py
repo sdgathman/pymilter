@@ -321,6 +321,14 @@ class Base(object):
   # this almost always results in terminating the connection.
   @nocallback
   def hello(self,hostname): return CONTINUE
+  ## Called with bytes by default global envfrom callback.
+  # @since 1.0.5
+  # Converts from utf-8 to unicode with surrogate escape.  Can be overriden 
+  # to pass bytes to @link #header the header callback @endlink instead,
+  # or trap utf-8 conversion exception, etc.
+  def envfrom_bytes(self,*b):
+    s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
+    return self.envfrom(fld,*s)
   ## Called when the SMTP client says MAIL FROM. Called by the
   # <a href="milter_api/xxfi_envfrom.html">
   # xxfi_envfrom</a> callback.  
@@ -331,7 +339,15 @@ class Base(object):
   # <a href="http://tools.ietf.org/html/rfc5322">RFC 5322</a>,
   # see @link #header the header callback @endlink.
   @nocallback
-  def envfrom(self,f,*str): return CONTINUE
+  def envfrom(self,f,*s): return CONTINUE
+  ## Called with bytes by default global envrcpt callback.
+  # @since 1.0.5
+  # Converts from utf-8 to unicode with surrogate escape.  Can be overriden 
+  # to pass bytes to @link #header the header callback @endlink instead,
+  # or trap utf-8 conversion exception, etc.
+  def envrcpt_bytes(self,*b):
+    s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
+    return self.envrcpt(fld,*s)
   ## Called when the SMTP client says RCPT TO. Called by the
   # <a href="milter_api/xxfi_envrcpt.html">
   # xxfi_envrcpt</a> callback.
@@ -714,12 +730,6 @@ def connect_callback(ctx,hostname,family,hostaddr,nr_mask=P_NR_CONN):
   return m.connect(hostname,family,hostaddr)
 
 ## @private
-# @brief check str/bytes decorator and invoke header method.
-def header_callback(ctx,fld,val):
-  m = ctx.getpriv()
-  return m.header_bytes(fld,val)
-
-## @private
 # @brief Disconnect milterContext and call close method.
 def close_callback(ctx):
   m = ctx.getpriv()
@@ -782,12 +792,14 @@ def runmilter(name,socketname,timeout = 0,rmsock=True):
   # parms, but then all existing users would have to include **kw to accept
   # arbitrary keywords without crashing.  We do provide envcallback and
   # dictfromlist to make parsing the ESMTP args convenient.
-  milter.set_envfrom_callback(lambda ctx,*str: ctx.getpriv().envfrom(*str))
-  milter.set_envrcpt_callback(lambda ctx,*str: ctx.getpriv().envrcpt(*str))
   if sys.version < '3.0.0':
+    milter.set_envfrom_callback(lambda ctx,*s: ctx.getpriv().envfrom(*s))
+    milter.set_envrcpt_callback(lambda ctx,*s: ctx.getpriv().envrcpt(*s))
     milter.set_header_callback(lambda ctx,f,v: ctx.getpriv().header(f,v))
   else:
-    milter.set_header_callback(header_callback)
+    milter.set_envfrom_callback(lambda ctx,*b: ctx.getpriv().envfrom_bytes(*b))
+    milter.set_envrcpt_callback(lambda ctx,*b: ctx.getpriv().envrcpt_bytes(*b))
+    milter.set_header_callback(lambda ctx,f,v: ctx.getpriv().header_bytes(f,v))
   milter.set_eoh_callback(lambda ctx: ctx.getpriv().eoh())
   milter.set_body_callback(lambda ctx,chunk: ctx.getpriv().body(chunk))
   milter.set_eom_callback(lambda ctx: ctx.getpriv().eom())

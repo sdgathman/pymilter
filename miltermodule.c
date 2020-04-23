@@ -643,7 +643,7 @@ generic_env_wrapper(SMFICTX *ctx, PyObject*cb, char **argv) {
      /* There's some error checking performed in do_mkvalue() for a string */
      /* that's not currently done here - it probably should be */
 #if PY_MAJOR_VERSION >= 3
-     PyObject *o = PyUnicode_FromStringAndSize(argv[i], strlen(argv[i]));
+     PyObject *o = PyBytes_FromStringAndSize(argv[i], strlen(argv[i]));
 #else
      PyObject *o = PyString_FromStringAndSize(argv[i], strlen(argv[i]));
 #endif
