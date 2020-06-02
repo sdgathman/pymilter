@@ -250,7 +250,7 @@ static const char milter_set_flags__doc__[] =
 Set flags for filter capabilities; OR of one or more of:\n\
 ADDHDRS - filter may add headers\n\
 CHGBODY - filter may replace body\n\
-CHGFROM - filter may replace body\n\
+CHGFROM - filter may replace sender\n\
 ADDRCPT - filter may add recipients\n\
 DELRCPT - filter may delete recipients\n\
 CHGHDRS - filter may change/delete headers";

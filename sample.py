@@ -73,6 +73,7 @@ class sampleMilter(Milter.Milter):
 
       # even if we wanted the Taiwanese spam, we can't read Chinese
       # (delete if you read chinese mail)
+      print('val=',val)
       if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
         self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')

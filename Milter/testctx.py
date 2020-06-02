@@ -234,7 +234,7 @@ class TestCtx(object):
     else:
       v = val.encode(encoding='ascii',errors='surrogateescape')
     # invoke the Milter header_callback
-    return Milter.header_callback(self,fld,v)
+    return self._priv.header_bytes(fld,v)
 
   def _eoh(self):
     if self._protocol & Milter.P_NOEOH:
