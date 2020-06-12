@@ -1,9 +1,12 @@
 import os
 import sys
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 
 if sys.version < '2.6.5':
   sys.exit('ERROR: Sorry, python 2.6.5 is required for this module.')
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 # FIXME: on some versions of sendmail, smutil is renamed to sm.
 # On slackware and debian, leave it out entirely.  It depends
@@ -16,12 +19,7 @@ modules = ["mime"]
 # NOTE: importing Milter to obtain version fails when milter.so not built
 setup(name = "pymilter", version = '1.0.5',
 	description="Python interface to sendmail milter API",
-	long_description="""\
-This is a python extension module to enable python scripts to
-attach to sendmail's libmilter functionality.  Additional python
-modules provide for navigating and modifying MIME parts, and
-sending DSNs or doing CBVs.
-""",
+	long_description=long_description,
 	author="Jim Niemira",
 	author_email="urmane@urmane.org",
 	maintainer="Stuart D. Gathman",

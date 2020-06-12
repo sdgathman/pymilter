@@ -1,2 +1,4 @@
+Test case for Milter/dsn.py
+
 Lookup exact RFC syntax of real name / email and make 
 Milter.utils.parse_addr() pass all unit tests.

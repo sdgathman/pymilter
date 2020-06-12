@@ -1,5 +1,4 @@
-Abstract
---------
+# Abstract
 
 This is a python extension module to enable python scripts to attach to
 Sendmail's libmilter API, enabling filtering of messages as they arrive.
@@ -7,54 +6,34 @@ Since it's a script, you can do anything you want to the message - screen
 out viruses, collect statistics, add or modify headers, etc.  You can, at
 any point, tell Sendmail to reject, discard, or accept the message.
 
+Additional python modules provide for navigating and modifying MIME parts, and
+sending DSNs or doing CBVs.
 
-Requirements
-------------
+# Requirements 
 
-Python milter extension: http://https://pypi.python.org/pypi/pymilter/
+Python milter extension: https://pypi.python.org/pypi/pymilter/
 Python: http://www.python.org
 Sendmail: http://www.sendmail.org
 
-NB: From Sendmail's libmilter/README:
+# Quick Installation
 
-libmilter requires pthread support in the operating system.  Moreover, it
-requires that the library functions it uses are thread safe; which is true
-for the operating systems libmilter has been developed and tested on.  On
-some operating systems this requires special compile time options (e.g.,
-not just -pthread).  libmilter is currently known to work on (modulo problems
-in the pthread support of some specific versions):
+ 1. Build and install Sendmail, enabling libmilter (see libmilter/README).
+ 2. Build and install Python, enabling threading.
+ 3. Install this module: python setup.py --help
+ 4. Add these two lines to sendmail.cf[a]:
 
-FreeBSD 3.x, 4.x
-SunOS 5.x (x >= 5)
-AIX 4.3.x
-HP UX 11.x
-Linux (recent versions/distributions)
+ O InputMailFilters=pythonfilter
+ Xpythonfilter,        S=local:/home/username/pythonsock
 
-libmilter is currently not supported on:
-
-IRIX 6.x
-Ultrix
-
-Quick Installation
-------------------
-
-1. Build and install Sendmail, enabling libmilter (see libmilter/README).
-2. Build and install Python, enabling threading.
-3. Install this module: python setup.py --help
-4. Add these two lines to sendmail.cf[*]:
-
-O InputMailFilters=pythonfilter
-Xpythonfilter,        S=local:/home/username/pythonsock
-
-5. Run the sample.py example milter with: python sample.py
-Note that milters should almost certainly not run as root.
+ 5. Run the sample.py example milter with: python sample.py
+ Note that milters should almost certainly not run as root.
 
 That's it.  Incoming mail will cause the milter to print some things, and
 some email will be rejected (see the "header" method).  Edit and play.  
 See spfmilter.py for a functional SPF milter, or see bms.py for an complex
 milter used in production.
 
-[*] This is for a quick test.  Your sendmail.cf in most distros will get
+[a] This is for a quick test.  Your sendmail.cf in most distros will get
 overwritten whenever sendmail.mc is updated.  To make a milter permanent,
 add something like:
 
@@ -62,8 +41,7 @@ INPUT_MAIL_FILTER(`pythonfilter', `S=local:/home/username/pythonsock, F=T, T=C:5
 
 to sendmail.mc instead.
 
-Not-so-quick Installation
--------------------------
+# Not-so-quick Installation
 
 First install Sendmail.  Make sure you read libmilter/README in the Sendmail
 source directory, and make sure you enable libmilter before you build.  The
@@ -109,8 +87,7 @@ _FFR_MILTER for the cf macros.  For example,
 
 m4 -D_FFR_MILTER ../m4/cf.m4 myconfig.mc > myconfig.cf
 
-IPv6 Notes
-----------
+# IPv6 Notes
 
 The IPv6 protocol is supported if your operation system supports it
 and if sendmail was compiled with IPv6 support.  To determine if your
@@ -165,8 +142,7 @@ be determined the hostname will appear similar to the string
 RFC 2553 for information on interpreting and using the flowinfo and
 scopeid socket attributes, both of which are integers.
 
-Authors
--------
+# Authors
 
 Jim Niemira (urmane@urmane.org) wrote the original C module and some quick
 and dirty python to use it.  Stuart D. Gathman (stuart@gathman.org) took that

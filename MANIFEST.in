@@ -2,7 +2,7 @@ include COPYING
 include TODO
 include NEWS
 include CREDITS
-include README
+include README.md
 include ChangeLog
 include MANIFEST.in
 include testsample.py

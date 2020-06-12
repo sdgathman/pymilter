@@ -72,10 +72,13 @@
 from __future__ import print_function
 import smtplib
 import socket
-from email.Message import Message
+try:
+  from email.message import Message
+except:
+  from email.Message import Message
 import Milter
+import Milter.dns as dns
 import time
-import dns
 
 ## Send DSN.
 # Try the published MX names in order, rejecting obviously bogus entries
