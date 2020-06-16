@@ -14,10 +14,10 @@ class MilterConfigParser(ConfigParser):
   # which screws up iterating over all options in a section.
   # Worse, passing "defaults" with vars= overrides the config file!
   # So we roll our own defaults.
-  def get(self,sect,opt,raw=False,fallback=None):
+  def get(self,sect,opt,fallback=None,**kwds):
     if not self.has_option(sect,opt) and not fallback and opt in self.defaults:
       return self.defaults[opt]
-    return ConfigParser.get(self,sect,opt,raw=raw,fallback=fallback)
+    return ConfigParser.get(self,sect,opt,fallback=fallback,**kwds)
     
   def getlist(self,sect,opt):
     if self.has_option(sect,opt):
