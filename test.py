@@ -3,6 +3,7 @@ import testmime
 import testsample
 import testutils
 import testgrey
+import testcfg
 import os
 
 def suite(): 
@@ -11,6 +12,7 @@ def suite():
   s.addTest(testsample.suite())
   s.addTest(testutils.suite())
   s.addTest(testgrey.suite())
+  s.addTest(testcfg.suite())
   return s
 
 if __name__ == '__main__':

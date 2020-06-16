@@ -46,6 +46,9 @@ class TestBase(object):
     ## The macros returned by protocol stage
     self._symlist = [ None, None, None, None, None, None, None ]
 
+  def _close(self):
+    close(self.logfp)
+
   def log(self,*msg):
     for i in msg: print(i,file=self.logfp,end=None)
     print(file=self.logfp)
@@ -204,6 +207,8 @@ class TestBase(object):
     self._body.write(header)
     self._body.write(b'\n\n')
     self._body.write(body)
+    self.close()
+    self._close()
     return rc
 
   ## Feed an email contained in a file to the %milter.

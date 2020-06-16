@@ -1,4 +1,7 @@
-from ConfigParser import ConfigParser
+try:
+  from configparser import ConfigParser
+except:
+  from ConfigParser import ConfigParser
 import os.path
 
 class MilterConfigParser(ConfigParser):
