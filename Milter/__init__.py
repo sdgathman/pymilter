@@ -181,15 +181,26 @@ def noreply(func):
   wrapper.milter_protocol = nr_mask
   return wrapper
 
+## Function decorator to set encoding error strategy.
+# Current RFCs define UTF-8 as the standard encoding for SMTP
+# envelope and header fields.  By default, Milter.Base decodes 
+# envelope and header values with errors='surrogateescape'.
+# This decorator can change the error strategy to, e.g., 'ignore' or 'replace'.
+def encodingerror(strategy):
+  def setstrategy(func):
+    func.error_strategy = strategy
+    return func
+  return setstrategy
+
 ## Function decorator to set macros used in a callback.
 # By default, the MTA sends all macros defined for a callback.
 # If some or all of these are unused, the bandwidth can be saved
 # by listing the ones that are used.
 # @since 1.0.2
 def symlist(*syms):
-  if len(syms) > 5:
-    raise ValueError('@symlist limited to 5 macros by MTA: '+func.__name__)
   def setsyms(func):
+    if len(syms) > 5:
+      raise ValueError('@symlist limited to 5 macros by MTA: '+func.__name__)
     if func.__name__ not in MACRO_CALLBACKS:
       raise ValueError('@symlist applied to non-symlist method: '+func.__name__)
     func._symlist = syms
@@ -328,7 +339,8 @@ class Base(object):
   # or trap utf-8 conversion exception, etc.
   def envfrom_bytes(self,*b):
     try:
-      s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
+      e = getattr(self.envfrom,'error_strategy','surrogateescape')
+      s = (v.decode(encoding='utf-8',errors=e) for v in b)
     except UnicodeDecodeError: s = b
     return self.envfrom(fld,*s)
   ## Called when the SMTP client says MAIL FROM. Called by the
@@ -349,7 +361,8 @@ class Base(object):
   # or trap utf-8 conversion exception, etc.
   def envrcpt_bytes(self,*b):
     try:
-      s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
+      e = getattr(self.envrcpt,'error_strategy','surrogateescape')
+      s = (v.decode(encoding='utf-8',errors=e) for v in b)
     except UnicodeDecodeError: s = b
     return self.envrcpt(fld,*s)
   ## Called when the SMTP client says RCPT TO. Called by the
@@ -377,7 +390,8 @@ class Base(object):
   # to pass bytes to @link #header the header callback @endlink instead.
   def header_bytes(self,fld,val):
     try:
-      s = val.decode(encoding='utf-8',errors='surrogateescape')
+      e = getattr(self.header,'error_strategy','surrogateescape')
+      s = val.decode(encoding='utf-8',errors=e)
     except UnicodeDecodeError: s = val
     return self.header(fld,s)
   ## Called for each header field in the message body.

@@ -67,13 +67,15 @@ class sampleMilter(Milter.Milter):
     self.log("rcpt to",to,str)
     return Milter.CONTINUE
 
+  @Milter.encodingerror('replace')
   def header(self,name,val):
     lname = name.lower()
     if lname == 'subject':
 
       # even if we wanted the Taiwanese spam, we can't read Chinese
       # (delete if you read chinese mail)
-      print('val=',val.encode(errors='surrogateescape'))
+      #print('val=',val.encode(errors='surrogateescape'))
+      print('val=',val)
       if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
         self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')
