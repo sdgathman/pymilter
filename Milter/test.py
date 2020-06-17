@@ -47,7 +47,9 @@ class TestBase(object):
     self._symlist = [ None, None, None, None, None, None, None ]
 
   def _close(self):
-    close(self.logfp)
+    if self.logfp:
+      self.logfp.close()
+      self.logfp = None
 
   def log(self,*msg):
     for i in msg: print(i,file=self.logfp,end=None)
