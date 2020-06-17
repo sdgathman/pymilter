@@ -328,7 +328,7 @@ class Base(object):
   # or trap utf-8 conversion exception, etc.
   def envfrom_bytes(self,*b):
     try:
-      s = (v.decode(encoding='utf-8') for v in b)
+      s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
     except UnicodeDecodeError: s = b
     return self.envfrom(fld,*s)
   ## Called when the SMTP client says MAIL FROM. Called by the
@@ -349,7 +349,7 @@ class Base(object):
   # or trap utf-8 conversion exception, etc.
   def envrcpt_bytes(self,*b):
     try:
-      s = (v.decode(encoding='utf-8') for v in b)
+      s = (v.decode(encoding='utf-8',errors='surrogateescape') for v in b)
     except UnicodeDecodeError: s = b
     return self.envrcpt(fld,*s)
   ## Called when the SMTP client says RCPT TO. Called by the
@@ -377,7 +377,7 @@ class Base(object):
   # to pass bytes to @link #header the header callback @endlink instead.
   def header_bytes(self,fld,val):
     try:
-      s = val.decode(encoding='utf-8')
+      s = val.decode(encoding='utf-8',errors='surrogateescape')
     except UnicodeDecodeError: s = val
     return self.header(fld,s)
   ## Called for each header field in the message body.

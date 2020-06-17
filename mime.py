@@ -548,7 +548,7 @@ if __name__ == '__main__':
     return Milter.CONTINUE
 
   for fname in sys.argv[1:]:
-    fp = open(fname,'rb')
-    msg = message_from_file(fp)
+    with open(fname,'rb') as fp:
+      msg = message_from_file(fp)
     email.iterators._structure(msg)
     check_attachments(msg,_list_attach)
