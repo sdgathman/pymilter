@@ -181,12 +181,12 @@ def noreply(func):
   wrapper.milter_protocol = nr_mask
   return wrapper
 
-## Function decorator to set encoding error strategy.
+## Function decorator to set decoding error strategy.
 # Current RFCs define UTF-8 as the standard encoding for SMTP
 # envelope and header fields.  By default, Milter.Base decodes 
 # envelope and header values with errors='surrogateescape'.
 # This decorator can change the error strategy to, e.g., 'ignore' or 'replace'.
-def encodingerror(strategy):
+def decode(strategy):
   def setstrategy(func):
     func.error_strategy = strategy
     return func
@@ -391,6 +391,9 @@ class Base(object):
   def header_bytes(self,fld,val):
     try:
       e = getattr(self.header,'error_strategy','surrogateescape')
+      if e == 'bytes':
+        self.header_bytes = self.header
+        return self.header(fld,val)
       s = val.decode(encoding='utf-8',errors=e)
     except UnicodeDecodeError: s = val
     return self.header(fld,s)

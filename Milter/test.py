@@ -183,7 +183,7 @@ class TestBase(object):
     if rc != Milter.CONTINUE: return rc
     # header
     for h,val in msg.items():
-      rc = self.header(h,val)
+      rc = self.header_bytes(h,val.encode())
       if rc != Milter.CONTINUE: return rc
     # eoh
     self._stage = Milter.M_EOH

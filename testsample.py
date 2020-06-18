@@ -74,7 +74,8 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(ctx._bodyreplaced,"Message body not replaced")
     fp = ctx._body
-    open('test/'+fname+".tstout","wb").write(fp.getvalue())
+    with open('test/'+fname+".tstout","wb") as f:
+        f.write(fp.getvalue())
     #self.assertTrue(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
     msg = mime.message_from_file(fp)
@@ -97,7 +98,8 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open('test/'+fname+".tstout","wb").write(fp.getvalue())
+    with open('test/'+fname+".tstout","wb") as f:
+        f.write(fp.getvalue())
     #self.assertTrue(fp.getvalue() == open("test/virus1.out","r").read())
     fp.seek(0)
     msg = mime.message_from_file(fp)
@@ -112,7 +114,8 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertFalse(milter._bodyreplaced,"Milter needlessly replaced body.")
     fp = milter._body
-    open('test/'+fname+".tstout","wb").write(fp.getvalue())
+    with open('test/'+fname+".tstout","wb") as f:
+        f.write(fp.getvalue())
     milter.close()
 
   def testDefang2(self):
@@ -126,7 +129,8 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     fp = milter._body
-    open("test/virus3.tstout","wb").write(fp.getvalue())
+    with open("test/virus3.tstout","wb") as f:
+        f.write(fp.getvalue())
     #self.assertTrue(fp.getvalue() == open("test/virus3.out","r").read())
     with self.zf.open("virus6") as fp:
       rc = milter.feedFile(fp)
@@ -134,7 +138,8 @@ class BMSMilterTestCase(unittest.TestCase):
     self.assertTrue(milter._bodyreplaced,"Message body not replaced")
     self.assertTrue(milter._headerschanged,"Message headers not adjusted")
     fp = milter._body
-    open("test/virus6.tstout","wb").write(fp.getvalue())
+    with open("test/virus6.tstout","wb") as f:
+        f.write(fp.getvalue())
     milter.close()
 
 def suite(): return unittest.makeSuite(BMSMilterTestCase,'test')

@@ -67,7 +67,7 @@ class sampleMilter(Milter.Milter):
     self.log("rcpt to",to,str)
     return Milter.CONTINUE
 
-  @Milter.encodingerror('replace')
+  @Milter.decode('bytes')
   def header(self,name,val):
     lname = name.lower()
     if lname == 'subject':
@@ -76,22 +76,22 @@ class sampleMilter(Milter.Milter):
       # (delete if you read chinese mail)
       #print('val=',val.encode(errors='surrogateescape'))
       print('val=',val)
-      if val.startswith('=?big5') or val.startswith('=?ISO-2022-JP'):
+      if val.startswith(b'=?big5') or val.startswith(b'=?ISO-2022-JP'):
         self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')
         return Milter.REJECT
 
       # check for common spam keywords
-      if val.find("$$$") >= 0 or val.find("XXX") >= 0	\
-	or val.find("!!!") >= 0 or val.find("FREE") >= 0:
+      if val.find(b"$$$") >= 0 or val.find(b"XXX") >= 0	\
+	or val.find(b"!!!") >= 0 or val.find(b"FREE") >= 0:
         self.log('REJECT: %s: %s' % (name,val))
 	#self.setreply('550','','Go away spammer')
         return Milter.REJECT
 
       # check for spam that pretends to be legal
       lval = val.lower()
-      if lval.startswith("adv:") or lval.startswith("adv.") \
-	or lval.find('viagra') >= 0:
+      if lval.startswith(b"adv:") or lval.startswith(b"adv.") \
+	or lval.find(b'viagra') >= 0:
         self.log('REJECT: %s: %s' % (name,val))
         return Milter.REJECT
 
@@ -103,7 +103,7 @@ class sampleMilter(Milter.Milter):
 
     # check for common bulk mailers
     if lname == 'x-mailer' and \
-	val.lower() in ('direct email','calypso','mail bomber'):
+	val.lower() in (b'direct email',b'calypso',b'mail bomber'):
       self.log('REJECT: %s: %s' % (name,val))
       #self.setreply('550','','Go away spammer')
       return Milter.REJECT
@@ -112,7 +112,7 @@ class sampleMilter(Milter.Milter):
     if lname in ('subject','x-mailer'):
       self.log('%s: %s' % (name,val))
     if self.fp:
-      self.fp.write(("%s: %s\n" % (name,val)).encode(errors='surrogateescape'))	# add header to buffer
+      self.fp.write(b"%s: %s\n" % (name.encode(),val))	# add header to buffer
     return Milter.CONTINUE
 
   def eoh(self):
