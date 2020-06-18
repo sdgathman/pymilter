@@ -185,7 +185,22 @@ def noreply(func):
 # Current RFCs define UTF-8 as the standard encoding for SMTP
 # envelope and header fields.  By default, Milter.Base decodes 
 # envelope and header values with errors='surrogateescape'.
-# This decorator can change the error strategy to, e.g., 'ignore' or 'replace'.
+# Applications can recover the original bytes with 
+# <pre>
+# b = s.encode(errors='surrogateescape')
+# </pre>
+# This preserves information, but can lead to unexpected exceptions
+# as you cannot, e.g. print strings with surrogates.
+# Illegal bytes occur quite often in real life, so there must
+# be a way to deal with them.
+# This decorator can change the error strategy to
+# <ul>
+# <li> bytes    - original bytes are passed unmodified
+# <li> strict   - pass bytes if illegal bytes are present, string otherwise
+# <li> ignore   - illegal bytes are removed
+# <li> replace  - illegal bytes are replaced with a unicode error symbol
+# </ul> 
+# 
 def decode(strategy):
   def setstrategy(func):
     func.error_strategy = strategy
@@ -340,6 +355,9 @@ class Base(object):
   def envfrom_bytes(self,*b):
     try:
       e = getattr(self.envfrom,'error_strategy','surrogateescape')
+      if e == 'bytes':
+        #self.envfrom_bytes = self.envfrom
+        return self.envfrom(*b)
       s = (v.decode(encoding='utf-8',errors=e) for v in b)
     except UnicodeDecodeError: s = b
     return self.envfrom(fld,*s)
@@ -362,6 +380,9 @@ class Base(object):
   def envrcpt_bytes(self,*b):
     try:
       e = getattr(self.envrcpt,'error_strategy','surrogateescape')
+      if e == 'bytes':
+        #self.envrcpt_bytes = self.envrcpt
+        return self.envrcpt(*b)
       s = (v.decode(encoding='utf-8',errors=e) for v in b)
     except UnicodeDecodeError: s = b
     return self.envrcpt(fld,*s)
@@ -387,7 +408,13 @@ class Base(object):
   # @param val field value as bytes
   # @since 1.0.5
   # Converts from utf-8 to unicode with surrogate escape.  Can be overriden 
-  # to pass bytes to @link #header the header callback @endlink instead.
+  # to pass bytes to @link #header the header callback @endlink instead,
+  # e.g. by assignment:
+  # <pre>
+  #  mymilter.header_bytes = mymilter.header
+  # </pre>
+  # The <code>@decode('bytes')</code> decorator will also do this.
+  # 
   def header_bytes(self,fld,val):
     try:
       e = getattr(self.header,'error_strategy','surrogateescape')
