@@ -34,7 +34,8 @@ class MilterConfigParser(ConfigParser):
       if q.startswith('file:'):
         domain = q[5:].lower()
         fname = os.path.join(dir,domain)
-        d[domain] = d.setdefault(domain,[]) + open(fname,'r').read().split()
+        with open(fname,'r') as fp:
+          d[domain] = d.setdefault(domain,[]) + fp.read().split()
       else:
         user,domain = q.split('@')
         d.setdefault(domain.lower(),[]).append(user)
@@ -52,8 +53,9 @@ class MilterConfigParser(ConfigParser):
           addr = addr.strip()
           if addr.startswith('file:'):
             fname = os.path.join(dir,addr[5:])
-            for a in open(fname,'r').read().split():
-              d[a] = q
+            with open(fname,'r') as fp:
+              for a in fp.read().split():
+                d[a] = q
           else:
             d[addr] = q
     return d

@@ -108,10 +108,11 @@ import email
 from email.message import Message
 try:
   from email.generator import BytesGenerator
-  from email import message_from_binary_file
+  from email import message_from_binary_file, encoders
 except:
   from email.generator import Generator as BytesGenerator
   from email import message_from_file as message_from_binary_file
+  from email import Encoders as encoders
 from email.utils import quote
 
 if not getattr(Message,'as_bytes',None):
@@ -534,7 +535,7 @@ def check_html(msg,savname=None):
     if htmlfilter.modified:
       msg.set_payload(out)	# remove embedded scripts
       del msg["content-transfer-encoding"]
-      email.Encoders.encode_quopri(msg)
+      encoders.encode_quopri(msg)
   return Milter.CONTINUE
 
 if __name__ == '__main__':

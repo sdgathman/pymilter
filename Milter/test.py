@@ -64,7 +64,7 @@ class TestBase(object):
     
   def getsymval(self,name):
     stage = self._stage
-    if stage >= 0:
+    if stage is not None and stage >= 0:
       syms = self._symlist[stage]
       if syms is not None and name not in syms:
         return None

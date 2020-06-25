@@ -216,7 +216,8 @@ def parse_header(val):
           u.append(s.decode())
       else:
         u.append(s.decode())
-    u = u''.join(u)
+    u = ''.join(u)
+    if type(u) is str: return u
     for enc in ('us-ascii','iso-8859-1','utf-8'):
       try:
         return u.encode(enc)

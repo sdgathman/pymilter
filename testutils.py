@@ -43,7 +43,10 @@ class AddrCacheTestCase(unittest.TestCase):
   def testParseHeader(self):
     s='=?UTF-8?B?TGFzdCBGZXcgQ29sZHBsYXkgQWxidW0gQXJ0d29ya3MgQXZhaWxhYmxlAA?='
     h = Milter.utils.parse_header(s)
-    self.assertEqual(h,b'Last Few Coldplay Album Artworks Available\x00')
+    self.assertEqual(h,'Last Few Coldplay Album Artworks Available\x00')
+    s='=?iso-8859-1?Q?Peter_=D8rum?= <orum@ditas.dk>'
+    h = Milter.utils.parse_header(s)
+    self.assertEqual(h,'Peter \xd8rum <orum@ditas.dk>')
 
   @unittest.expectedFailure
   def testParseAddress(self):
