@@ -1,31 +1,6 @@
-# $Log$
-# Revision 1.5  2011/06/09 17:27:42  customdesigned
-# Documentation updates.
-#
-# Revision 1.4  2005/07/20 14:49:44  customdesigned
-# Handle corrupt and empty ZIP files.
-#
-# Revision 1.3  2005/06/17 01:49:39  customdesigned
-# Handle zip within zip.
-#
-# Revision 1.2  2005/06/02 15:00:17  customdesigned
-# Configure banned extensions.  Scan zipfile option with test case.
-#
-# Revision 1.1.1.2  2005/05/31 18:23:49  customdesigned
-# Development changes since 0.7.2
-#
-# Revision 1.23  2005/02/11 18:34:14  stuart
-# Handle garbage after quote in boundary.
-#
-# Revision 1.22  2005/02/10 01:10:59  stuart
-# Fixed MimeMessage.ismodified()
-#
-# Revision 1.21  2005/02/10 00:56:49  stuart
-# Runs with python2.4.  Defang not working correctly - more work needed.
-#
-# Revision 1.20  2004/11/20 16:38:17  stuart
-# Add rcs log
-#
+# @author Stuart D. Gathman <stuart@bmsi.com>
+# Copyright 2005,2009,2020 Business Management Systems, Inc.
+# This code is under the GNU General Public License.  See COPYING for details.
 from __future__ import print_function
 import unittest
 import mime

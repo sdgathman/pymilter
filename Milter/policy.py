@@ -42,7 +42,7 @@ class MTAPolicy(object):
         self.acf = dbmopen(self.access_file,'r')
       except:
         print('%s: Cannot open for reading'%self.access_file)
-        syslog.syslog('%s: Cannot open for reading'%self.access_file)
+        raise
     return self
   def __exit__(self,t,v,b): self.close()
 
