@@ -192,6 +192,33 @@ class MimeTestCase(unittest.TestCase):
     self.assertEqual(self.filename,"7501'S FOR TWO GOLDEN SOURCES SHIPMENTS FOR TAX & DUTY PURPOSES ONLY.PDF")
     self.assertEqual(rc,Milter.CONTINUE)
 
+  def test_getnames(self):
+    names = []
+    self.sawpif = False
+    def do_part(m):
+      n = m.getnames()
+      a = names
+      a += n
+      return Milter.CONTINUE
+    def chk_part(m):
+      for k,n in m.getnames():
+        if n and n.lower().endswith('.pif'):
+          self.sawpif = True
+      s = m.get_submsg()
+      print(m.get_content_type(),type(s),'modified:',m.ismodified())
+      if isinstance(s,email.message.Message):
+        return mime.check_attachments(s,chk_part)
+      return Milter.CONTINUE
+
+    with self.zf.open('virus7','r') as fp:
+      msg = mime.message_from_file(fp)
+      self.assertTrue(msg.ismultipart())
+      mime.check_attachments(msg,do_part)
+      self.assertTrue(('filename','application.pif') in names)
+      self.assertFalse(self.sawpif)
+      mime.check_attachments(msg,chk_part)
+      self.assertTrue(self.sawpif)
+
   def testHTML(self,fname=""):
     result = StringIO()
     filter = mime.HTMLScriptFilter(result)

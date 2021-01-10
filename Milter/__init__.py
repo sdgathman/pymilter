@@ -358,9 +358,9 @@ class Base(object):
       if e == 'bytes':
         #self.envfrom_bytes = self.envfrom
         return self.envfrom(*b)
-      s = (v.decode(encoding='utf-8',errors=e) for v in b)
+      s = [v.decode(encoding='utf-8',errors=e) for v in b]
     except UnicodeDecodeError: s = b
-    return self.envfrom(fld,*s)
+    return self.envfrom(s[0],*s[1:])
   ## Called when the SMTP client says MAIL FROM. Called by the
   # <a href="milter_api/xxfi_envfrom.html">
   # xxfi_envfrom</a> callback.  
@@ -383,9 +383,9 @@ class Base(object):
       if e == 'bytes':
         #self.envrcpt_bytes = self.envrcpt
         return self.envrcpt(*b)
-      s = (v.decode(encoding='utf-8',errors=e) for v in b)
+      s = [v.decode(encoding='utf-8',errors=e) for v in b]
     except UnicodeDecodeError: s = b
-    return self.envrcpt(fld,*s)
+    return self.envrcpt(s[0],*s[1:])
   ## Called when the SMTP client says RCPT TO. Called by the
   # <a href="milter_api/xxfi_envrcpt.html">
   # xxfi_envrcpt</a> callback.

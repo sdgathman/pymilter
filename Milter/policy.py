@@ -16,6 +16,7 @@ try:
     f = DB()
     f.open(fname,mode)
     return f
+except ModuleNotFoundError: raise
 except:
   import anydbm as dbm
   dbmopen = dbm.open

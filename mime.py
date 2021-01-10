@@ -125,7 +125,7 @@ class MimeMessage(Message):
     """Return a list of (attr,name) pairs of attributes that IE might
        interpret as a name - and hence decide to execute this message."""
     names = []
-    for attr,val in self._get_params_preserve([],'content-type'):
+    for attr,val in self.get_params([],'content-type',False):
       if isinstance(val, tuple):
 	  # It's an RFC 2231 encoded parameter
           newvalue = _unquotevalue(val)
@@ -195,6 +195,11 @@ class MimeMessage(Message):
 
   def get_payload(self,i=None,decode=False):
     msg = self.submsg
+    if msg is None:
+      t = self.get_content_type().lower()
+      if t == 'message/rfc822' or t.startswith('multipart/'):
+        msg = super().get_payload()
+        self.submsg = msg
     if isinstance(msg,Message) and msg.ismodified():
       self.set_payload([msg])
     return Message.get_payload(self,i,decode)
@@ -213,7 +218,11 @@ class MimeMessage(Message):
     if t == 'message/rfc822' or t.startswith('multipart/'):
       if not self.submsg:
         txt = self.get_payload()
-        if type(txt) == str:
+        if type(txt) is bytes:
+          self.submsg = email.message_from_bytes(txt,MimeMessage)
+          for part in self.submsg.walk():
+            part.modified = False
+        elif type(txt) is str:
           txt = self.get_payload(decode=True)
           self.submsg = email.message_from_string(txt,MimeMessage)
           for part in self.submsg.walk():
@@ -274,17 +283,24 @@ def check_name(msg,savname=None,ckname=check_ext,scan_zip=False):
   msg["Content-Type"] = "text/plain; name="+name
   return Milter.CONTINUE
 
-def check_attachments(msg,check):
+def check_attachments(msg,check,lev=None):
   """Scan attachments.
 msg	MimeMessage
 check	function(MimeMessage): int
 	Return CONTINUE, REJECT, ACCEPT
   """
   if msg.is_multipart():
+    if not lev: lev = []
+    lev.append(1)
+    if msg.get_content_type().endswith('/rfc822'):
+      foo = 1
     for i in msg.get_payload():
-      rc = check_attachments(i,check)
+      print('chkm',lev,msg.get_content_type())
+      rc = check_attachments(i,check,lev=lev)
       if rc != Milter.CONTINUE: return rc
+      lev[-1] += 1
     return Milter.CONTINUE
+  print('chk',lev,msg.get_content_type())
   return check(msg)
 
 # save call context for Python without nested_scopes
