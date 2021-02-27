@@ -16,6 +16,7 @@ except:
   from io import BytesIO
 import time
 import email
+import os
 import sys
 from socket import AF_INET, AF_INET6
 from Milter.utils import parse_addr
@@ -157,7 +158,7 @@ def background():
 def main():
   bt = Thread(target=background)
   bt.start()
-  socketname = "/home/stuart/pythonsock"
+  socketname = os.getenv("HOME") + "/pythonsock"
   timeout = 600
   # Register to have the Milter factory create instances of your class:
   Milter.factory = myMilter
