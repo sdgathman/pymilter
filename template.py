@@ -16,8 +16,8 @@ except:
   from io import BytesIO
 import time
 import email
-import sys
 import os
+import sys
 from socket import AF_INET, AF_INET6
 from Milter.utils import parse_addr
 if True:
