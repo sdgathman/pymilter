@@ -114,7 +114,7 @@ class myMilter(Milter.Base):
 
   def eom(self):
     self.fp.seek(0)
-    msg = email.message_from_binary_file(self.fp)
+    msg = email.message_from_binary_file(self.fp, policy=policy.default)
     # many milter functions can only be called from eom()
     # example of adding a Bcc:
     self.addrcpt('<%s>' % 'spy@example.com')
