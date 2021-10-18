@@ -16,6 +16,9 @@ except:
   from io import BytesIO
 import time
 import email
+from email import message_from_binary_file
+from email import policy
+import mimetypes
 import os
 import sys
 from socket import AF_INET, AF_INET6
@@ -114,7 +117,21 @@ class myMilter(Milter.Base):
 
   def eom(self):
     self.fp.seek(0)
-    msg = email.message_from_binary_file(self.fp)
+    msg = email.message_from_binary_file(self.fp, policy=policy.default)
+
+    #example on how to iterate through attachments
+    for attachment in msg.iter_attachments():
+      #attachment holds the attachment object so that it can be used with a new MIMEMultipart() message
+      fn = attachment.get_filename()
+      self.log("Attachment filename is %s" % (fn,))
+      if fn:
+        extension = os.path.splitext(attachment.get_filename())[1]
+      else:
+        extension = mimetypes.guess_extension(attachment.get_content_type())
+      self.log("Attachment extension is %s" % (extension,))      
+      data = attachment.get_content()
+      self.log("Attachment content is %s" % (data,))
+    
     # many milter functions can only be called from eom()
     # example of adding a Bcc:
     self.addrcpt('<%s>' % 'spy@example.com')
