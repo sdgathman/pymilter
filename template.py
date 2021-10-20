@@ -122,13 +122,8 @@ class myMilter(Milter.Base):
     #example on how to iterate through attachments
     for attachment in msg.iter_attachments():
       #attachment holds the attachment object so that it can be used with a new MIMEMultipart() message
-      fn = attachment.get_filename()
-      self.log("Attachment filename is %s" % (fn,))
-      if fn:
-        extension = os.path.splitext(attachment.get_filename())[1]
-      else:
-        extension = mimetypes.guess_extension(attachment.get_content_type())
-      self.log("Attachment extension is %s" % (extension,))      
+      self.log("Attachment filename is %s" % (attachment.get_filename(),))
+      self.log("Attachment content/type is %s" % (attachment.get_content_type(),))
       data = attachment.get_content()
       self.log("Attachment content is %s" % (data,))
     
