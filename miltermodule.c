@@ -43,6 +43,7 @@ $ python setup.py help
 #error MAX_ML_REPLY must be 1 or 11 or 32
 #endif
 #define _FFR_MULTILINE (MAX_ML_REPLY > 1)
+#define PY_SSIZE_T_CLEAN
 
 //#include <pthread.h>	// shouldn't be needed - use Python API
 #include <Python.h>		// Python C API
@@ -709,9 +710,9 @@ milter_wrap_body(SMFICTX *ctx, u_char *bodyp, size_t bodylen) {
    if (!c) return SMFIS_TEMPFAIL;
    /* Unclear whether this should be s#, z#, or t# */
 #if PY_MAJOR_VERSION >= 3
-   arglist = Py_BuildValue("(Oy#)", c, bodyp, bodylen);
+   arglist = Py_BuildValue("(Oy#)", c, bodyp, (Py_ssize_t)bodylen);
 #else
-   arglist = Py_BuildValue("(Os#)", c, bodyp, bodylen);
+   arglist = Py_BuildValue("(Os#)", c, bodyp, (Py_ssize_t)bodylen);
 #endif
    return _generic_wrapper(c, body_callback, arglist);
 }
@@ -1134,6 +1135,8 @@ milter_chgfrom(PyObject *self, PyObject *args) {
   SMFICTX *ctx;
   PyThreadState *t;
   
+  /* FIXME: use s# to transition to allow passing bytes, but milter api
+   * requires NUL terminated bytes. */
   if (!PyArg_ParseTuple(args, "s|z:chgfrom", &sender, &params))
     return NULL;
   ctx = _find_context(self);
@@ -1230,7 +1233,7 @@ can only be called from the EOM callback.";
 static PyObject *
 milter_replacebody(PyObject *self, PyObject *args) {
   char *bodyp;
-  int bodylen;
+  Py_ssize_t bodylen;
   SMFICTX *ctx;
   PyThreadState *t;
   
@@ -1239,7 +1242,7 @@ milter_replacebody(PyObject *self, PyObject *args) {
   if (ctx == NULL) return NULL;
   t = PyEval_SaveThread();
   return _thread_return(t,smfi_replacebody(ctx,
-	(unsigned char *)bodyp, bodylen), "cannot replace message body");
+	(unsigned char *)bodyp, (int)bodylen), "cannot replace message body");
 }
 
 static const char milter_setpriv__doc__[] =
