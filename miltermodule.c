@@ -491,7 +491,7 @@ _generic_wrapper(milter_ContextObject *self, PyObject *cb, PyObject *arglist) {
   int retval;
 
   if (arglist == NULL) return _report_exception(self);
-  result = PyEval_CallObject(cb, arglist);
+  result = PyObject_CallObject(cb, arglist);
   Py_DECREF(arglist);
   if (result == NULL) return _report_exception(self);
 #if PY_MAJOR_VERSION >= 3
@@ -904,7 +904,10 @@ milter_main(PyObject *self, PyObject *args) {
     return NULL;
   }
   /* libmilter requires thread support */
+  #if PY_VERSION_HEX < 0x03070000
+  /* called in Py_Initialize beginning with 3.7 */
   PyEval_InitThreads();	
+  #endif
   /* let other threads run while in smfi_main() */
   interp = PyThreadState_Get()->interp;
   _main = PyEval_SaveThread();	/* must be done before smfi_main() */
