@@ -21,10 +21,10 @@ Sendmail: http://www.sendmail.org
  2. Build and install Python, enabling threading.
  3. Install this module: python setup.py --help
  4. Add these two lines to sendmail.cf[a]:
-
+```
  O InputMailFilters=pythonfilter
  Xpythonfilter,        S=local:/home/username/pythonsock
-
+```
  5. Run the sample.py example milter with: python sample.py
  Note that milters should almost certainly not run as root.
 
@@ -54,18 +54,13 @@ Install this miltermodule package; DistUtils Automatic Installation:
 
 $ python setup.py --help
 
-For versions of python prior to 2.0, you will need to download distutils
-separately or build manually.  You will need to download unittest
-separately to run the test programs.  The bdist_rpm distutils option seems
-not to work for python 2.0; upgrade to at least 2.1.1.
-
 Now that everything is installed, we need to tell sendmail that we're going
 to filter incoming email.  Add lines similar to the following to
 sendmail.cf:
-
+```
 O InputMailFilters=pythonfilter
 Xpythonfilter,        S=local:/home/username/pythonsock
-
+```
 The "O" line tells sendmail which filters to use in what order; here we're
 telling sendmail to use the filter named "pythonfilter".
 
@@ -84,9 +79,9 @@ INPUT_MAIL_FILTER(`pythonfilter', `S=local:/home/username/pythonsock')
 ```
 For versions of sendmail prior to 8.12, you will need to enable
 `_FFR_MILTER` for the cf macros.  For example,
-
+```
 m4 -D_FFR_MILTER ../m4/cf.m4 myconfig.mc > myconfig.cf
-
+```
 # IPv6 Notes
 
 The IPv6 protocol is supported if your operation system supports it
@@ -113,9 +108,9 @@ O DaemonPortOptions=Name=MTA-v6, Family=inet6, Modify=C, Port=25
 ```
 To allow sendmail and the milter process to communicate with each
 other over IPv6, you may use the "inet6" socket name prefix, as in:
-
+```
 Xpythonfilter,        S=inet6:1234@fec0:0:0:7::5c
-
+```
 The connect() callback method in the milter class will pass the
 IPv6-specific information in the 'hostaddr' argument as a tuple.  Note
 that the type of this value is dependent upon the protocol family, and
