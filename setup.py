@@ -20,6 +20,7 @@ modules = ["mime"]
 setup(name = "pymilter", version = '1.0.5',
 	description="Python interface to sendmail milter API",
 	long_description=long_description,
+    long_description_content_type='text/markdown',
 	author="Jim Niemira",
 	author_email="urmane@urmane.org",
 	maintainer="Stuart D. Gathman",

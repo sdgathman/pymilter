@@ -36,9 +36,9 @@ milter used in production.
 [a] This is for a quick test.  Your sendmail.cf in most distros will get
 overwritten whenever sendmail.mc is updated.  To make a milter permanent,
 add something like:
-
+```
 INPUT_MAIL_FILTER(`pythonfilter', `S=local:/home/username/pythonsock, F=T, T=C:5m;S:20s;R:5m;E:5m')
-
+```
 to sendmail.mc instead.
 
 # Not-so-quick Installation
@@ -79,11 +79,11 @@ NB: The name is specified in two places: here, in sendmail's cf file, and
 in the milter itself.  Make sure the two match.
 
 NB: The above lines can be added in your .mc file with this line:
-
+```
 INPUT_MAIL_FILTER(`pythonfilter', `S=local:/home/username/pythonsock')
-
+```
 For versions of sendmail prior to 8.12, you will need to enable
-_FFR_MILTER for the cf macros.  For example,
+`_FFR_MILTER` for the cf macros.  For example,
 
 m4 -D_FFR_MILTER ../m4/cf.m4 myconfig.mc > myconfig.cf
 
@@ -94,9 +94,9 @@ and if sendmail was compiled with IPv6 support.  To determine if your
 sendmail supports IPv6, run "sendmail -d0" and check for the NETINET6
 compilation option.  To compile sendmail with IPv6 support, add this
 declaration to your site.config.m4 before building it:
-
+```
 APPENDDEF(`confENVDEF', `-DNETINET6=1')
-
+```
 IPv6 support can show up in two places; the communications socket
 between the milter and sendmail processes and in the host address
 argument to the connect() callback method.
@@ -107,10 +107,10 @@ want to allow both IPv4 and IPv6 connections, some operating systems
 will require that each listens to different port numbers.  For an
 IPv6-only setup, your sendmail configuration should contain a line
 similar to (first line is for sendmail.mc, second is sendmail.cf):
-
+```
 DAEMON_OPTIONS(`Name=MTA-v6, Family=inet6, Modify=C, Port=25')
 O DaemonPortOptions=Name=MTA-v6, Family=inet6, Modify=C, Port=25
-
+```
 To allow sendmail and the milter process to communicate with each
 other over IPv6, you may use the "inet6" socket name prefix, as in:
 
@@ -122,19 +122,19 @@ that the type of this value is dependent upon the protocol family, and
 is not compatible with IPv4 connections.  Therefore you should always
 check the family argument before attempting to use the hostaddr
 argument.  A quick example showing this follows:
-
+```
   import socket
-  ...
+  
   class ipv6awareMilter(Milter.Milter):
-  ...
+     
      def connect(self,hostname,family,hostaddr):
-        if family==socket.AF_INET:
-           ipaddress, port = hostaddr
-        elif family==socket.AF_INET6:
-           ip6address, port, flowinfo, scopeid = hostaddr
-        elif family==socket.AF_UNIX:
-           socketpath = hostaddr
-
+	if family==socket.AF_INET:
+	   ipaddress, port = hostaddr
+	elif family==socket.AF_INET6:
+	   ip6address, port, flowinfo, scopeid = hostaddr
+	elif family==socket.AF_UNIX:
+	   socketpath = hostaddr
+```
 The hostname argument is always safe to use without interpreting the
 protocol family.  For IPv6 connections for which the hostname can not
 be determined the hostname will appear similar to the string
