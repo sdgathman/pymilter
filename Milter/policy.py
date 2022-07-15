@@ -27,6 +27,10 @@ class MTAPolicy(object):
     if not access_file:
       access_file = conf.access_file
     self.use_nulls = conf.access_file_nulls
+    try:
+      self.use_colon = conf.access_file_colon
+    except:
+      self.use_colon = True
     self.sender = sender
     self.domain = sender.split('@')[-1].lower()
     self.acf = None
@@ -52,7 +56,11 @@ class MTAPolicy(object):
     if not acf: return None
     if self.use_nulls: sfx = b'\x00'
     else: sfx = b''
-    pfx = pfx.encode() + b'!'
+    if self.use_colon:
+      sep = b':'
+    else:
+      sep = b'!'
+    pfx = pfx.encode() + sep
     try:
       return acf[pfx + self.sender.encode() + sfx].rstrip(b'\x00').decode()
     except KeyError:

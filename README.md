@@ -11,9 +11,11 @@ sending DSNs or doing CBVs.
 
 # Requirements 
 
-Python milter extension: https://pypi.python.org/pypi/pymilter/
+Python milter extension: https://pypi.org/project/pymilter/
 Python: http://www.python.org
 Sendmail: http://www.sendmail.org
+   or
+Postfix: http://www.postfix.org/MILTER_README.html
 
 # Quick Installation
 
