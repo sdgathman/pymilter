@@ -31,7 +31,7 @@ class BMSMilterTestCase(unittest.TestCase):
     count = 10
     while count > 0:
       rc = ctx._connect(helo='milter-template.example.org')
-      self.assertEquals(rc,Milter.CONTINUE)
+      self.assertEqual(rc,Milter.CONTINUE)
       with open('test/'+fname,'rb') as fp:
         rc = ctx._feedFile(fp)
       milter = ctx.getpriv()
@@ -46,7 +46,7 @@ class BMSMilterTestCase(unittest.TestCase):
     ctx._setsymval('{auth_type}','batcomputer')
     ctx._setsymval('j','mailhost')
     rc = ctx._connect()
-    self.assertEquals(rc,Milter.CONTINUE)
+    self.assertEqual(rc,Milter.CONTINUE)
     with open('test/'+fname,'rb') as fp:
       rc = ctx._feedFile(fp)
     milter = ctx.getpriv()
@@ -69,7 +69,7 @@ class BMSMilterTestCase(unittest.TestCase):
     milter = ctx.getpriv()
 #    self.assertTrue(milter.user == 'batman',"getsymval failed: "+
 #        "%s != %s"%(milter.user,'batman'))
-    self.assertEquals(milter.user,'batman')
+    self.assertEqual(milter.user,'batman')
     self.assertTrue(milter.auth_type != 'batcomputer',"setsymlist failed")
     self.assertTrue(rc == Milter.ACCEPT)
     self.assertTrue(ctx._bodyreplaced,"Message body not replaced")
