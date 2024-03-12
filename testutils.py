@@ -24,11 +24,11 @@ class AddrCacheTestCase(unittest.TestCase):
     self.assertTrue(cache.has_key('foo@bar.com'))
     self.assertTrue(not cache.has_key('hello@bar.com'))
     self.assertTrue('baz@bar.com' in cache)
-    self.assertEquals(cache['temp@bar.com'],'testing')
+    self.assertEqual(cache['temp@bar.com'],'testing')
     s = open(self.fname).readlines()
     self.assertTrue(len(s) == 2)
     self.assertTrue(s[0].startswith('foo@bar.com '))
-    self.assertEquals(s[1].strip(),'baz@bar.com')
+    self.assertEqual(s[1].strip(),'baz@bar.com')
     # check that new result overrides old
     cache['temp@bar.com'] = None
     self.assertTrue(not cache['temp@bar.com'])
