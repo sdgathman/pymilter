@@ -23,6 +23,8 @@ class PolicyTestCase(unittest.TestCase):
       print("Missing test/access")
 
   def testPolicy(self):
+    self.config.use_colon = True
+    self.config.use_nulls = True
     with MTAPolicy('good@example.com',conf=self.config) as p:
       pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'OK')
@@ -35,6 +37,9 @@ class PolicyTestCase(unittest.TestCase):
     with MTAPolicy('any@random.com',conf=self.config) as p:
       pol = p.getPolicy('smtp-test')
     self.assertEqual(pol,'REJECT')
+    with MTAPolicy('foo@bar.baz.com',conf=self.config) as p:
+      pol = p.getPolicy('smtp-test')
+    self.assertEqual(pol,'WILDCARD')
 
 def suite(): return unittest.makeSuite(PolicyTestCase,'test')
 

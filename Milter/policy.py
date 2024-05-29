@@ -6,6 +6,8 @@ try:
       else: raise RuntimeException('unsupported mode')
       self.f = db.DB()
       self.f.open(fname,flags=flags)
+    def __contains__(self,key):
+      return not not self.f.get(key)
     def __getitem__(self,key):
       v = self.f.get(key)
       if not v: raise KeyError(key)
@@ -61,13 +63,19 @@ class MTAPolicy(object):
     else:
       sep = b'!'
     pfx = pfx.encode() + sep
-    try:
+    try:    # try with localpart@domain
       return acf[pfx + self.sender.encode() + sfx].rstrip(b'\x00').decode()
     except KeyError:
-      try:
-        return acf[pfx + self.domain.encode() + sfx].rstrip(b'\x00').decode()
+      try:  # try with domain
+        d = self.domain.encode()
+        k = pfx + d + sfx
+        while not k in acf and b'.' in d:
+          # check partial domains
+          d = b'.'.join(d.split(b'.')[1:])
+          k = pfx + b'.' + d + sfx
+        return acf[k].rstrip(b'\x00').decode()
       except KeyError:
-        try:
+        try:    # try bare prefix
           return acf[pfx + sfx].rstrip(b'\x00').decode()
         except KeyError:
           try:
