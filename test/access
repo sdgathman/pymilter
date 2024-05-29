@@ -7,3 +7,4 @@ SMTP-Auth:good@example.com      OK
 SMTP-Auth:example.com      REJECT
 SMTP-Auth:bad@localhost.localdomain     REJECT
 SMTP-Test:      REJECT
+SMTP-Test:.baz.com      WILDCARD

@@ -8,6 +8,7 @@ class Config(object):
   def __init__(self):
     self.access_file='test/access.db'
     self.access_file_nulls=True
+    self.access_file_colon = False
 
 class PolicyTestCase(unittest.TestCase):
 
@@ -23,8 +24,8 @@ class PolicyTestCase(unittest.TestCase):
       print("Missing test/access")
 
   def testPolicy(self):
-    self.config.use_colon = True
-    self.config.use_nulls = True
+    self.config.access_file_colon = False
+    self.config.access_file_nulls = True
     with MTAPolicy('good@example.com',conf=self.config) as p:
       pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'OK')

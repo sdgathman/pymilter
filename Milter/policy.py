@@ -1,5 +1,8 @@
 try:
-  from bsddb3 import db
+  try:
+    from berkeleydb import db
+  except:
+    from bsddb3 import db
   class DB(object):
     def open(self,fname,mode):
       if mode == 'r': flags = db.DB_RDONLY
