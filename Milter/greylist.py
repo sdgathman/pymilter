@@ -1,7 +1,10 @@
 from __future__ import print_function
 import time
 import shelve
-import thread
+try:
+  import thread
+except:
+  import _thread as thread
 import logging
 import urllib
 
