@@ -53,8 +53,8 @@ class AddrCacheTestCase(unittest.TestCase):
     s = Milter.utils.parseaddr('a(WRONG)@b')
     self.assertEqual(s,('WRONG', 'a@b'))
 
-def suite(): 
-  s = unittest.makeSuite(AddrCacheTestCase,'test')
+def suite():
+  s = unittest.TestLoader().loadTestsFromTestCase(AddrCacheTestCase)
   s.addTest(doctest.DocTestSuite(Milter.utils))
   s.addTest(doctest.DocTestSuite(Milter.dynip))
   s.addTest(doctest.DocTestSuite(Milter.pyip6))

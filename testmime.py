@@ -71,7 +71,7 @@ class MimeTestCase(unittest.TestCase):
         self.fail('should get boundary error parsing bad rfc822 attachment')
     except errors.BoundaryError:
       pass
-  
+
   def testDefang(self,vname='virus1',part=1,
 	fname='LOVE-LETTER-FOR-YOU.TXT.vbs'):
     try:
@@ -234,7 +234,7 @@ class MimeTestCase(unittest.TestCase):
     #print(msg + filter.msg)
     self.assertTrue(result.getvalue() == msg + filter.msg)
 
-def suite(): return unittest.makeSuite(MimeTestCase,'test')
+def suite(): return unittest.TestLoader().loadTestsFromTestCase(MimeTestCase)
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:

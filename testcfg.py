@@ -11,7 +11,7 @@ class ConfigTestCase(unittest.TestCase):
     miltersrs = cp.getboolean('srsmilter','miltersrs')
     self.assertFalse(miltersrs)
 
-def suite(): return unittest.makeSuite(ConfigTestCase,'test')
+def suite(): return unittest.TestLoader().loadTestsFromTestCase(ConfigTestCase)
 
 if __name__ == '__main__':
   unittest.main()
