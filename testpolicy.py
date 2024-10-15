@@ -25,7 +25,7 @@ class PolicyTestCase(unittest.TestCase):
 
   def testPolicy(self):
     self.config.access_file_colon = False
-    self.config.access_file_nulls = True
+    self.config.access_file_nulls = False   # FIXME: test old and new bsddb
     with MTAPolicy('good@example.com',conf=self.config) as p:
       pol = p.getPolicy('smtp-auth')
     self.assertEqual(pol,'OK')

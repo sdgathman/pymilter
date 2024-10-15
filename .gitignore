@@ -1,8 +1,11 @@
 *.pyc
+*.tar.gz
 build/
 test/*.out
 test/*.tstout
 test/*.log
+test/*.db
 test.db
 dist
+log
 MANIFEST
