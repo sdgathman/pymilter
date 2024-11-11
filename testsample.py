@@ -142,7 +142,7 @@ class BMSMilterTestCase(unittest.TestCase):
         f.write(fp.getvalue())
     milter.close()
 
-def suite(): return unittest.TestLoader().loadTestsFromTestCase(BMSMilterTestCase)
+def suite(): return unittest.makeSuite(BMSMilterTestCase,'test')
 
 if __name__ == '__main__':
   unittest.main()
