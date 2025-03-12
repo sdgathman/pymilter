@@ -36,7 +36,10 @@ setup(name = "pymilter", version = '1.0.5',
 	    # set MAX_ML_REPLY to 1 for sendmail < 8.13
 	    define_macros = [ ('MAX_ML_REPLY',32) ],
             # save lots of debugging time testing rfc2553 compliance
-            extra_compile_args = [ "-Werror=implicit-function-declaration" ]
+            extra_compile_args = [
+                "-Werror=implicit-function-declaration",
+                "-std=gnu17",
+            ]
 	  ),
 	],
 	keywords = ['sendmail','milter'],
