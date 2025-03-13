@@ -35,7 +35,7 @@ class GreylistTestCase(unittest.TestCase):
     # new one past expire
     rc = grey.check('1.2.3.5','foo@bar.com','baz@spat.com',timeinc=6*3600)
     self.assertEqual(rc,0)
-    # original past retain
+    # original past retain 
     rc = grey.check('1.2.3.4','foo@bar.com','baz@spat.com',timeinc=37*24*3600)
     self.assertEqual(rc,0)
     # new one for testing expire
@@ -48,8 +48,8 @@ class GreylistTestCase(unittest.TestCase):
     self.assertEqual(rc,1)
     grey.close()
 
-def suite():
-  s = unittest.TestLoader().loadTestsFromTestCase(GreylistTestCase)
+def suite(): 
+  s = unittest.makeSuite(GreylistTestCase,'test')
   return s
 
 if __name__ == '__main__':
