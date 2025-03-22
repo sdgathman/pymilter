@@ -42,7 +42,7 @@ class PolicyTestCase(unittest.TestCase):
       pol = p.getPolicy('smtp-test')
     self.assertEqual(pol,'WILDCARD')
 
-def suite(): return unittest.TestLoader().loadTestsFromTestCase(PolicyTestCase)
+def suite(): return unittest.makeSuite(PolicyTestCase,'test')
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
