@@ -15,13 +15,3 @@ diff -up ./Milter/utils.py.check ./Milter/utils.py
 diff -up ./test.py.check ./test.py
 --- ./test.py.check	2018-08-04 23:04:58.609420815 -0400
 +++ ./test.py	2018-08-04 23:05:40.070949438 -0400
-@@ -14,6 +14,8 @@ def suite():
-   return s
- 
- if __name__ == '__main__':
-+  import sys
-   try: os.remove('test/milter.log')
-   except: pass
--  unittest.TextTestRunner().run(suite())
-+  rc = unittest.TextTestRunner().run(suite())
-+  sys.exit(len(rc.failures))
