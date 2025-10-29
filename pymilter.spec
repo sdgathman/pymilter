@@ -15,7 +15,7 @@ Url: http://bmsi.com/pymilter
 Source: https://github.com/sdgathman/pymilter/archive/pymilter-%{version}.tar.gz
 #Source1: tmpfiles-python-pymilter.conf
 # remove unit tests that require network for check
-Patch: pymilter-check.patch
+Patch: test-nonet.patch
 License: GPLv2+
 Group: Development/Libraries
 BuildRequires: python2-devel, %{python3}-devel, sendmail-devel >= 8.13
