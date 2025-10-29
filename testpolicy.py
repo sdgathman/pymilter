@@ -2,6 +2,7 @@ from __future__ import print_function
 import unittest
 import sys
 import os
+import bsddb3
 from Milter.policy import MTAPolicy
 
 class Config(object):
@@ -10,6 +11,17 @@ class Config(object):
     self.access_file_nulls=True
     self.access_file_colon = False
 
+def makemap(in_filename, out_filename):
+  db = bsddb3.hashopen(out_filename, 'c')
+  with open(in_filename, 'r', encoding='utf-8') as fh:
+    for line in fh:
+      line = line.strip().replace(":", "!")
+      if not line or line.startswith("#"):
+        continue
+      [k, v] = line.split(maxsplit=1)
+      db[k.lower().encode()] = v.encode()
+  db.close()
+
 class PolicyTestCase(unittest.TestCase):
 
   def setUp(self):
@@ -17,9 +29,7 @@ class PolicyTestCase(unittest.TestCase):
     if os.access('test/access',os.R_OK):
       if not os.path.exists('test/access.db') or \
           os.path.getmtime('test/access') > os.path.getmtime('test/access.db'):
-        cmd = 'tr : ! <test/access | makemap hash test/access.db'
-        if os.system(cmd):
-          print('failed!')
+        makemap("test/access", "test/access.db")
     else:
       print("Missing test/access")
 
